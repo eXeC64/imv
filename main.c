@@ -34,6 +34,7 @@ int main(int argc, char** argv)
   int next_path = 0;
   SDL_Texture *img = NULL;
 
+  double scale = 1;
   int quit = 0;
   int redraw = 1;
   while(!quit) {
@@ -57,6 +58,14 @@ int main(int argc, char** argv)
               if(next_path < 0)
                 next_path = num_paths - 1;
               break;
+            case SDLK_UP:
+              scale = (scale + 0.1 < 10) ? scale + 0.1 : scale;
+              redraw = 1;
+              break;
+            case SDLK_DOWN:
+              scale = (scale - 0.1 >= 1) ? scale - 0.1 : scale;
+              redraw = 1;
+              break;
           }
           break;
         case SDL_WINDOWEVENT:
@@ -77,6 +86,7 @@ int main(int argc, char** argv)
         img = NULL;
       }
       img = imv_load_image(renderer, paths[cur_path]);
+      scale = 1;
       redraw = 1;
     }
 
@@ -87,7 +97,7 @@ int main(int argc, char** argv)
         int img_w, img_h, img_access;
         unsigned int img_format;
         SDL_QueryTexture(img, &img_format, &img_access, &img_w, &img_h);
-        SDL_Rect area = {0,0,img_w,img_h};
+        SDL_Rect area = {0,0,img_w*scale,img_h*scale};
         SDL_RenderCopy(renderer, img, &area, &area);
       }
 
