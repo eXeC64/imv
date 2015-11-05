@@ -26,7 +26,7 @@ int main(int argc, char** argv)
   SDL_Renderer *renderer =
     SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-  const char** paths = &argv[1];
+  const char** paths = (const char**)&argv[1];
   const int num_paths = argc - 1;
   int cur_path = -1;
   int next_path = 0;
