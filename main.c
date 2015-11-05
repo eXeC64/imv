@@ -57,10 +57,7 @@ int main(int argc, char** argv)
           }
           break;
         case SDL_WINDOWEVENT:
-          if(e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED
-              || e.window.event == SDL_WINDOWEVENT_RESIZED) {
-            redraw = 1;
-          }
+          redraw = 1;
           break;
       }
     }
