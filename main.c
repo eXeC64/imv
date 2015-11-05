@@ -26,6 +26,11 @@ int main(int argc, char** argv)
   SDL_Renderer *renderer =
     SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
+  const char** paths = &argv[1];
+  const int num_paths = argc - 1;
+  int cur_path = -1;
+  int next_path = 0;
+
   int quit = 0;
   int redraw = 1;
   while(!quit) {
@@ -37,8 +42,18 @@ int main(int argc, char** argv)
           quit = 1;
           break;
         case SDL_KEYDOWN:
-          if(e.key.keysym.sym == SDLK_q) {
-            quit = 1;
+          switch (e.key.keysym.sym) {
+            case SDLK_q:
+              quit = 1;
+              break;
+            case SDLK_RIGHT:
+              next_path = (next_path + 1) % num_paths;
+              break;
+            case SDLK_LEFT:
+              next_path -= 1;
+              if(next_path < 0)
+                next_path = num_paths - 1;
+              break;
           }
           break;
         case SDL_WINDOWEVENT:
@@ -52,6 +67,12 @@ int main(int argc, char** argv)
 
     if(quit) {
       break;
+    }
+
+    if(next_path != cur_path) {
+      cur_path = next_path;
+      fprintf(stdout, "current image: %s\n", paths[cur_path]);
+      redraw = 1;
     }
 
     if(redraw) {
