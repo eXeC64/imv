@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
 
+SDL_Texture* imv_load_image(SDL_Renderer *r, const char* path);
+
 int main(int argc, char** argv)
 {
   if(argc < 2) {
@@ -30,6 +32,7 @@ int main(int argc, char** argv)
   const int num_paths = argc - 1;
   int cur_path = -1;
   int next_path = 0;
+  SDL_Texture *img = NULL;
 
   int quit = 0;
   int redraw = 1;
@@ -69,12 +72,21 @@ int main(int argc, char** argv)
     if(next_path != cur_path) {
       cur_path = next_path;
       fprintf(stdout, "current image: %s\n", paths[cur_path]);
+      if(img) {
+        SDL_DestroyTexture(img);
+        img = NULL;
+      }
+      img = imv_load_image(renderer, paths[cur_path]);
       redraw = 1;
     }
 
     if(redraw) {
       SDL_RenderClear(renderer);
-      //SDL_RenderCopy(renderer, tex, srcrect, dstrect);
+
+      if(img) {
+        SDL_Rect area = {0,0,width,height};
+        SDL_RenderCopy(renderer, img, &area, &area);
+      }
 
       SDL_RenderPresent(renderer);
       redraw = 0;
@@ -82,6 +94,10 @@ int main(int argc, char** argv)
     SDL_Delay(10);
   }
 
+  if(img) {
+    SDL_DestroyTexture(img);
+    img = NULL;
+  }
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();
