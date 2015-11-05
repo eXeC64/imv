@@ -2,6 +2,7 @@
 #include <string.h>
 
 extern SDL_Texture* imv_load_png(SDL_Renderer *r, const char* path);
+extern SDL_Texture* imv_load_jpeg(SDL_Renderer *r, const char* path);
 
 SDL_Texture* imv_load_image(SDL_Renderer *r, const char* path)
 {
@@ -27,6 +28,8 @@ SDL_Texture* imv_load_image(SDL_Renderer *r, const char* path)
     return img;
   } else if(strcasecmp(ext, ".png") == 0) {
     return imv_load_png(r, path);
+  } else if(strcasecmp(ext, ".jpeg") == 0 || strcasecmp(ext, ".jpg") == 0) {
+    return imv_load_jpeg(r, path);
   }
 
   return NULL;

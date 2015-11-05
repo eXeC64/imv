@@ -1,7 +1,7 @@
 .PHONY: clean
 
 CFLAGS = -g -W -Wall -std=c11 `sdl2-config --cflags`
-LDFLAGS = `sdl2-config --libs` -lpng
+LDFLAGS = `sdl2-config --libs` -lpng -ljpeg
 
 TARGET = imv
 SOURCES = $(wildcard *.c)
