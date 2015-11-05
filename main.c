@@ -84,7 +84,10 @@ int main(int argc, char** argv)
       SDL_RenderClear(renderer);
 
       if(img) {
-        SDL_Rect area = {0,0,width,height};
+        int img_w, img_h, img_access;
+        unsigned int img_format;
+        SDL_QueryTexture(img, &img_format, &img_access, &img_w, &img_h);
+        SDL_Rect area = {0,0,img_w,img_h};
         SDL_RenderCopy(renderer, img, &area, &area);
       }
 
