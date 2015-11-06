@@ -103,7 +103,7 @@ void remove_current_path()
   struct loop_item_s* cur = g_path.cur;
   cur->next->prev = cur->prev;
   cur->prev->next = cur->next;
-  if(g_path.dir > 0) {
+  if(g_path.dir < 0) {
     g_path.cur = cur->prev;
   } else {
     g_path.cur = cur->next;
@@ -209,10 +209,14 @@ int main(int argc, char** argv)
         case SDL_KEYDOWN:
           switch (e.key.keysym.sym) {
             case SDLK_q:     quit = 1;              break;
-            case SDLK_RIGHT: prev_path();           break;
-            case SDLK_LEFT:  next_path();           break;
+            case SDLK_LEFTBRACKET:
+            case SDLK_LEFT:  prev_path();           break;
+            case SDLK_RIGHTBRACKET:
+            case SDLK_RIGHT: next_path();           break;
+            case SDLK_EQUALS:
             case SDLK_i:
             case SDLK_UP:    zoom_view(1);          break;
+            case SDLK_MINUS:
             case SDLK_o:
             case SDLK_DOWN:  zoom_view(-1);         break;
             case SDLK_r:     reset_view();          break;
