@@ -157,6 +157,9 @@ int main(int argc, char** argv)
             case SDLK_DOWN:
               zoom_view(-1);
               break;
+            case SDLK_r:
+              reset_view();
+              break;
             case SDLK_j:
               move_view(0, -50);
               break;
