@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
-
-SDL_Texture* imv_load_freeimage(SDL_Renderer *r, const char* path);
+#include <FreeImage.h>
 
 struct loop_item_s {
   struct loop_item_s *prev;
@@ -98,6 +97,28 @@ void prev_path()
   g_path.dir = -1;
 }
 
+SDL_Texture* load_freeimage(SDL_Renderer *r, const char* path)
+{
+  FREE_IMAGE_FORMAT fmt = FreeImage_GetFileType(path,0);
+  FIBITMAP *image = FreeImage_Load(fmt, path, 0);
+  FreeImage_FlipVertical(image);
+
+  FIBITMAP* temp = image;
+  image = FreeImage_ConvertTo32Bits(image);
+  FreeImage_Unload(temp);
+
+  int w = FreeImage_GetWidth(image);
+  int h = FreeImage_GetHeight(image);
+  char* pixels = (char*)FreeImage_GetBits(image);
+
+  SDL_Texture *img = SDL_CreateTexture(r,
+        SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STATIC, w, h);
+  SDL_Rect area = {0,0,w,h};
+  SDL_UpdateTexture(img, &area, pixels, sizeof(unsigned int) * w);
+  FreeImage_Unload(image);
+  return img;
+}
+
 int main(int argc, char** argv)
 {
   if(argc < 2) {
@@ -177,7 +198,7 @@ int main(int argc, char** argv)
         SDL_DestroyTexture(img);
         img = NULL;
       }
-      img = imv_load_freeimage(renderer, g_path.cur->path);
+      img = load_freeimage(renderer, g_path.cur->path);
       if(img == NULL) {
         fprintf(stderr, "Ignoring unsupported file: %s\n", g_path.cur->path);
         remove_current_path();
