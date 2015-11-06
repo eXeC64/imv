@@ -33,8 +33,9 @@ struct loop_item_s {
 struct {
   double scale;
   int x, y;
+  int fullscreen;
   int redraw;
-} g_view = {1,0,0,1};
+} g_view = {1,0,0,0,1};
 
 struct {
   struct loop_item_s *first, *last, *cur;
@@ -47,6 +48,17 @@ struct {
   SDL_Texture *tex;
   int width, height;
 } g_img = {NULL,NULL,0,0};
+
+void toggle_fullscreen()
+{
+  if(g_view.fullscreen) {
+    SDL_SetWindowFullscreen(g_window, 0);
+    g_view.fullscreen = 0;
+  } else {
+    SDL_SetWindowFullscreen(g_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    g_view.fullscreen = 1;
+  }
+}
 
 void reset_view()
 {
@@ -228,6 +240,7 @@ int main(int argc, char** argv)
             case SDLK_h:     move_view(50, 0);      break;
             case SDLK_l:     move_view(-50, 0);     break;
             case SDLK_x:     remove_current_path(); break;
+            case SDLK_f:     toggle_fullscreen();   break;
           }
           break;
         case SDL_MOUSEWHEEL:
