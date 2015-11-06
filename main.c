@@ -18,7 +18,8 @@ struct {
 struct {
   struct loop_item_s *first, *last, *cur;
   int reload;
-} g_path = {NULL,NULL,NULL,1};
+  int dir;
+} g_path = {NULL,NULL,NULL,1,1};
 
 void reset_view()
 {
@@ -75,7 +76,11 @@ void remove_current_path()
   struct loop_item_s* cur = g_path.cur;
   cur->next->prev = cur->prev;
   cur->prev->next = cur->next;
-  g_path.cur = cur->next;
+  if(g_path.dir > 0) {
+    g_path.cur = cur->prev;
+  } else {
+    g_path.cur = cur->next;
+  }
   free(cur);
 }
 
@@ -83,12 +88,14 @@ void next_path()
 {
   g_path.cur = g_path.cur->prev;
   g_path.reload = 1;
+  g_path.dir = 1;
 }
 
 void prev_path()
 {
   g_path.cur = g_path.cur->next;
   g_path.reload = 1;
+  g_path.dir = -1;
 }
 
 int main(int argc, char** argv)
@@ -182,7 +189,7 @@ int main(int argc, char** argv)
       break;
     }
 
-    if(g_path.reload) {
+    while(g_path.reload) {
       if(img) {
         SDL_DestroyTexture(img);
         img = NULL;
