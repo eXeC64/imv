@@ -68,7 +68,7 @@ void add_path(const char* path)
 void remove_current_path()
 {
   if(g_path.cur->next == g_path.cur) {
-    fprintf(stderr, "All input paths removed. Exiting\n");
+    fprintf(stderr, "All input files closed. Exiting\n");
     exit(0);
   }
 
@@ -80,6 +80,7 @@ void remove_current_path()
   } else {
     g_path.cur = cur->next;
   }
+  g_path.reload = 1;
   free(cur);
 }
 
@@ -161,18 +162,19 @@ int main(int argc, char** argv)
           break;
         case SDL_KEYDOWN:
           switch (e.key.keysym.sym) {
-            case SDLK_q:     quit = 1;          break;
-            case SDLK_RIGHT: prev_path();       break;
-            case SDLK_LEFT:  next_path();       break;
+            case SDLK_q:     quit = 1;              break;
+            case SDLK_RIGHT: prev_path();           break;
+            case SDLK_LEFT:  next_path();           break;
             case SDLK_i:
-            case SDLK_UP:    zoom_view(1);      break;
+            case SDLK_UP:    zoom_view(1);          break;
             case SDLK_o:
-            case SDLK_DOWN:  zoom_view(-1);     break;
-            case SDLK_r:     reset_view();      break;
-            case SDLK_j:     move_view(0, -50); break;
-            case SDLK_k:     move_view(0, 50);  break;
-            case SDLK_h:     move_view(50, 0);  break;
-            case SDLK_l:     move_view(-50, 0); break;
+            case SDLK_DOWN:  zoom_view(-1);         break;
+            case SDLK_r:     reset_view();          break;
+            case SDLK_j:     move_view(0, -50);     break;
+            case SDLK_k:     move_view(0, 50);      break;
+            case SDLK_h:     move_view(50, 0);      break;
+            case SDLK_l:     move_view(-50, 0);     break;
+            case SDLK_x:     remove_current_path(); break;
           }
           break;
         case SDL_MOUSEWHEEL:
