@@ -87,11 +87,25 @@ int main(int argc, char** argv)
               if(next_path < 0)
                 next_path = num_paths - 1;
               break;
+            case SDLK_i:
             case SDLK_UP:
               zoom_view(1);
               break;
+            case SDLK_o:
             case SDLK_DOWN:
               zoom_view(-1);
+              break;
+            case SDLK_j:
+              move_view(0, -50);
+              break;
+            case SDLK_k:
+              move_view(0, 50);
+              break;
+            case SDLK_h:
+              move_view(50, 0);
+              break;
+            case SDLK_l:
+              move_view(-50, 0);
               break;
           }
           break;
