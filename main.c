@@ -89,7 +89,7 @@ void add_path(const char* path)
     new_path->prev = g_path.last;
     g_path.first->prev = new_path;
     new_path->next = g_path.first;
-    g_path.last= new_path;
+    g_path.last = new_path;
   }
 }
 
@@ -161,6 +161,25 @@ int main(int argc, char** argv)
     exit(1);
   }
 
+  if(argc == 2 && argv[1][0] == '-') {
+    char buf[512];
+    while(fgets(buf, sizeof(buf), stdin)) {
+      size_t len = strlen(buf);
+      if(buf[len-1] == '\n') {
+        buf[--len] = 0;
+      }
+      if(len > 0) {
+        char *str = (char*)malloc(len + 1);
+        memcpy(str, buf, len + 1);
+        add_path(str);
+      }
+    }
+  } else {
+    for(int i = 1; i < argc; ++i) {
+      add_path(argv[i]);
+    }
+  }
+
   if(SDL_Init(SDL_INIT_VIDEO) != 0) {
     fprintf(stderr, "SDL Failed to Init: %s\n", SDL_GetError());
     exit(1);
@@ -177,10 +196,6 @@ int main(int argc, char** argv)
         SDL_WINDOW_RESIZABLE);
 
   g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_ACCELERATED);
-
-  for(int i = 1; i < argc; ++i) {
-    add_path(argv[i]);
-  }
 
   int quit = 0;
   while(!quit) {
