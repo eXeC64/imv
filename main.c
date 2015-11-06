@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
 
-SDL_Texture* imv_load_image(SDL_Renderer *r, const char* path);
+SDL_Texture* imv_load_freeimage(SDL_Renderer *r, const char* path);
 
 struct loop_item_s {
   struct loop_item_s *prev;
@@ -194,7 +194,7 @@ int main(int argc, char** argv)
         SDL_DestroyTexture(img);
         img = NULL;
       }
-      img = imv_load_image(renderer, g_path.cur->path);
+      img = imv_load_freeimage(renderer, g_path.cur->path);
       if(img == NULL) {
         fprintf(stderr, "Ignoring unsupported file: %s\n", g_path.cur->path);
         remove_current_path();
