@@ -5,12 +5,13 @@ imv is a command line image viewer intended for use with tiling window managers.
 
 **This software is currently in alpha.**
 
-Supported file formats:
+Currently supported file formats:
 * PNG
 * JPEG
+* TIFF
 
 TODO:
 * GIF
-* TIFF
+* TGA
 * BMP
 * and more
