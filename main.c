@@ -3,12 +3,35 @@
 
 SDL_Texture* imv_load_image(SDL_Renderer *r, const char* path);
 
-double clamp(double v, double min, double max) {
-  if(v < min)
-    return min;
-  if(v > max)
-    return max;
-  return v;
+struct {
+  double scale;
+  int x, y;
+  int redraw;
+} g_view = {1,0,0,1};
+
+void reset_view()
+{
+  g_view.scale = 1;
+  g_view.x = 0;
+  g_view.y = 0;
+  g_view.redraw = 1;
+}
+
+void move_view(int x, int y)
+{
+  g_view.x += x;
+  g_view.y += y;
+  g_view.redraw = 1;
+}
+
+void zoom_view(int amount)
+{
+  g_view.scale += amount * 0.1;
+  if(g_view.scale > 10)
+    g_view.scale = 10;
+  else if (g_view.scale < 1)
+    g_view.scale = 1;
+  g_view.redraw = 1;
 }
 
 int main(int argc, char** argv)
@@ -42,12 +65,7 @@ int main(int argc, char** argv)
   int next_path = 0;
   SDL_Texture *img = NULL;
 
-  struct {
-    double scale;
-    int x, y;
-  } view = {1,0,0};
   int quit = 0;
-  int redraw = 1;
   while(!quit) {
 
     SDL_Event e;
@@ -70,28 +88,23 @@ int main(int argc, char** argv)
                 next_path = num_paths - 1;
               break;
             case SDLK_UP:
-              view.scale = clamp(view.scale + 0.1, 1, 10);
-              redraw = 1;
+              zoom_view(1);
               break;
             case SDLK_DOWN:
-              view.scale = clamp(view.scale - 0.1, 1, 10);
-              redraw = 1;
+              zoom_view(-1);
               break;
           }
           break;
         case SDL_MOUSEWHEEL:
-          view.scale = clamp(view.scale + (0.1 * e.wheel.y), 1, 10);
-          redraw = 1;
+          zoom_view(e.wheel.y);
           break;
         case SDL_MOUSEMOTION:
           if(e.motion.state & SDL_BUTTON_LMASK) {
-            view.x += e.motion.xrel;
-            view.y += e.motion.yrel;
-            redraw = 1;
+            move_view(e.motion.xrel, e.motion.yrel);
           }
           break;
         case SDL_WINDOWEVENT:
-          redraw = 1;
+          g_view.redraw = 1;
           break;
       }
     }
@@ -108,30 +121,27 @@ int main(int argc, char** argv)
         img = NULL;
       }
       img = imv_load_image(renderer, paths[cur_path]);
-      view.scale = 1;
-      view.x = 0;
-      view.y = 0;
-      redraw = 1;
+      reset_view();
     }
 
-    if(redraw) {
+    if(g_view.redraw) {
       SDL_RenderClear(renderer);
 
       if(img) {
         int img_w, img_h, img_access;
         unsigned int img_format;
         SDL_QueryTexture(img, &img_format, &img_access, &img_w, &img_h);
-        SDL_Rect view_area = {
-          view.x,
-          view.y,
-          img_w * view.scale,
-          img_h * view.scale
+        SDL_Rect g_view_area = {
+          g_view.x,
+          g_view.y,
+          img_w * g_view.scale,
+          img_h * g_view.scale
         };
-        SDL_RenderCopy(renderer, img, NULL, &view_area);
+        SDL_RenderCopy(renderer, img, NULL, &g_view_area);
       }
 
       SDL_RenderPresent(renderer);
-      redraw = 0;
+      g_view.redraw = 0;
     }
     SDL_Delay(10);
   }
