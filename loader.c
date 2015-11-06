@@ -3,6 +3,7 @@
 
 SDL_Texture* imv_load_png(SDL_Renderer *r, const char* path);
 SDL_Texture* imv_load_jpeg(SDL_Renderer *r, const char* path);
+SDL_Texture* imv_load_tiff(SDL_Renderer *r, const char* path);
 
 SDL_Texture* imv_load_image(SDL_Renderer *r, const char* path)
 {
@@ -18,6 +19,8 @@ SDL_Texture* imv_load_image(SDL_Renderer *r, const char* path)
     return imv_load_png(r, path);
   } else if(strcasecmp(ext, ".jpeg") == 0 || strcasecmp(ext, ".jpg") == 0) {
     return imv_load_jpeg(r, path);
+  } else if(strcasecmp(ext, ".tif") == 0 || strcasecmp(ext, ".tiff") == 0) {
+    return imv_load_tiff(r, path);
   }
 
   fprintf(stderr,
