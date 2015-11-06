@@ -1,11 +1,20 @@
 imv - Image Viewer
 ==================
 
-imv is a command line image viewer intended for use with tiling window managers.
+`imv` is a command line image viewer intended for use with tiling window managers.
 
-**This software is currently in alpha.**
+Currently `imv` is in **alpha**. Command line flags and shortcuts may change
+without notice.
 
-Currently supported file formats:
+Features
+--------
+
+###Wayland support
+
+`imv` supports Wayland out of the box.
+
+###Support for many file formats
+
  * BMP
  * Dr. Halo CUT
  * DDS
@@ -39,5 +48,21 @@ Currently supported file formats:
  * XBM
  * XPM
 
-TODO:
-* GIF
+Usage
+-----
+
+### Opening images
+    imv image1.png another_image.jpeg yet_another.TIFF
+
+### Opening images via stdin
+    find . "*.png" | imv -
+
+### Sorting images
+    find . "*.png" | sort | imv -
+
+### Shuffling images
+    find . "*.png" | shuf | imv -
+
+License
+-------
+`imv` is published under the [MIT](LICENSE) license.
