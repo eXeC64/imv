@@ -161,7 +161,7 @@ int main(int argc, char** argv)
     exit(1);
   }
 
-  if(argc == 2 && argv[1][0] == '-') {
+  if(argc == 2 && strcmp(argv[1], "-") == 0) {
     char buf[512];
     while(fgets(buf, sizeof(buf), stdin)) {
       size_t len = strlen(buf);
