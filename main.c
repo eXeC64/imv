@@ -189,6 +189,7 @@ int main(int argc, char** argv)
       }
       img = imv_load_image(renderer, g_path.cur->path);
       if(img == NULL) {
+        fprintf(stderr, "Ignoring unsupported file: %s\n", g_path.cur->path);
         remove_current_path();
       } else {
         g_path.reload = 0;
