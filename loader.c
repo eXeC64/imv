@@ -11,6 +11,9 @@ SDL_Texture* imv_load_image(SDL_Renderer *r, const char* path)
 
   const char* ext = strrchr(path, '.');
 
+  if(!ext)
+    return NULL;
+
   if(strcasecmp(ext, ".png") == 0) {
     return imv_load_png(r, path);
   } else if(strcasecmp(ext, ".jpeg") == 0 || strcasecmp(ext, ".jpg") == 0) {

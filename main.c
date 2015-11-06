@@ -63,7 +63,20 @@ void add_path(const char* path)
     new_path->next = g_path.first;
     g_path.last= new_path;
   }
+}
 
+void remove_current_path()
+{
+  if(g_path.cur->next == g_path.cur) {
+    fprintf(stderr, "All input paths removed. Exiting\n");
+    exit(0);
+  }
+
+  struct loop_item_s* cur = g_path.cur;
+  cur->next->prev = cur->prev;
+  cur->prev->next = cur->next;
+  g_path.cur = cur->next;
+  free(cur);
 }
 
 void next_path()
@@ -172,13 +185,18 @@ int main(int argc, char** argv)
     if(g_path.reload) {
       if(img) {
         SDL_DestroyTexture(img);
+        img = NULL;
       }
       img = imv_load_image(renderer, g_path.cur->path);
-      g_path.reload = 0;
-      reset_view();
+      if(img == NULL) {
+        remove_current_path();
+      } else {
+        g_path.reload = 0;
+        reset_view();
+      }
     }
 
-    if(g_view.redraw) {
+    if(g_view.redraw && img) {
       SDL_RenderClear(renderer);
 
       if(img) {
