@@ -197,6 +197,9 @@ int main(int argc, char** argv)
 
   g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_ACCELERATED);
 
+  //Use linear sampling for scaling
+  SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+
   int quit = 0;
   while(!quit) {
 
