@@ -103,7 +103,7 @@ void remove_current_path()
   struct loop_item_s* cur = g_path.cur;
   cur->next->prev = cur->prev;
   cur->prev->next = cur->next;
-  if(g_path.dir < 0) {
+  if(g_path.dir > 0) {
     g_path.cur = cur->prev;
   } else {
     g_path.cur = cur->next;
