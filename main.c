@@ -214,6 +214,9 @@ int main(int argc, char** argv)
         remove_current_path();
       } else {
         g_path.changed = 0;
+        char title[128];
+        snprintf(&title[0], sizeof(title), "imv - %s", g_path.cur->path);
+        SDL_SetWindowTitle(g_window, (const char*)&title);
         reset_view();
       }
     }
