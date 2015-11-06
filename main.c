@@ -2,6 +2,9 @@
 #include <SDL2/SDL.h>
 #include <FreeImage.h>
 
+SDL_Window *g_window = NULL;
+SDL_Renderer *g_renderer = NULL;
+
 struct loop_item_s {
   struct loop_item_s *prev;
   struct loop_item_s *next;
@@ -19,6 +22,12 @@ struct {
   int reload;
   int dir;
 } g_path = {NULL,NULL,NULL,1,1};
+
+struct {
+  FIBITMAP *img;
+  SDL_Texture *tex;
+  int width, height;
+} g_img = {NULL,NULL,0,0};
 
 void reset_view()
 {
@@ -98,26 +107,32 @@ void prev_path()
   g_path.dir = -1;
 }
 
-SDL_Texture* load_freeimage(SDL_Renderer *r, const char* path)
+void load_image(const char* path)
 {
   FREE_IMAGE_FORMAT fmt = FreeImage_GetFileType(path,0);
   FIBITMAP *image = FreeImage_Load(fmt, path, 0);
   FreeImage_FlipVertical(image);
 
-  FIBITMAP* temp = image;
-  image = FreeImage_ConvertTo32Bits(image);
-  FreeImage_Unload(temp);
-
-  int w = FreeImage_GetWidth(image);
-  int h = FreeImage_GetHeight(image);
-  char* pixels = (char*)FreeImage_GetBits(image);
-
-  SDL_Texture *img = SDL_CreateTexture(r,
-        SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STATIC, w, h);
-  SDL_Rect area = {0,0,w,h};
-  SDL_UpdateTexture(img, &area, pixels, sizeof(unsigned int) * w);
+  if(g_img.img) {
+    FreeImage_Unload(g_img.img);
+  }
+  g_img.img = FreeImage_ConvertTo32Bits(image);
   FreeImage_Unload(image);
-  return img;
+
+  g_img.width = FreeImage_GetWidth(g_img.img);
+  g_img.height = FreeImage_GetHeight(g_img.img);
+
+  char* pixels = (char*)FreeImage_GetBits(g_img.img);
+
+  if(g_img.tex) {
+    SDL_DestroyTexture(g_img.tex);
+  }
+  g_img.tex = SDL_CreateTexture(g_renderer,
+        SDL_PIXELFORMAT_RGB888,
+        SDL_TEXTUREACCESS_STATIC,
+        g_img.width, g_img.height);
+  SDL_Rect area = {0,0,g_img.width,g_img.height};
+  SDL_UpdateTexture(g_img.tex, &area, pixels, 4 * g_img.width);
 }
 
 int main(int argc, char** argv)
@@ -135,21 +150,18 @@ int main(int argc, char** argv)
   const int width = 1280;
   const int height = 720;
 
-  SDL_Window *window = SDL_CreateWindow(
+  g_window = SDL_CreateWindow(
         "imv",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         width, height,
         SDL_WINDOW_RESIZABLE);
 
-  SDL_Renderer *renderer =
-    SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+  g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_ACCELERATED);
 
   for(int i = 1; i < argc; ++i) {
     add_path(argv[i]);
   }
-
-  SDL_Texture *img = NULL;
 
   int quit = 0;
   while(!quit) {
@@ -196,12 +208,8 @@ int main(int argc, char** argv)
     }
 
     while(g_path.reload) {
-      if(img) {
-        SDL_DestroyTexture(img);
-        img = NULL;
-      }
-      img = load_freeimage(renderer, g_path.cur->path);
-      if(img == NULL) {
+      load_image(g_path.cur->path);
+      if(g_img.tex == NULL) {
         fprintf(stderr, "Ignoring unsupported file: %s\n", g_path.cur->path);
         remove_current_path();
       } else {
@@ -210,34 +218,36 @@ int main(int argc, char** argv)
       }
     }
 
-    if(g_view.redraw && img) {
-      SDL_RenderClear(renderer);
+    if(g_view.redraw) {
+      SDL_RenderClear(g_renderer);
 
-      if(img) {
+      if(g_img.tex) {
         int img_w, img_h, img_access;
         unsigned int img_format;
-        SDL_QueryTexture(img, &img_format, &img_access, &img_w, &img_h);
+        SDL_QueryTexture(g_img.tex, &img_format, &img_access, &img_w, &img_h);
         SDL_Rect g_view_area = {
           g_view.x,
           g_view.y,
           img_w * g_view.scale,
           img_h * g_view.scale
         };
-        SDL_RenderCopy(renderer, img, NULL, &g_view_area);
+        SDL_RenderCopy(g_renderer, g_img.tex, NULL, &g_view_area);
       }
 
-      SDL_RenderPresent(renderer);
+      SDL_RenderPresent(g_renderer);
       g_view.redraw = 0;
     }
     SDL_Delay(10);
   }
 
-  if(img) {
-    SDL_DestroyTexture(img);
-    img = NULL;
+  if(g_img.img) {
+    FreeImage_Unload(g_img.img);
   }
-  SDL_DestroyRenderer(renderer);
-  SDL_DestroyWindow(window);
+  if(g_img.tex) {
+    SDL_DestroyTexture(g_img.tex);
+  }
+  SDL_DestroyRenderer(g_renderer);
+  SDL_DestroyWindow(g_window);
   SDL_Quit();
 
   return 0;
