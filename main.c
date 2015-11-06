@@ -68,8 +68,8 @@ void zoom_view(int amount)
   g_view.scale += amount * 0.1;
   if(g_view.scale > 10)
     g_view.scale = 10;
-  else if (g_view.scale < 1)
-    g_view.scale = 1;
+  else if (g_view.scale < 0.1)
+    g_view.scale = 0.1;
   g_view.redraw = 1;
 }
 
