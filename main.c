@@ -19,7 +19,7 @@ struct {
 
 struct {
   struct loop_item_s *first, *last, *cur;
-  int reload;
+  int changed;
   int dir;
 } g_path = {NULL,NULL,NULL,1,1};
 
@@ -89,21 +89,21 @@ void remove_current_path()
   } else {
     g_path.cur = cur->next;
   }
-  g_path.reload = 1;
+  g_path.changed = 1;
   free(cur);
 }
 
 void next_path()
 {
   g_path.cur = g_path.cur->prev;
-  g_path.reload = 1;
+  g_path.changed = 1;
   g_path.dir = 1;
 }
 
 void prev_path()
 {
   g_path.cur = g_path.cur->next;
-  g_path.reload = 1;
+  g_path.changed = 1;
   g_path.dir = -1;
 }
 
@@ -207,13 +207,13 @@ int main(int argc, char** argv)
       break;
     }
 
-    while(g_path.reload) {
+    while(g_path.changed) {
       load_image(g_path.cur->path);
       if(g_img.tex == NULL) {
         fprintf(stderr, "Ignoring unsupported file: %s\n", g_path.cur->path);
         remove_current_path();
       } else {
-        g_path.reload = 0;
+        g_path.changed = 0;
         reset_view();
       }
     }
