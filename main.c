@@ -3,11 +3,22 @@
 
 SDL_Texture* imv_load_image(SDL_Renderer *r, const char* path);
 
+struct loop_item_s {
+  struct loop_item_s *prev;
+  struct loop_item_s *next;
+  const char *path;
+};
+
 struct {
   double scale;
   int x, y;
   int redraw;
 } g_view = {1,0,0,1};
+
+struct {
+  struct loop_item_s *first, *last, *cur;
+  int reload;
+} g_path = {NULL,NULL,NULL,1};
 
 void reset_view()
 {
@@ -32,6 +43,39 @@ void zoom_view(int amount)
   else if (g_view.scale < 1)
     g_view.scale = 1;
   g_view.redraw = 1;
+}
+
+void add_path(const char* path)
+{
+  struct loop_item_s *new_path =
+    (struct loop_item_s*)malloc(sizeof(struct loop_item_s));
+  new_path->path = path;
+  if(!g_path.first && !g_path.last) {
+    g_path.first = new_path;
+    g_path.last = new_path;
+    new_path->next = new_path;
+    new_path->prev = new_path;
+    g_path.cur = new_path;
+  } else {
+    g_path.last->next = new_path;
+    new_path->prev = g_path.last;
+    g_path.first->prev = new_path;
+    new_path->next = g_path.first;
+    g_path.last= new_path;
+  }
+
+}
+
+void next_path()
+{
+  g_path.cur = g_path.cur->prev;
+  g_path.reload = 1;
+}
+
+void prev_path()
+{
+  g_path.cur = g_path.cur->next;
+  g_path.reload = 1;
 }
 
 int main(int argc, char** argv)
@@ -59,10 +103,10 @@ int main(int argc, char** argv)
   SDL_Renderer *renderer =
     SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-  const char** paths = (const char**)&argv[1];
-  const int num_paths = argc - 1;
-  int cur_path = -1;
-  int next_path = 0;
+  for(int i = 1; i < argc; ++i) {
+    add_path(argv[i]);
+  }
+
   SDL_Texture *img = NULL;
 
   int quit = 0;
@@ -80,12 +124,10 @@ int main(int argc, char** argv)
               quit = 1;
               break;
             case SDLK_RIGHT:
-              next_path = (next_path + 1) % num_paths;
+              prev_path();
               break;
             case SDLK_LEFT:
-              next_path -= 1;
-              if(next_path < 0)
-                next_path = num_paths - 1;
+              next_path();
               break;
             case SDLK_i:
             case SDLK_UP:
@@ -127,14 +169,12 @@ int main(int argc, char** argv)
       break;
     }
 
-    if(next_path != cur_path) {
-      cur_path = next_path;
-      fprintf(stdout, "current image: %s\n", paths[cur_path]);
+    if(g_path.reload) {
       if(img) {
         SDL_DestroyTexture(img);
-        img = NULL;
       }
-      img = imv_load_image(renderer, paths[cur_path]);
+      img = imv_load_image(renderer, g_path.cur->path);
+      g_path.reload = 0;
       reset_view();
     }
 
