@@ -59,13 +59,19 @@ Usage
     imv image1.png another_image.jpeg yet_another.TIFF
 
 ### Opening images via stdin
-    find . "*.png" | imv -
+    find . "*.png" | imv -i
+
+### Autoscale images to fit the window
+    imv -s *.gif
+
+### Open an image fullscreen (and scale to fit screen)
+    imv -fs image.jpeg
 
 ### Sorting images
-    find . "*.png" | sort | imv -
+    find . "*.png" | sort | imv -i
 
 ### Shuffling images
-    find . "*.png" | shuf | imv -
+    find . "*.png" | shuf | imv -i
 
 License
 -------
