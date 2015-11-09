@@ -313,15 +313,50 @@ void load_image(const char* path)
   FreeImage_Unload(image);
 }
 
-void parse_arg(const char* arg)
+void print_usage(const char* name)
+{
+  fprintf(stdout,
+  "Usage: %s [-ifsh] [images...]\n"
+  "\n"
+  "Flags:\n"
+  "  -i: Read paths from stdin. One path per line.\n"
+  "  -f: Start in fullscreen mode\n"
+  "  -s: Auto scale images to fit window\n"
+  "  -h: Print this help\n"
+  "\n"
+  "Mouse:\n"
+  "   Click+Drag to Pan\n"
+  "   MouseWheel to Zoom\n"
+  "\n"
+  "Hotkeys:\n"
+  "         'q': Quit\n"
+  "  '[',LArrow: Previous image\n"
+  "  ']',RArrow: Next image\n"
+  "     'i','+': Zoom in\n"
+  "     'o','=': Zoom out\n"
+  "         'h': Pan left\n"
+  "         'j': Pan down\n"
+  "         'k': Pan up\n"
+  "         'l': Pan right\n"
+  "         'r': Reset view\n"
+  "         's': Scale image to fit window\n"
+  "         'x': Close current image\n"
+  "         'f': Toggle fullscreen\n"
+  "         ' ': Toggle gif playback\n"
+  "         '.': Step a frame of gif playback\n"
+  ,name);
+}
+
+void parse_arg(const char* name, const char* arg)
 {
   for(const char *o = arg; *o != 0; ++o) {
     switch(*o) {
       case 'f': g_options.fullscreen = 1; break;
       case 's': g_options.autoscale = 1; break;
       case 'i': g_options.stdin = 1; break;
+      case 'h': print_usage(name); exit(0); break;
       default:
-        fprintf(stderr, "Error: unknown argument '%c'. Aborting.\n", *o);
+        fprintf(stderr, "Unknown argument '%c'. Aborting.\n", *o);
         exit(1);
     }
   }
@@ -330,13 +365,13 @@ void parse_arg(const char* arg)
 int main(int argc, char** argv)
 {
   if(argc < 2) {
-    fprintf(stderr, "Usage: %s <image_file> <...>\n", argv[0]);
+    print_usage(argv[0]);
     exit(1);
   }
 
   for(int i = 1; i < argc; ++i) {
     if(argv[i][0] == '-') {
-      parse_arg(&argv[i][1]);
+      parse_arg(argv[0], &argv[i][1]);
     } else {
       add_path(argv[i]);
     }
