@@ -285,6 +285,12 @@ void load_image(const char* path)
   }
 
   FREE_IMAGE_FORMAT fmt = FreeImage_GetFileType(path,0);
+
+  if(fmt == FIF_UNKNOWN) {
+    fprintf(stderr, "Could not identify file: '%s'. Ignoring.\n", path);
+    return;
+  }
+
   if(fmt == FIF_GIF) {
     load_gif(path);
     return;
@@ -297,6 +303,10 @@ void load_image(const char* path)
   g_img.playing = 0;
 
   FIBITMAP *image = FreeImage_Load(fmt, path, 0);
+  if(!image) {
+    fprintf(stderr, "Error loading file: '%s'. Ignoring.\n", path);
+    return;
+  }
   FIBITMAP *frame = FreeImage_ConvertTo32Bits(image);
   FreeImage_FlipVertical(frame);
   render_image(frame);
@@ -432,7 +442,6 @@ int main(int argc, char** argv)
     while(g_path.changed) {
       load_image(g_path.cur->path);
       if(g_img.tex == NULL) {
-        fprintf(stderr, "Ignoring unsupported file: %s\n", g_path.cur->path);
         remove_current_path();
       } else {
         g_path.changed = 0;
