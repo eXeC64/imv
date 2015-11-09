@@ -13,6 +13,10 @@ Features
 
 `imv` supports Wayland out of the box.
 
+###Animated gif support
+
+`imv` will display animated gifs in all their silent movie era glory
+
 ###Support for many file formats
 
  * BMP
