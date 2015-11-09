@@ -118,6 +118,9 @@ void scale_to_window()
     //Image will become too wide before it becomes too tall
     g_view.scale = (double)ww/(double)g_img.width;
   }
+  //Also center image
+  g_view.x = 0;
+  g_view.y = 0;
   g_view.redraw = 1;
 }
 
@@ -500,7 +503,7 @@ int main(int argc, char** argv)
             case SDLK_l:     move_view(-50, 0);     break;
             case SDLK_x:     remove_current_path(); break;
             case SDLK_f:     toggle_fullscreen();   break;
-            case SDLK_PERIOD: next_frame();         break;
+            case SDLK_PERIOD:next_frame();          break;
             case SDLK_SPACE: toggle_playing();      break;
             case SDLK_s:     scale_to_window();     break;
           }
