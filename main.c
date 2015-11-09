@@ -35,7 +35,8 @@ struct {
   int autoscale;
   int fullscreen;
   int stdin;
-} g_options = {0,0,0};
+  int center;
+} g_options = {0,0,0,0};
 
 struct {
   double scale;
@@ -423,6 +424,7 @@ void print_usage(const char* name)
   "  -i: Read paths from stdin. One path per line.\n"
   "  -f: Start in fullscreen mode\n"
   "  -s: Auto scale images to fit window\n"
+  "  -c: Center images in the window\n"
   "  -h: Print this help\n"
   "\n"
   "Mouse:\n"
@@ -454,6 +456,7 @@ void parse_arg(const char* name, const char* arg)
     switch(*o) {
       case 'f': g_options.fullscreen = 1; break;
       case 's': g_options.autoscale = 1; break;
+      case 'c': g_options.center = 1; break;
       case 'i': g_options.stdin = 1; break;
       case 'h': print_usage(name); exit(0); break;
       default:
@@ -593,6 +596,9 @@ int main(int argc, char** argv)
       //Autoscale if requested
       if(g_options.autoscale) {
         scale_to_window();
+      }
+      if(g_options.center) {
+        center_view();
       }
     }
 
