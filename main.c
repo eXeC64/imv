@@ -63,6 +63,15 @@ void toggle_fullscreen()
   }
 }
 
+void toggle_playing()
+{
+  if(g_img.playing) {
+    g_img.playing = 0;
+  } else if(g_img.num_frames >= 2) {
+    g_img.playing = 1;
+  }
+}
+
 void reset_view()
 {
   g_view.scale = 1;
@@ -352,6 +361,7 @@ int main(int argc, char** argv)
             case SDLK_x:     remove_current_path(); break;
             case SDLK_f:     toggle_fullscreen();   break;
             case SDLK_PERIOD: next_frame();         break;
+            case SDLK_SPACE: toggle_playing();      break;
           }
           break;
         case SDL_MOUSEWHEEL:
