@@ -207,8 +207,15 @@ void push_img_to_gpu(FIBITMAP *image)
   g_gpu.num_chunks_wide = 1 + g_img.width / g_gpu.max_chunk_width;
   g_gpu.num_chunks_tall = 1 + g_img.height / g_gpu.max_chunk_height;
 
-  const int end_chunk_width = g_img.width % g_gpu.max_chunk_width;
-  const int end_chunk_height = g_img.height % g_gpu.max_chunk_height;
+  int end_chunk_width = g_img.width % g_gpu.max_chunk_width;
+  int end_chunk_height = g_img.height % g_gpu.max_chunk_height;
+
+  if(end_chunk_width == 0) {
+    end_chunk_width = g_gpu.max_chunk_width;
+  }
+  if(end_chunk_height == 0) {
+    end_chunk_height = g_gpu.max_chunk_height;
+  }
 
   g_gpu.num_chunks = g_gpu.num_chunks_wide * g_gpu.num_chunks_tall;
   g_gpu.chunks = 
@@ -226,6 +233,7 @@ void push_img_to_gpu(FIBITMAP *image)
           is_last_h_chunk ? end_chunk_width : g_gpu.max_chunk_width,
           is_last_v_chunk ? end_chunk_height : g_gpu.max_chunk_height);
       if(g_gpu.chunks[x + y * g_gpu.num_chunks_wide] == NULL) {
+
         failed_at = x + y * g_gpu.num_chunks_wide;
         break;
       }
@@ -235,6 +243,7 @@ void push_img_to_gpu(FIBITMAP *image)
     for(int i = 0; i <= failed_at; ++i) {
       SDL_DestroyTexture(g_gpu.chunks[i]);
     }
+
     free(g_gpu.chunks);
     g_gpu.num_chunks = 0;
     fprintf(stderr, "SDL Error when creating texture: %s\n", SDL_GetError());
@@ -312,7 +321,7 @@ void next_frame()
   FreeImage_Unload(frame32);
 }
 
-void load_gif(const char* path)
+int load_gif(const char* path)
 {
   FIMULTIBITMAP *gif =
     FreeImage_OpenMultiBitmap(FIF_GIF, path,
@@ -322,7 +331,8 @@ void load_gif(const char* path)
         /* flags */ GIF_LOAD256);
 
   if(!gif) {
-    return;
+    fprintf(stderr, "Error loading file: '%s'. Ignoring.\n", path);
+    return 1;
   }
 
   g_img.mbmp = gif;
@@ -333,9 +343,10 @@ void load_gif(const char* path)
   g_img.playing = 1;
 
   next_frame();
+  return 0;
 }
 
-void load_image(const char* path)
+int load_image(const char* path)
 {
   if(g_img.mbmp) {
     FreeImage_CloseMultiBitmap(g_img.mbmp, 0);
@@ -346,12 +357,11 @@ void load_image(const char* path)
 
   if(fmt == FIF_UNKNOWN) {
     fprintf(stderr, "Could not identify file: '%s'. Ignoring.\n", path);
-    return;
+    return 1;
   }
 
   if(fmt == FIF_GIF) {
-    load_gif(path);
-    return;
+    return load_gif(path);
   }
 
   g_img.num_frames = 0;
@@ -363,12 +373,13 @@ void load_image(const char* path)
   FIBITMAP *image = FreeImage_Load(fmt, path, 0);
   if(!image) {
     fprintf(stderr, "Error loading file: '%s'. Ignoring.\n", path);
-    return;
+    return 1;
   }
   FIBITMAP *frame = FreeImage_ConvertTo32Bits(image);
   FreeImage_FlipVertical(frame);
   push_img_to_gpu(frame);
   FreeImage_Unload(image);
+  return 0;
 }
 
 void print_usage(const char* name)
@@ -539,8 +550,7 @@ int main(int argc, char** argv)
     }
 
     while(g_path.changed) {
-      load_image(g_path.cur->path);
-      if(g_gpu.num_chunks == 0) {
+      if(load_image(g_path.cur->path) != 0) {
         remove_current_path();
       } else {
         g_path.changed = 0;
