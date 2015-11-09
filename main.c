@@ -185,7 +185,7 @@ void prev_path()
   g_path.dir = -1;
 }
 
-void render_image(FIBITMAP *image)
+void push_img_to_gpu(FIBITMAP *image)
 {
   if(g_img.frame) {
     FreeImage_Unload(g_img.frame);
@@ -288,18 +288,18 @@ void next_frame()
 
   switch(disposal_method) {
     case 0: /*nothing specified, just use the raw frame*/
-      render_image(frame32);
+      push_img_to_gpu(frame32);
       break;
     case 1: /*composite over previous frame*/
       if(g_img.frame && g_img.cur_frame > 0) {
         FIBITMAP *bg_frame = FreeImage_ConvertTo24Bits(g_img.frame);
         FIBITMAP *comp = FreeImage_Composite(frame32, 1, NULL, bg_frame);
         FreeImage_Unload(bg_frame);
-        render_image(comp);
+        push_img_to_gpu(comp);
         FreeImage_Unload(comp);
       } else {
         //No previous frame, just render directly
-        render_image(frame32);
+        push_img_to_gpu(frame32);
       }
       break;
     case 2: /*set to background, composite over that*/
@@ -367,7 +367,7 @@ void load_image(const char* path)
   }
   FIBITMAP *frame = FreeImage_ConvertTo32Bits(image);
   FreeImage_FlipVertical(frame);
-  render_image(frame);
+  push_img_to_gpu(frame);
   FreeImage_Unload(image);
 }
 
