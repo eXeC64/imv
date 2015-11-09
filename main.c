@@ -44,10 +44,12 @@ struct {
 } g_path = {NULL,NULL,NULL,1,1};
 
 struct {
-  FIBITMAP *img;
+  FIMULTIBITMAP *mbmp;
+  FIBITMAP *frame;
   SDL_Texture *tex;
   int width, height;
-} g_img = {NULL,NULL,0,0};
+  int cur_frame, next_frame, num_frames;
+} g_img = {NULL,NULL,NULL,0,0,0,0,0};
 
 void toggle_fullscreen()
 {
@@ -138,22 +140,16 @@ void prev_path()
   g_path.dir = -1;
 }
 
-void load_image(const char* path)
+void render_image(FIBITMAP *image)
 {
-  FREE_IMAGE_FORMAT fmt = FreeImage_GetFileType(path,0);
-  FIBITMAP *image = FreeImage_Load(fmt, path, 0);
-  FreeImage_FlipVertical(image);
-
-  if(g_img.img) {
-    FreeImage_Unload(g_img.img);
+  if(g_img.frame) {
+    FreeImage_Unload(g_img.frame);
   }
-  g_img.img = FreeImage_ConvertTo32Bits(image);
-  FreeImage_Unload(image);
+  g_img.frame = FreeImage_ConvertTo32Bits(image);
+  g_img.width = FreeImage_GetWidth(g_img.frame);
+  g_img.height = FreeImage_GetHeight(g_img.frame);
 
-  g_img.width = FreeImage_GetWidth(g_img.img);
-  g_img.height = FreeImage_GetHeight(g_img.img);
-
-  char* pixels = (char*)FreeImage_GetBits(g_img.img);
+  char* pixels = (char*)FreeImage_GetBits(g_img.frame);
 
   if(g_img.tex) {
     SDL_DestroyTexture(g_img.tex);
@@ -164,6 +160,100 @@ void load_image(const char* path)
         g_img.width, g_img.height);
   SDL_Rect area = {0,0,g_img.width,g_img.height};
   SDL_UpdateTexture(g_img.tex, &area, pixels, 4 * g_img.width);
+  g_view.redraw = 1;
+}
+
+void next_frame()
+{
+  FITAG *tag = NULL;
+  char disposal_method = 0;
+
+  g_img.cur_frame = g_img.next_frame;
+  g_img.next_frame = (g_img.cur_frame + 1) % g_img.num_frames;
+  FIBITMAP *frame = FreeImage_LockPage(g_img.mbmp, g_img.cur_frame);
+  FIBITMAP *frame32 = FreeImage_ConvertTo32Bits(frame);
+  FreeImage_FlipVertical(frame32);
+
+  //First frame is always going to use the raw frame
+  if(g_img.cur_frame > 0) {
+    FreeImage_GetMetadata(FIMD_ANIMATION, frame, "DisposalMethod", &tag);
+    if(FreeImage_GetTagValue(tag)) {
+      disposal_method = *(char*)FreeImage_GetTagValue(tag);
+    }
+  }
+
+  FreeImage_UnlockPage(g_img.mbmp, frame, 0);
+
+  switch(disposal_method) {
+    case 0: /*nothing specified, just use the raw frame*/
+      render_image(frame32);
+      break;
+    case 1: /*composite over previous frame*/
+      if(g_img.frame && g_img.cur_frame > 0) {
+        FIBITMAP *bg_frame = FreeImage_ConvertTo24Bits(g_img.frame);
+        FIBITMAP *comp = FreeImage_Composite(frame32, 1, NULL, bg_frame);
+        FreeImage_Unload(bg_frame);
+        render_image(comp);
+        FreeImage_Unload(comp);
+      } else {
+        //No previous frame, just render directly
+        render_image(frame32);
+      }
+      break;
+    case 2: /*set to background, composite over that*/
+      fprintf(stdout, "tried to set to bg\n");
+      break;
+    case 3: /*restore to previous content*/
+      fprintf(stdout, "restore to content\n");
+      break;
+  }
+  FreeImage_Unload(frame32);
+}
+
+void load_gif(const char* path)
+{
+
+  FIMULTIBITMAP *gif =
+    FreeImage_OpenMultiBitmap(FIF_GIF, path,
+        /* don't create */ 0,
+        /* read only */ 1,
+        /* keep in memory */ 1,
+        /* flags */ GIF_LOAD256);
+
+  if(!gif) {
+    return;
+  }
+
+  g_img.mbmp = gif;
+  g_img.num_frames = FreeImage_GetPageCount(gif);
+  g_img.cur_frame = 0;
+  g_img.next_frame = 0;
+
+  next_frame();
+}
+
+void load_image(const char* path)
+{
+  if(g_img.mbmp) {
+    FreeImage_CloseMultiBitmap(g_img.mbmp, 0);
+    g_img.mbmp = NULL;
+  }
+
+  FREE_IMAGE_FORMAT fmt = FreeImage_GetFileType(path,0);
+  if(fmt == FIF_GIF) {
+    load_gif(path);
+    return;
+  }
+
+  g_img.num_frames = 0;
+  g_img.cur_frame = 0;
+  g_img.next_frame = 0;
+
+  FIBITMAP *image = FreeImage_Load(fmt, path, 0);
+  FIBITMAP *frame = FreeImage_ConvertTo32Bits(image);
+  FreeImage_FlipVertical(frame);
+  render_image(frame);
+  FreeImage_Unload(image);
 }
 
 int main(int argc, char** argv)
@@ -241,6 +331,7 @@ int main(int argc, char** argv)
             case SDLK_l:     move_view(-50, 0);     break;
             case SDLK_x:     remove_current_path(); break;
             case SDLK_f:     toggle_fullscreen();   break;
+            case SDLK_PERIOD: next_frame();         break;
           }
           break;
         case SDL_MOUSEWHEEL:
@@ -297,8 +388,11 @@ int main(int argc, char** argv)
     SDL_Delay(10);
   }
 
-  if(g_img.img) {
-    FreeImage_Unload(g_img.img);
+  if(g_img.mbmp) {
+    FreeImage_CloseMultiBitmap(g_img.mbmp, 0);
+  }
+  if(g_img.frame) {
+    FreeImage_Unload(g_img.frame);
   }
   if(g_img.tex) {
     SDL_DestroyTexture(g_img.tex);
