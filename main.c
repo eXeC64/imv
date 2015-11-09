@@ -271,6 +271,8 @@ void next_frame()
   FITAG *tag = NULL;
   char disposal_method = 0;
   int frame_time = 0;
+  short top = 0;
+  short left = 0;
 
   g_img.cur_frame = g_img.next_frame;
   g_img.next_frame = (g_img.cur_frame + 1) % g_img.num_frames;
@@ -286,6 +288,16 @@ void next_frame()
     }
   }
 
+  FreeImage_GetMetadata(FIMD_ANIMATION, frame, "FrameLeft", &tag);
+  if(FreeImage_GetTagValue(tag)) {
+    left = *(short*)FreeImage_GetTagValue(tag);
+  }
+
+  FreeImage_GetMetadata(FIMD_ANIMATION, frame, "FrameTop", &tag);
+  if(FreeImage_GetTagValue(tag)) {
+    top = *(short*)FreeImage_GetTagValue(tag);
+  }
+
   FreeImage_GetMetadata(FIMD_ANIMATION, frame, "FrameTime", &tag);
   if(FreeImage_GetTagValue(tag)) {
     frame_time = *(int*)FreeImage_GetTagValue(tag);
@@ -295,11 +307,23 @@ void next_frame()
 
   FreeImage_UnlockPage(g_img.mbmp, frame, 0);
 
+  //If this frame is inset, we need to expand it for compositing
+  if(left != 0 || top != 0) {
+    RGBQUAD color = {0,0,0,0};
+    FIBITMAP *expanded = FreeImage_EnlargeCanvas(frame32, left, top,
+        g_img.width - FreeImage_GetWidth(frame32) - left,
+        g_img.height - FreeImage_GetHeight(frame32) - top,
+        &color,
+        0);
+    FreeImage_Unload(frame32);
+    frame32 = expanded;
+  }
+
   switch(disposal_method) {
-    case 0: /*nothing specified, just use the raw frame*/
+    case 0: //nothing specified, just use the raw frame
       push_img_to_gpu(frame32);
       break;
-    case 1: /*composite over previous frame*/
+    case 1: //composite over previous frame
       if(g_img.frame && g_img.cur_frame > 0) {
         FIBITMAP *bg_frame = FreeImage_ConvertTo24Bits(g_img.frame);
         FIBITMAP *comp = FreeImage_Composite(frame32, 1, NULL, bg_frame);
@@ -311,11 +335,9 @@ void next_frame()
         push_img_to_gpu(frame32);
       }
       break;
-    case 2: /*set to background, composite over that*/
-      fprintf(stdout, "tried to set to bg\n");
+    case 2: //TODO - set to background, composite over that
       break;
-    case 3: /*restore to previous content*/
-      fprintf(stdout, "restore to content\n");
+    case 3: //TODO - restore to previous content
       break;
   }
   FreeImage_Unload(frame32);
