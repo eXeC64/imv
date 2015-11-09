@@ -31,6 +31,12 @@ struct loop_item_s {
 };
 
 struct {
+  int autoscale;
+  int fullscreen;
+  int stdin;
+} g_options = {0,0,0};
+
+struct {
   double scale;
   int x, y;
   int fullscreen;
@@ -297,6 +303,20 @@ void load_image(const char* path)
   FreeImage_Unload(image);
 }
 
+void parse_arg(const char* arg)
+{
+  for(const char *o = arg; *o != 0; ++o) {
+    switch(*o) {
+      case 'f': g_options.fullscreen = 1; break;
+      case 's': g_options.autoscale = 1; break;
+      case 'i': g_options.stdin = 1; break;
+      default:
+        fprintf(stderr, "Error: unknown argument '%c'. Aborting.\n", *o);
+        exit(1);
+    }
+  }
+}
+
 int main(int argc, char** argv)
 {
   if(argc < 2) {
@@ -304,7 +324,15 @@ int main(int argc, char** argv)
     exit(1);
   }
 
-  if(argc == 2 && strcmp(argv[1], "-") == 0) {
+  for(int i = 1; i < argc; ++i) {
+    if(argv[i][0] == '-') {
+      parse_arg(&argv[i][1]);
+    } else {
+      add_path(argv[i]);
+    }
+  }
+
+  if(g_options.stdin) {
     char buf[512];
     while(fgets(buf, sizeof(buf), stdin)) {
       size_t len = strlen(buf);
@@ -316,10 +344,6 @@ int main(int argc, char** argv)
         memcpy(str, buf, len + 1);
         add_path(str);
       }
-    }
-  } else {
-    for(int i = 1; i < argc; ++i) {
-      add_path(argv[i]);
     }
   }
 
@@ -342,6 +366,11 @@ int main(int argc, char** argv)
 
   //Use linear sampling for scaling
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+
+  //Put us in fullscren by default if requested
+  if(g_options.fullscreen) {
+    toggle_fullscreen();
+  }
 
   double lastTime = SDL_GetTicks() / 1000.0;
 
@@ -411,6 +440,10 @@ int main(int argc, char** argv)
         snprintf(&title[0], sizeof(title), "imv - %s", g_path.cur->path);
         SDL_SetWindowTitle(g_window, (const char*)&title);
         reset_view();
+      }
+      //Autoscale if requested
+      if(g_options.autoscale) {
+        scale_to_window();
       }
     }
 
