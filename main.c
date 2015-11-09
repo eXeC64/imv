@@ -90,10 +90,27 @@ void move_view(int x, int y)
 void zoom_view(int amount)
 {
   g_view.scale += amount * 0.1;
-  if(g_view.scale > 10)
+  if(g_view.scale > 100)
     g_view.scale = 10;
-  else if (g_view.scale < 0.1)
+  else if (g_view.scale < 0.01)
     g_view.scale = 0.1;
+  g_view.redraw = 1;
+}
+
+void scale_to_window()
+{
+  int ww, wh;
+  SDL_GetWindowSize(g_window, &ww, &wh);
+  double window_aspect = (double)ww/(double)wh;
+  double image_aspect = (double)g_img.width/(double)g_img.height;
+
+  if(window_aspect > image_aspect) {
+    //Image will become too tall before it becomes too wide
+    g_view.scale = (double)wh/(double)g_img.height;
+  } else {
+    //Image will become too wide before it becomes too tall
+    g_view.scale = (double)ww/(double)g_img.width;
+  }
   g_view.redraw = 1;
 }
 
@@ -362,6 +379,7 @@ int main(int argc, char** argv)
             case SDLK_f:     toggle_fullscreen();   break;
             case SDLK_PERIOD: next_frame();         break;
             case SDLK_SPACE: toggle_playing();      break;
+            case SDLK_s:     scale_to_window();     break;
           }
           break;
         case SDL_MOUSEWHEEL:
