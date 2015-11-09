@@ -18,6 +18,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 
 #include <stdio.h>
+#include <stddef.h>
 #include <SDL2/SDL.h>
 #include <FreeImage.h>
 
@@ -51,13 +52,20 @@ struct {
 
 struct {
   FIMULTIBITMAP *mbmp;
-  FIBITMAP *frame;
-  SDL_Texture *tex;
-  int width, height;
-  int max_width, max_height;
-  int cur_frame, next_frame, num_frames, playing;
+  FIBITMAP *frame; //most current bitmap frame
+  int width, height; //overall dimensions of bitmap
+  int cur_frame, next_frame, num_frames, playing; //animation state
   double frame_time;
-} g_img = {NULL,NULL,NULL,0,0,0,0,0,0,0,0,0};
+} g_img = {NULL,NULL,0,0,0,0,0,0,0};
+
+struct {
+  int num_chunks; //number of chunks in use
+  SDL_Texture **chunks; //array of SDL_Texture*
+  int chunk_width, chunk_height; //dimensions of each chunk
+  int num_chunks_wide; //number of chunks per row of the image
+  int num_chunks_tall; //number of chunks per column of the image
+  int max_chunk_width, max_chunk_height; //max dimensions a chunk can have
+} g_gpu = {0,NULL,0,0,0,0,0,0};
 
 void toggle_fullscreen()
 {
@@ -177,41 +185,6 @@ void prev_path()
   g_path.dir = -1;
 }
 
-void resample_image()
-{
-  double max_aspect = (double)g_img.max_width/(double)g_img.max_height;
-  double img_aspect = (double)g_img.width/(double)g_img.height;
-  double scale;
-
-  if(max_aspect > img_aspect) {
-    //Image will become too tall before it becomes too wide
-    scale = (double)g_img.max_height/(double)g_img.height;
-  } else {
-    //Image will become too wide before it becomes too tall
-    scale = (double)g_img.max_width/(double)g_img.width;
-  }
-
-  int new_width = g_img.width * scale;
-  int new_height = g_img.height * scale;
-
-  fprintf(stderr,
-      "Warning: '%s' [%ix%i] is too large to fit into a SDL texture. "
-      "Resampling to %ix%i\n",
-      g_path.cur->path,
-      g_img.width, g_img.height,
-      new_width, new_height);
-
-  //perform scaling
-  g_img.width = new_width;
-  g_img.height = new_height;
-
-  FIBITMAP *resampled = FreeImage_Rescale(g_img.frame,
-      g_img.width, g_img.height, FILTER_CATMULLROM);
-
-  FreeImage_Unload(g_img.frame);
-  g_img.frame = resampled;
-}
-
 void render_image(FIBITMAP *image)
 {
   if(g_img.frame) {
@@ -221,24 +194,63 @@ void render_image(FIBITMAP *image)
   g_img.width = FreeImage_GetWidth(g_img.frame);
   g_img.height = FreeImage_GetHeight(g_img.frame);
 
-  if(g_img.width > g_img.max_width || g_img.height > g_img.max_height) {
-    resample_image();
-  }
-
   char* pixels = (char*)FreeImage_GetBits(g_img.frame);
 
-  if(g_img.tex) {
-    SDL_DestroyTexture(g_img.tex);
+  //figure out how many chunks are needed, and create them
+  if(g_gpu.num_chunks > 0) {
+    for(int i = 0; i < g_gpu.num_chunks; ++i) {
+      SDL_DestroyTexture(g_gpu.chunks[i]);
+    }
+    free(g_gpu.chunks);
   }
-  g_img.tex = SDL_CreateTexture(g_renderer,
-        SDL_PIXELFORMAT_RGB888,
-        SDL_TEXTUREACCESS_STATIC,
-        g_img.width, g_img.height);
-  if(g_img.tex == NULL) {
+
+  g_gpu.num_chunks_wide = 1 + g_img.width / g_gpu.max_chunk_width;
+  g_gpu.num_chunks_tall = 1 + g_img.height / g_gpu.max_chunk_height;
+
+  const int end_chunk_width = g_img.width % g_gpu.max_chunk_width;
+  const int end_chunk_height = g_img.height % g_gpu.max_chunk_height;
+
+  g_gpu.num_chunks = g_gpu.num_chunks_wide * g_gpu.num_chunks_tall;
+  g_gpu.chunks = 
+    (SDL_Texture**)malloc(sizeof(SDL_Texture*) * g_gpu.num_chunks);
+
+  int failed_at = -1;
+  for(int y = 0; y < g_gpu.num_chunks_tall; ++y) {
+    for(int x = 0; x < g_gpu.num_chunks_wide; ++x) {
+      const int is_last_h_chunk = (x == g_gpu.num_chunks_wide - 1);
+      const int is_last_v_chunk = (y == g_gpu.num_chunks_tall - 1);
+      g_gpu.chunks[x + y * g_gpu.num_chunks_wide] =
+        SDL_CreateTexture(g_renderer,
+          SDL_PIXELFORMAT_RGB888,
+          SDL_TEXTUREACCESS_STATIC,
+          is_last_h_chunk ? end_chunk_width : g_gpu.max_chunk_width,
+          is_last_v_chunk ? end_chunk_height : g_gpu.max_chunk_height);
+      if(g_gpu.chunks[x + y * g_gpu.num_chunks_wide] == NULL) {
+        failed_at = x + y * g_gpu.num_chunks_wide;
+        break;
+      }
+    }
+  }
+  if(failed_at != -1) {
+    for(int i = 0; i <= failed_at; ++i) {
+      SDL_DestroyTexture(g_gpu.chunks[i]);
+    }
+    free(g_gpu.chunks);
+    g_gpu.num_chunks = 0;
     fprintf(stderr, "SDL Error when creating texture: %s\n", SDL_GetError());
+    return;
   }
-  SDL_Rect area = {0,0,g_img.width,g_img.height};
-  SDL_UpdateTexture(g_img.tex, &area, pixels, 4 * g_img.width);
+
+  for(int y = 0; y < g_gpu.num_chunks_tall; ++y) {
+    for(int x = 0; x < g_gpu.num_chunks_wide; ++x) {
+      ptrdiff_t offset = 4 * x * g_gpu.max_chunk_width +
+        y * 4 * g_img.width * g_gpu.max_chunk_height;
+      char* addr = pixels + offset;
+      SDL_UpdateTexture(g_gpu.chunks[x + y * g_gpu.num_chunks_wide],
+          NULL, addr, 4 * g_img.width);
+    }
+  }
+
   g_view.redraw = 1;
 }
 
@@ -461,8 +473,8 @@ int main(int argc, char** argv)
   //We need to know how big our textures can be
   SDL_RendererInfo ri;
   SDL_GetRendererInfo(g_renderer, &ri);
-  g_img.max_width = ri.max_texture_width;
-  g_img.max_height = ri.max_texture_height;
+  g_gpu.max_chunk_width = ri.max_texture_width;
+  g_gpu.max_chunk_height = ri.max_texture_height;
 
   //Put us in fullscren by default if requested
   if(g_options.fullscreen) {
@@ -528,7 +540,7 @@ int main(int argc, char** argv)
 
     while(g_path.changed) {
       load_image(g_path.cur->path);
-      if(g_img.tex == NULL) {
+      if(g_gpu.num_chunks == 0) {
         remove_current_path();
       } else {
         g_path.changed = 0;
@@ -553,18 +565,26 @@ int main(int argc, char** argv)
 
     if(g_view.redraw) {
       SDL_RenderClear(g_renderer);
-
-      if(g_img.tex) {
-        int img_w, img_h, img_access;
-        unsigned int img_format;
-        SDL_QueryTexture(g_img.tex, &img_format, &img_access, &img_w, &img_h);
-        SDL_Rect g_view_area = {
-          g_view.x,
-          g_view.y,
-          img_w * g_view.scale,
-          img_h * g_view.scale
-        };
-        SDL_RenderCopy(g_renderer, g_img.tex, NULL, &g_view_area);
+      int offset_x = 0;
+      int offset_y = 0;
+      for(int y = 0; y < g_gpu.num_chunks_tall; ++y) {
+        for(int x = 0; x < g_gpu.num_chunks_wide; ++x) {
+          int img_w, img_h, img_access;
+          unsigned int img_format;
+          SDL_QueryTexture(g_gpu.chunks[x + y * g_gpu.num_chunks_wide],
+              &img_format, &img_access, &img_w, &img_h);
+          SDL_Rect g_view_area = {
+            g_view.x + offset_x,
+            g_view.y + offset_y,
+            img_w * g_view.scale,
+            img_h * g_view.scale
+          };
+          SDL_RenderCopy(g_renderer,
+              g_gpu.chunks[x + y * g_gpu.num_chunks_wide], NULL, &g_view_area);
+          offset_x += g_gpu.max_chunk_width * g_view.scale;
+        }
+        offset_x = 0;
+        offset_y += g_gpu.max_chunk_height * g_view.scale;
       }
 
       SDL_RenderPresent(g_renderer);
@@ -579,9 +599,13 @@ int main(int argc, char** argv)
   if(g_img.frame) {
     FreeImage_Unload(g_img.frame);
   }
-  if(g_img.tex) {
-    SDL_DestroyTexture(g_img.tex);
+  if(g_gpu.num_chunks > 0) {
+    for(int i = 0; i < g_gpu.num_chunks; ++i) {
+      SDL_DestroyTexture(g_gpu.chunks[i]);
+    }
+    free(g_gpu.chunks);
   }
+
   SDL_DestroyRenderer(g_renderer);
   SDL_DestroyWindow(g_window);
   SDL_Quit();
