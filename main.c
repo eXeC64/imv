@@ -310,9 +310,11 @@ void next_frame()
   //If this frame is inset, we need to expand it for compositing
   if(left != 0 || top != 0) {
     RGBQUAD color = {0,0,0,0};
-    FIBITMAP *expanded = FreeImage_EnlargeCanvas(frame32, left, top,
-        g_img.width - FreeImage_GetWidth(frame32) - left,
+    FIBITMAP *expanded = FreeImage_EnlargeCanvas(frame32,
+        left,
         g_img.height - FreeImage_GetHeight(frame32) - top,
+        g_img.width - FreeImage_GetWidth(frame32) - left,
+        top,
         &color,
         0);
     FreeImage_Unload(frame32);
