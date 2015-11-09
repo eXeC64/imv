@@ -522,6 +522,8 @@ int main(int argc, char** argv)
   while(!quit) {
     double curTime = SDL_GetTicks() / 1000.0;
     double dt = curTime - lastTime;
+    double prevScale;
+    int x, y;
     lastTime = curTime;
 
     SDL_Event e;
@@ -556,7 +558,27 @@ int main(int argc, char** argv)
           }
           break;
         case SDL_MOUSEWHEEL:
+          SDL_GetMouseState(&x, &y);
+          prevScale = g_view.scale;
           zoom_view(e.wheel.y);
+
+          // Translate mouse coordinates to "projected" coordinates
+          x -= g_view.x;
+          y -= g_view.y;
+
+          double changeX = x - (x * (g_view.scale / prevScale));
+          double changeY = y - (y * (g_view.scale / prevScale));
+
+          if(e.wheel.y < 0 &&
+            (g_view.x <= 0 && (g_view.x + changeX > 0 || !changeX))) {
+              g_view.x = 0;
+          } else g_view.x += changeX;
+
+          if(e.wheel.y < 0 &&
+            (g_view.y <= 0 && (g_view.y + changeY > 0 || !changeY))) {
+              g_view.y = 0;
+          } else g_view.y += changeY;
+
           break;
         case SDL_MOUSEMOTION:
           if(e.motion.state & SDL_BUTTON_LMASK) {
