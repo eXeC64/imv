@@ -112,6 +112,15 @@ void zoom_view(int amount)
   g_view.redraw = 1;
 }
 
+void center_view()
+{
+  int wx, wy;
+  SDL_GetWindowSize(g_window, &wx, &wy);
+  g_view.x = (wx - g_img.width * g_view.scale) / 2;
+  g_view.y = (wy - g_img.height * g_view.scale) / 2;
+  g_view.redraw = 1;
+}
+
 void scale_to_window()
 {
   int ww, wh;
@@ -127,8 +136,7 @@ void scale_to_window()
     g_view.scale = (double)ww/(double)g_img.width;
   }
   //Also center image
-  g_view.x = 0;
-  g_view.y = 0;
+  center_view();
   g_view.redraw = 1;
 }
 
