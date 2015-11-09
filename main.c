@@ -516,13 +516,12 @@ int main(int argc, char** argv)
     toggle_fullscreen();
   }
 
-  double lastTime = SDL_GetTicks() / 1000.0;
+  double last_time = SDL_GetTicks() / 1000.0;
 
   int quit = 0;
   while(!quit) {
-    double curTime = SDL_GetTicks() / 1000.0;
-    double dt = curTime - lastTime;
-    lastTime = curTime;
+    double cur_time = SDL_GetTicks() / 1000.0;
+    double dt = cur_time - last_time;
 
     SDL_Event e;
     while(!quit && SDL_PollEvent(&e)) {
@@ -624,6 +623,7 @@ int main(int argc, char** argv)
       SDL_RenderPresent(g_renderer);
       g_view.redraw = 0;
     }
+    last_time = SDL_GetTicks() / 1000.0;
     SDL_Delay(10);
   }
 
