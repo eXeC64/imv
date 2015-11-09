@@ -48,8 +48,9 @@ struct {
   FIBITMAP *frame;
   SDL_Texture *tex;
   int width, height;
-  int cur_frame, next_frame, num_frames;
-} g_img = {NULL,NULL,NULL,0,0,0,0,0};
+  int cur_frame, next_frame, num_frames, playing;
+  double frame_time;
+} g_img = {NULL,NULL,NULL,0,0,0,0,0,0,0};
 
 void toggle_fullscreen()
 {
@@ -165,8 +166,12 @@ void render_image(FIBITMAP *image)
 
 void next_frame()
 {
+  if(g_img.num_frames < 2) {
+    return;
+  }
   FITAG *tag = NULL;
   char disposal_method = 0;
+  int frame_time = 0;
 
   g_img.cur_frame = g_img.next_frame;
   g_img.next_frame = (g_img.cur_frame + 1) % g_img.num_frames;
@@ -181,6 +186,13 @@ void next_frame()
       disposal_method = *(char*)FreeImage_GetTagValue(tag);
     }
   }
+
+  FreeImage_GetMetadata(FIMD_ANIMATION, frame, "FrameTime", &tag);
+  if(FreeImage_GetTagValue(tag)) {
+    frame_time = *(int*)FreeImage_GetTagValue(tag);
+  }
+
+  g_img.frame_time += frame_time * 0.001;
 
   FreeImage_UnlockPage(g_img.mbmp, frame, 0);
 
@@ -212,7 +224,6 @@ void next_frame()
 
 void load_gif(const char* path)
 {
-
   FIMULTIBITMAP *gif =
     FreeImage_OpenMultiBitmap(FIF_GIF, path,
         /* don't create */ 0,
@@ -228,6 +239,8 @@ void load_gif(const char* path)
   g_img.num_frames = FreeImage_GetPageCount(gif);
   g_img.cur_frame = 0;
   g_img.next_frame = 0;
+  g_img.frame_time = 0;
+  g_img.playing = 1;
 
   next_frame();
 }
@@ -248,6 +261,8 @@ void load_image(const char* path)
   g_img.num_frames = 0;
   g_img.cur_frame = 0;
   g_img.next_frame = 0;
+  g_img.frame_time = 0;
+  g_img.playing = 0;
 
   FIBITMAP *image = FreeImage_Load(fmt, path, 0);
   FIBITMAP *frame = FreeImage_ConvertTo32Bits(image);
@@ -302,8 +317,13 @@ int main(int argc, char** argv)
   //Use linear sampling for scaling
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
+  double lastTime = SDL_GetTicks() / 1000.0;
+
   int quit = 0;
   while(!quit) {
+    double curTime = SDL_GetTicks() / 1000.0;
+    double dt = curTime - lastTime;
+    lastTime = curTime;
 
     SDL_Event e;
     while(!quit && SDL_PollEvent(&e)) {
@@ -363,6 +383,14 @@ int main(int argc, char** argv)
         snprintf(&title[0], sizeof(title), "imv - %s", g_path.cur->path);
         SDL_SetWindowTitle(g_window, (const char*)&title);
         reset_view();
+      }
+    }
+
+    if(g_img.playing) {
+      g_img.frame_time -= dt;
+
+      while(g_img.frame_time < 0) {
+        next_frame();
       }
     }
 
