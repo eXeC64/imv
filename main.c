@@ -360,6 +360,11 @@ int main(int argc, char** argv)
     }
   }
 
+  if(!imv_navigator_get_current_path(&nav)) {
+    fprintf(stderr, "No input files. Exiting.\n");
+    exit(1);
+  }
+
   if(SDL_Init(SDL_INIT_VIDEO) != 0) {
     fprintf(stderr, "SDL Failed to Init: %s\n", SDL_GetError());
     exit(1);
@@ -388,7 +393,7 @@ int main(int argc, char** argv)
     toggle_fullscreen();
   }
 
-  const char* last_path = NULL;
+  const char* current_path = NULL;
 
   double last_time = SDL_GetTicks() / 1000.0;
 
@@ -446,13 +451,19 @@ int main(int argc, char** argv)
       break;
     }
 
-    while(imv_navigator_get_current_path(&nav) != last_path) {
-      last_path = imv_navigator_get_current_path(&nav);
-      if(load_image(&tex, last_path) != 0) {
+    while(imv_navigator_get_current_path(&nav) != current_path) {
+      current_path = imv_navigator_get_current_path(&nav);
+
+      if(!current_path) {
+        fprintf(stderr, "No input files left. Exiting\n.");
+        exit(1);
+      }
+
+      if(load_image(&tex, current_path) != 0) {
         imv_navigator_remove_current_path(&nav);
       } else {
         char title[128];
-        snprintf(&title[0], sizeof(title), "imv - %s", last_path);
+        snprintf(&title[0], sizeof(title), "imv - %s", current_path);
         SDL_SetWindowTitle(g_window, (const char*)&title);
         reset_view();
       }
