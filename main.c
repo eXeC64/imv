@@ -246,6 +246,7 @@ int main(int argc, char** argv)
   const char* current_path = NULL;
 
   double last_time = SDL_GetTicks() / 1000.0;
+  int last_frame = img.cur_frame;
 
   int quit = 0;
   while(!quit) {
@@ -336,13 +337,13 @@ int main(int argc, char** argv)
     }
 
     if(g_view.playing) {
-      int last_frame = img.cur_frame;
       imv_image_play(&img, dt);
-      if(img.cur_frame != last_frame) {
-        imv_texture_set_image(&tex, img.cur_bmp);
-        g_view.redraw = 1;
-      }
     }
+    if(img.cur_frame != last_frame) {
+      imv_texture_set_image(&tex, img.cur_bmp);
+      g_view.redraw = 1;
+    }
+    last_frame = img.cur_frame;
 
     if(g_view.redraw) {
       SDL_RenderClear(renderer);
