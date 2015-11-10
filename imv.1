@@ -1,0 +1,89 @@
+.TH IMV 1 "" "" "multimedia"
+.SH NAME
+imv \- image viewer
+.SH SYNOPSIS
+.nf
+\fBimv\fP [OPTIONS] [IMAGES]
+.fi
+.sp
+.SH DESCRIPTION
+.sp
+\fBimv\fP is a X11/Wayland image viewer aimed at users of tiling window managers.
+It supports a wide variety of image file formats, including animated gif files.
+.SH OPTIONS
+.TP
+.B -i
+Read paths from stdin. One path per line.
+.TP
+.B -r
+Recursively search input paths for files.
+.TP
+.B -f
+Start in full screen mode
+.TP
+.B -s
+Auto scale images.
+.TP
+.B -c
+Center images in the window.
+.TP
+.B -h
+Print help.
+.SH CONTROLs
+.sp
+imv can be controlled using the mouse or keyboard.
+.TP
+.B Drag + Left Mouse Button
+Pan.
+.TP
+.B MouseWheel
+Zoom in and out.
+.TP
+.B q
+Quit.
+.TP
+.B LEFT and [
+Change to previous image.
+.TP
+.B RIGHT and ]
+Change to next image.
+.TP
+.B i and \&+ and UP
+Zoom in.
+.TP
+.B o and \- and DOWN
+Zoom out.
+.TP
+.B s
+Scale image to fit window.
+.TP
+.B r
+Reset image to default size.
+.TP
+.B h
+Pan left.
+.TP
+.B j
+Pan down.
+.TP
+.B k
+Pan up.
+.TP
+.B l
+Pan right.
+.TP
+.B x
+Close current image.
+.TP
+.B f
+Toggle fullscreen.
+.TP
+.B SPACE
+Pause gif playback (pressing again unpauses).
+.TP
+.B \&.
+Step forward one frame (when playing gifs).
+.SH BUGS
+No known bugs.
+.SH AUTHOR
+Harry Jeffery

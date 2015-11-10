@@ -16,3 +16,4 @@ clean:
 
 install: $(TARGET)
 	install -m 0755 $(TARGET) $(prefix)/bin
+	install -m 0644 $(TARGET).1 $(prefix)/share/man/man1
