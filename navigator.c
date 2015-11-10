@@ -145,7 +145,7 @@ void imv_navigator_remove_current_path(struct imv_navigator *nav)
   struct imv_loop_item *cur = nav->cur;
   cur->next->prev = cur->prev;
   cur->prev->next = cur->next;
-  if(nav->last_move_direction > 0) {
+  if(nav->last_move_direction < 0) {
     nav->cur = cur->prev;
   } else {
     nav->cur = cur->next;
