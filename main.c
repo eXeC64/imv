@@ -27,8 +27,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #include "navigator.h"
 #include "viewport.h"
 
-SDL_Window *g_window = NULL;
-
 struct {
   int autoscale;
   int fullscreen;
@@ -142,7 +140,7 @@ int main(int argc, char** argv)
   const int width = 1280;
   const int height = 720;
 
-  g_window = SDL_CreateWindow(
+  SDL_Window *window = SDL_CreateWindow(
         "imv",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
@@ -150,7 +148,7 @@ int main(int argc, char** argv)
         SDL_WINDOW_RESIZABLE);
 
   SDL_Renderer *renderer =
-    SDL_CreateRenderer(g_window, -1, SDL_RENDERER_ACCELERATED);
+    SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
   //Use linear sampling for scaling
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
@@ -162,7 +160,7 @@ int main(int argc, char** argv)
   imv_init_texture(&tex, renderer);
 
   struct imv_viewport view;
-  imv_init_viewport(&view, g_window);
+  imv_init_viewport(&view, window);
 
   //Put us in fullscren by default if requested
   if(g_options.fullscreen) {
@@ -243,7 +241,7 @@ int main(int argc, char** argv)
       } else {
         char title[128];
         snprintf(&title[0], sizeof(title), "imv - %s", current_path);
-        SDL_SetWindowTitle(g_window, (const char*)&title);
+        SDL_SetWindowTitle(window, (const char*)&title);
         imv_viewport_reset(&view);
       }
       //Autoscale if requested
@@ -285,7 +283,7 @@ int main(int argc, char** argv)
   imv_destroy_viewport(&view);
 
   SDL_DestroyRenderer(renderer);
-  SDL_DestroyWindow(g_window);
+  SDL_DestroyWindow(window);
   SDL_Quit();
 
   return 0;
