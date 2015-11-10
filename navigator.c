@@ -36,8 +36,6 @@ void imv_init_navigator(struct imv_navigator *nav)
 
 void imv_destroy_navigator(struct imv_navigator *nav)
 {
-  //Break the loop so we can just iterate through
-  nav->last->next = NULL;
   struct imv_loop_item *next = nav->first;
   while(next) {
     struct imv_loop_item *cur = next;
@@ -60,14 +58,13 @@ static void add_item(struct imv_navigator *nav, const char *path)
   if(!nav->first && !nav->last) {
     nav->first = new_item;
     nav->last = new_item;
-    new_item->next = new_item;
-    new_item->prev = new_item;
+    new_item->next = NULL;
+    new_item->prev = NULL;
     nav->cur = new_item;
   } else {
     nav->last->next = new_item;
     new_item->prev = nav->last;
-    nav->first->prev = new_item;
-    new_item->next = nav->first;
+    new_item->next = NULL;
     nav->last = new_item;
   }
   nav->num_paths += 1;
@@ -113,7 +110,7 @@ void imv_navigator_add_path_recursive(struct imv_navigator *nav, const char *pat
 
 const char *imv_navigator_get_current_path(struct imv_navigator *nav)
 {
-  if(!nav->num_paths) {
+  if(nav->num_paths == 0) {
     return NULL;
   }
   return nav->cur->path;
@@ -121,39 +118,59 @@ const char *imv_navigator_get_current_path(struct imv_navigator *nav)
 
 void imv_navigator_next_path(struct imv_navigator *nav)
 {
-  if(!nav->num_paths) {
+  if(nav->num_paths == 0) {
     return;
   }
 
-  nav->cur = nav->cur->next;
+  if(nav->cur->next) {
+    nav->cur = nav->cur->next;
+  } else {
+    nav->cur = nav->first;
+  }
   nav->last_move_direction = 1;
 }
 
 void imv_navigator_prev_path(struct imv_navigator *nav)
 {
-  if(!nav->num_paths) {
+  if(nav->num_paths == 0) {
     return;
   }
 
-  nav->cur = nav->cur->prev;
+  if(nav->cur->prev) {
+    nav->cur = nav->cur->prev;
+  } else {
+    nav->cur = nav->last;
+  }
+
   nav->last_move_direction = -1;
 }
 
 void imv_navigator_remove_current_path(struct imv_navigator *nav)
 {
-  if(!nav->num_paths) {
+  if(nav->num_paths == 0) {
     return;
   }
 
   nav->num_paths -= 1;
 
   struct imv_loop_item *cur = nav->cur;
-  cur->next->prev = cur->prev;
-  cur->prev->next = cur->next;
+  if(cur->prev) {
+    cur->prev->next = cur->next;
+  }
+  if(cur->next) {
+    cur->next->prev = cur->prev;
+  }
+  if(nav->first == cur) {
+    nav->first = cur->next;
+  }
+  if(nav->last == cur) {
+    nav->last = cur->prev;
+  }
+
   if(nav->last_move_direction < 0) {
-    nav->cur = cur->prev;
+    imv_navigator_prev_path(nav);
   } else {
-    nav->cur = cur->next;
+    imv_navigator_next_path(nav);
   }
 
   free(cur->path);
