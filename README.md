@@ -36,6 +36,12 @@ Usage
 ### Shuffling images
     find . "*.png" | shuf | imv -i
 
+Installation
+------------
+
+    make
+    make install
+
 License
 -------
 `imv` is published under the [MIT](LICENSE) license.
