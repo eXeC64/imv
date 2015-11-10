@@ -1,5 +1,5 @@
-imv - Image Viewer
-==================
+imv - X11/Wayland Image Viewer
+==============================
 
 `imv` is a command line image viewer intended for use with tiling window managers.
 
@@ -9,48 +9,11 @@ without notice.
 Features
 --------
 
-###Wayland support
-
-`imv` supports Wayland out of the box.
-
-###Animated gif support
-
-`imv` will display animated gifs in all their silent movie era glory
-
-###Support for many file formats
-
- * BMP
- * Dr. Halo CUT
- * DDS
- * EXR
- * Raw
- * GIF
- * HDR
- * ICO
- * IFF
- * JBIG
- * JNG
- * JPEG/JIF
- * JPEG-2000
- * JPEG-XR
- * KOALA
- * Kodak PhotoCD
- * MNG
- * PCX
- * PBM/PGM/PPM
- * PFM
- * PNG
- * Macintosh PICT
- * Photoshop PSD
- * RAW
- * Sun RAS
- * SGI
- * TARGA
- * TIFF
- * WBMP
- * WebP
- * XBM
- * XPM
+* Wayland Support
+* Support for over 30 different image file formats including:
+  * Photoshop PSD files
+  * Animated GIFS
+  * Various RAW formats
 
 Usage
 -----
