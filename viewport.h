@@ -24,7 +24,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #include "image.h"
 
 struct imv_viewport {
-	SDL_Window *window;
+  SDL_Window *window;
   double scale;
   int x, y;
   int fullscreen;
