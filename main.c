@@ -23,15 +23,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #include <FreeImage.h>
 
 #include "texture.h"
+#include "navigator.h"
 
 SDL_Window *g_window = NULL;
 SDL_Renderer *g_renderer = NULL;
-
-struct loop_item_s {
-  struct loop_item_s *prev;
-  struct loop_item_s *next;
-  const char *path;
-};
 
 struct {
   int autoscale;
@@ -46,12 +41,6 @@ struct {
   int fullscreen;
   int redraw;
 } g_view = {1,0,0,0,1};
-
-struct {
-  struct loop_item_s *first, *last, *cur;
-  int changed;
-  int dir;
-} g_path = {NULL,NULL,NULL,1,1};
 
 struct {
   FIMULTIBITMAP *mbmp;
@@ -132,59 +121,6 @@ void scale_to_window()
   //Also center image
   center_view();
   g_view.redraw = 1;
-}
-
-void add_path(const char* path)
-{
-  struct loop_item_s *new_path =
-    (struct loop_item_s*)malloc(sizeof(struct loop_item_s));
-  new_path->path = path;
-  if(!g_path.first && !g_path.last) {
-    g_path.first = new_path;
-    g_path.last = new_path;
-    new_path->next = new_path;
-    new_path->prev = new_path;
-    g_path.cur = new_path;
-  } else {
-    g_path.last->next = new_path;
-    new_path->prev = g_path.last;
-    g_path.first->prev = new_path;
-    new_path->next = g_path.first;
-    g_path.last = new_path;
-  }
-}
-
-void remove_current_path()
-{
-  if(g_path.cur->next == g_path.cur) {
-    fprintf(stderr, "All input files closed. Exiting\n");
-    exit(0);
-  }
-
-  struct loop_item_s* cur = g_path.cur;
-  cur->next->prev = cur->prev;
-  cur->prev->next = cur->next;
-  if(g_path.dir > 0) {
-    g_path.cur = cur->prev;
-  } else {
-    g_path.cur = cur->next;
-  }
-  g_path.changed = 1;
-  free(cur);
-}
-
-void next_path()
-{
-  g_path.cur = g_path.cur->prev;
-  g_path.changed = 1;
-  g_path.dir = 1;
-}
-
-void prev_path()
-{
-  g_path.cur = g_path.cur->next;
-  g_path.changed = 1;
-  g_path.dir = -1;
 }
 
 void push_img_to_gpu(struct imv_texture *tex, FIBITMAP *image)
@@ -400,11 +336,14 @@ int main(int argc, char** argv)
     exit(1);
   }
 
+  struct imv_navigator nav;
+  imv_init_navigator(&nav);
+
   for(int i = 1; i < argc; ++i) {
     if(argv[i][0] == '-') {
       parse_arg(argv[0], &argv[i][1]);
     } else {
-      add_path(argv[i]);
+      imv_navigator_add_path(&nav, argv[i]);
     }
   }
 
@@ -416,9 +355,7 @@ int main(int argc, char** argv)
         buf[--len] = 0;
       }
       if(len > 0) {
-        char *str = (char*)malloc(len + 1);
-        memcpy(str, buf, len + 1);
-        add_path(str);
+        imv_navigator_add_path(&nav, buf);
       }
     }
   }
@@ -451,6 +388,8 @@ int main(int argc, char** argv)
     toggle_fullscreen();
   }
 
+  const char* last_path = NULL;
+
   double last_time = SDL_GetTicks() / 1000.0;
 
   int quit = 0;
@@ -466,27 +405,27 @@ int main(int argc, char** argv)
           break;
         case SDL_KEYDOWN:
           switch (e.key.keysym.sym) {
-            case SDLK_q:     quit = 1;              break;
+            case SDLK_q:      quit = 1;                                break;
             case SDLK_LEFTBRACKET:
-            case SDLK_LEFT:  prev_path();           break;
+            case SDLK_LEFT:   imv_navigator_prev_path(&nav);           break;
             case SDLK_RIGHTBRACKET:
-            case SDLK_RIGHT: next_path();           break;
+            case SDLK_RIGHT:  imv_navigator_next_path(&nav);           break;
             case SDLK_EQUALS:
             case SDLK_i:
-            case SDLK_UP:    zoom_view(1);          break;
+            case SDLK_UP:     zoom_view(1);                            break;
             case SDLK_MINUS:
             case SDLK_o:
-            case SDLK_DOWN:  zoom_view(-1);         break;
-            case SDLK_r:     reset_view();          break;
-            case SDLK_j:     move_view(0, -50);     break;
-            case SDLK_k:     move_view(0, 50);      break;
-            case SDLK_h:     move_view(50, 0);      break;
-            case SDLK_l:     move_view(-50, 0);     break;
-            case SDLK_x:     remove_current_path(); break;
-            case SDLK_f:     toggle_fullscreen();   break;
-            case SDLK_PERIOD:next_frame(&tex);      break;
-            case SDLK_SPACE: toggle_playing();      break;
-            case SDLK_s:     scale_to_window();     break;
+            case SDLK_DOWN:   zoom_view(-1);                           break;
+            case SDLK_r:      reset_view();                            break;
+            case SDLK_j:      move_view(0, -50);                       break;
+            case SDLK_k:      move_view(0, 50);                        break;
+            case SDLK_h:      move_view(50, 0);                        break;
+            case SDLK_l:      move_view(-50, 0);                       break;
+            case SDLK_x:      imv_navigator_remove_current_path(&nav); break;
+            case SDLK_f:      toggle_fullscreen();                     break;
+            case SDLK_PERIOD: next_frame(&tex);                        break;
+            case SDLK_SPACE:  toggle_playing();                        break;
+            case SDLK_s:      scale_to_window();                       break;
           }
           break;
         case SDL_MOUSEWHEEL:
@@ -507,13 +446,13 @@ int main(int argc, char** argv)
       break;
     }
 
-    while(g_path.changed) {
-      if(load_image(&tex, g_path.cur->path) != 0) {
-        remove_current_path();
+    while(imv_navigator_get_current_path(&nav) != last_path) {
+      last_path = imv_navigator_get_current_path(&nav);
+      if(load_image(&tex, last_path) != 0) {
+        imv_navigator_remove_current_path(&nav);
       } else {
-        g_path.changed = 0;
         char title[128];
-        snprintf(&title[0], sizeof(title), "imv - %s", g_path.cur->path);
+        snprintf(&title[0], sizeof(title), "imv - %s", last_path);
         SDL_SetWindowTitle(g_window, (const char*)&title);
         reset_view();
       }
@@ -552,6 +491,7 @@ int main(int argc, char** argv)
   }
 
   imv_destroy_texture(&tex);
+  imv_destroy_navigator(&nav);
 
   SDL_DestroyRenderer(g_renderer);
   SDL_DestroyWindow(g_window);
