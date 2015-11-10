@@ -22,6 +22,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #include <SDL2/SDL.h>
 #include <FreeImage.h>
 
+#include "texture.h"
+
 SDL_Window *g_window = NULL;
 SDL_Renderer *g_renderer = NULL;
 
@@ -53,20 +55,11 @@ struct {
 
 struct {
   FIMULTIBITMAP *mbmp;
-  FIBITMAP *frame; //most current bitmap frame
+  FIBITMAP *last_frame; //most current bitmap frame
   int width, height; //overall dimensions of bitmap
   int cur_frame, next_frame, num_frames, playing; //animation state
   double frame_time;
 } g_img = {NULL,NULL,0,0,0,0,0,0,0};
-
-struct {
-  int num_chunks; //number of chunks in use
-  SDL_Texture **chunks; //array of SDL_Texture*
-  int chunk_width, chunk_height; //dimensions of each chunk
-  int num_chunks_wide; //number of chunks per row of the image
-  int num_chunks_tall; //number of chunks per column of the image
-  int max_chunk_width, max_chunk_height; //max dimensions a chunk can have
-} g_gpu = {0,NULL,0,0,0,0,0,0};
 
 void toggle_fullscreen()
 {
@@ -194,85 +187,19 @@ void prev_path()
   g_path.dir = -1;
 }
 
-void push_img_to_gpu(FIBITMAP *image)
+void push_img_to_gpu(struct imv_texture *tex, FIBITMAP *image)
 {
-  if(g_img.frame) {
-    FreeImage_Unload(g_img.frame);
+  if(g_img.last_frame) {
+    FreeImage_Unload(g_img.last_frame);
   }
-  g_img.frame = FreeImage_ConvertTo32Bits(image);
-  g_img.width = FreeImage_GetWidth(g_img.frame);
-  g_img.height = FreeImage_GetHeight(g_img.frame);
-
-  char* pixels = (char*)FreeImage_GetBits(g_img.frame);
-
-  //figure out how many chunks are needed, and create them
-  if(g_gpu.num_chunks > 0) {
-    for(int i = 0; i < g_gpu.num_chunks; ++i) {
-      SDL_DestroyTexture(g_gpu.chunks[i]);
-    }
-    free(g_gpu.chunks);
-  }
-
-  g_gpu.num_chunks_wide = 1 + g_img.width / g_gpu.max_chunk_width;
-  g_gpu.num_chunks_tall = 1 + g_img.height / g_gpu.max_chunk_height;
-
-  int end_chunk_width = g_img.width % g_gpu.max_chunk_width;
-  int end_chunk_height = g_img.height % g_gpu.max_chunk_height;
-
-  if(end_chunk_width == 0) {
-    end_chunk_width = g_gpu.max_chunk_width;
-  }
-  if(end_chunk_height == 0) {
-    end_chunk_height = g_gpu.max_chunk_height;
-  }
-
-  g_gpu.num_chunks = g_gpu.num_chunks_wide * g_gpu.num_chunks_tall;
-  g_gpu.chunks = 
-    (SDL_Texture**)malloc(sizeof(SDL_Texture*) * g_gpu.num_chunks);
-
-  int failed_at = -1;
-  for(int y = 0; y < g_gpu.num_chunks_tall; ++y) {
-    for(int x = 0; x < g_gpu.num_chunks_wide; ++x) {
-      const int is_last_h_chunk = (x == g_gpu.num_chunks_wide - 1);
-      const int is_last_v_chunk = (y == g_gpu.num_chunks_tall - 1);
-      g_gpu.chunks[x + y * g_gpu.num_chunks_wide] =
-        SDL_CreateTexture(g_renderer,
-          SDL_PIXELFORMAT_RGB888,
-          SDL_TEXTUREACCESS_STATIC,
-          is_last_h_chunk ? end_chunk_width : g_gpu.max_chunk_width,
-          is_last_v_chunk ? end_chunk_height : g_gpu.max_chunk_height);
-      if(g_gpu.chunks[x + y * g_gpu.num_chunks_wide] == NULL) {
-
-        failed_at = x + y * g_gpu.num_chunks_wide;
-        break;
-      }
-    }
-  }
-  if(failed_at != -1) {
-    for(int i = 0; i <= failed_at; ++i) {
-      SDL_DestroyTexture(g_gpu.chunks[i]);
-    }
-
-    free(g_gpu.chunks);
-    g_gpu.num_chunks = 0;
-    fprintf(stderr, "SDL Error when creating texture: %s\n", SDL_GetError());
-    return;
-  }
-
-  for(int y = 0; y < g_gpu.num_chunks_tall; ++y) {
-    for(int x = 0; x < g_gpu.num_chunks_wide; ++x) {
-      ptrdiff_t offset = 4 * x * g_gpu.max_chunk_width +
-        y * 4 * g_img.width * g_gpu.max_chunk_height;
-      char* addr = pixels + offset;
-      SDL_UpdateTexture(g_gpu.chunks[x + y * g_gpu.num_chunks_wide],
-          NULL, addr, 4 * g_img.width);
-    }
-  }
-
+  g_img.last_frame = FreeImage_ConvertTo32Bits(image);
+  g_img.width = FreeImage_GetWidth(g_img.last_frame);
+  g_img.height = FreeImage_GetHeight(g_img.last_frame);
+  imv_texture_set_image(tex, image);
   g_view.redraw = 1;
 }
 
-void next_frame()
+void next_frame(struct imv_texture* tex)
 {
   if(g_img.num_frames < 2) {
     return;
@@ -332,18 +259,18 @@ void next_frame()
 
   switch(disposal_method) {
     case 0: //nothing specified, just use the raw frame
-      push_img_to_gpu(frame32);
+      push_img_to_gpu(tex, frame32);
       break;
     case 1: //composite over previous frame
-      if(g_img.frame && g_img.cur_frame > 0) {
-        FIBITMAP *bg_frame = FreeImage_ConvertTo24Bits(g_img.frame);
+      if(g_img.last_frame && g_img.cur_frame > 0) {
+        FIBITMAP *bg_frame = FreeImage_ConvertTo24Bits(g_img.last_frame);
         FIBITMAP *comp = FreeImage_Composite(frame32, 1, NULL, bg_frame);
         FreeImage_Unload(bg_frame);
-        push_img_to_gpu(comp);
+        push_img_to_gpu(tex, comp);
         FreeImage_Unload(comp);
       } else {
         //No previous frame, just render directly
-        push_img_to_gpu(frame32);
+        push_img_to_gpu(tex, frame32);
       }
       break;
     case 2: //TODO - set to background, composite over that
@@ -354,7 +281,7 @@ void next_frame()
   FreeImage_Unload(frame32);
 }
 
-int load_gif(const char* path)
+int load_gif(struct imv_texture *tex, const char* path)
 {
   FIMULTIBITMAP *gif =
     FreeImage_OpenMultiBitmap(FIF_GIF, path,
@@ -375,11 +302,11 @@ int load_gif(const char* path)
   g_img.frame_time = 0;
   g_img.playing = 1;
 
-  next_frame();
+  next_frame(tex);
   return 0;
 }
 
-int load_image(const char* path)
+int load_image(struct imv_texture *tex, const char* path)
 {
   if(g_img.mbmp) {
     FreeImage_CloseMultiBitmap(g_img.mbmp, 0);
@@ -394,7 +321,7 @@ int load_image(const char* path)
   }
 
   if(fmt == FIF_GIF) {
-    return load_gif(path);
+    return load_gif(tex, path);
   }
 
   g_img.num_frames = 0;
@@ -410,7 +337,7 @@ int load_image(const char* path)
   }
   FIBITMAP *frame = FreeImage_ConvertTo32Bits(image);
   FreeImage_FlipVertical(frame);
-  push_img_to_gpu(frame);
+  push_img_to_gpu(tex, frame);
   FreeImage_Unload(image);
   return 0;
 }
@@ -516,11 +443,8 @@ int main(int argc, char** argv)
   //Use linear sampling for scaling
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
-  //We need to know how big our textures can be
-  SDL_RendererInfo ri;
-  SDL_GetRendererInfo(g_renderer, &ri);
-  g_gpu.max_chunk_width = ri.max_texture_width;
-  g_gpu.max_chunk_height = ri.max_texture_height;
+  struct imv_texture tex;
+  imv_init_texture(&tex, g_renderer);
 
   //Put us in fullscren by default if requested
   if(g_options.fullscreen) {
@@ -560,7 +484,7 @@ int main(int argc, char** argv)
             case SDLK_l:     move_view(-50, 0);     break;
             case SDLK_x:     remove_current_path(); break;
             case SDLK_f:     toggle_fullscreen();   break;
-            case SDLK_PERIOD:next_frame();          break;
+            case SDLK_PERIOD:next_frame(&tex);      break;
             case SDLK_SPACE: toggle_playing();      break;
             case SDLK_s:     scale_to_window();     break;
           }
@@ -584,7 +508,7 @@ int main(int argc, char** argv)
     }
 
     while(g_path.changed) {
-      if(load_image(g_path.cur->path) != 0) {
+      if(load_image(&tex, g_path.cur->path) != 0) {
         remove_current_path();
       } else {
         g_path.changed = 0;
@@ -606,34 +530,13 @@ int main(int argc, char** argv)
       g_img.frame_time -= dt;
 
       while(g_img.frame_time < 0) {
-        next_frame();
+        next_frame(&tex);
       }
     }
 
     if(g_view.redraw) {
       SDL_RenderClear(g_renderer);
-      int offset_x = 0;
-      int offset_y = 0;
-      for(int y = 0; y < g_gpu.num_chunks_tall; ++y) {
-        for(int x = 0; x < g_gpu.num_chunks_wide; ++x) {
-          int img_w, img_h, img_access;
-          unsigned int img_format;
-          SDL_QueryTexture(g_gpu.chunks[x + y * g_gpu.num_chunks_wide],
-              &img_format, &img_access, &img_w, &img_h);
-          SDL_Rect g_view_area = {
-            g_view.x + offset_x,
-            g_view.y + offset_y,
-            img_w * g_view.scale,
-            img_h * g_view.scale
-          };
-          SDL_RenderCopy(g_renderer,
-              g_gpu.chunks[x + y * g_gpu.num_chunks_wide], NULL, &g_view_area);
-          offset_x += g_gpu.max_chunk_width * g_view.scale;
-        }
-        offset_x = 0;
-        offset_y += g_gpu.max_chunk_height * g_view.scale;
-      }
-
+      imv_texture_draw(&tex, g_view.x, g_view.y, g_view.scale);
       SDL_RenderPresent(g_renderer);
       g_view.redraw = 0;
     }
@@ -644,15 +547,11 @@ int main(int argc, char** argv)
   if(g_img.mbmp) {
     FreeImage_CloseMultiBitmap(g_img.mbmp, 0);
   }
-  if(g_img.frame) {
-    FreeImage_Unload(g_img.frame);
+  if(g_img.last_frame) {
+    FreeImage_Unload(g_img.last_frame);
   }
-  if(g_gpu.num_chunks > 0) {
-    for(int i = 0; i < g_gpu.num_chunks; ++i) {
-      SDL_DestroyTexture(g_gpu.chunks[i]);
-    }
-    free(g_gpu.chunks);
-  }
+
+  imv_destroy_texture(&tex);
 
   SDL_DestroyRenderer(g_renderer);
   SDL_DestroyWindow(g_window);

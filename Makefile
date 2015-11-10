@@ -6,7 +6,7 @@ CFLAGS = -g -W -Wall -std=c11 `sdl2-config --cflags`
 LDFLAGS = `sdl2-config --libs` -lfreeimage
 
 TARGET = imv
-OBJECTS = main.o
+OBJECTS = main.o texture.o
 
 $(TARGET): $(OBJECTS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
