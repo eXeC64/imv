@@ -30,6 +30,7 @@ void imv_init_viewport(struct imv_viewport *view, SDL_Window *window)
 
 void imv_destroy_viewport(struct imv_viewport *view)
 {
+  view->window = NULL;
   return;
 }
 
