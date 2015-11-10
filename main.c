@@ -26,7 +26,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #include "navigator.h"
 
 SDL_Window *g_window = NULL;
-SDL_Renderer *g_renderer = NULL;
 
 struct {
   int autoscale;
@@ -391,13 +390,14 @@ int main(int argc, char** argv)
         width, height,
         SDL_WINDOW_RESIZABLE);
 
-  g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_ACCELERATED);
+  SDL_Renderer *renderer =
+    SDL_CreateRenderer(g_window, -1, SDL_RENDERER_ACCELERATED);
 
   //Use linear sampling for scaling
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
   struct imv_texture tex;
-  imv_init_texture(&tex, g_renderer);
+  imv_init_texture(&tex, renderer);
 
   //Put us in fullscren by default if requested
   if(g_options.fullscreen) {
@@ -496,9 +496,9 @@ int main(int argc, char** argv)
     }
 
     if(g_view.redraw) {
-      SDL_RenderClear(g_renderer);
+      SDL_RenderClear(renderer);
       imv_texture_draw(&tex, g_view.x, g_view.y, g_view.scale);
-      SDL_RenderPresent(g_renderer);
+      SDL_RenderPresent(renderer);
       g_view.redraw = 0;
     }
     last_time = SDL_GetTicks() / 1000.0;
@@ -515,7 +515,7 @@ int main(int argc, char** argv)
   imv_destroy_texture(&tex);
   imv_destroy_navigator(&nav);
 
-  SDL_DestroyRenderer(g_renderer);
+  SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(g_window);
   SDL_Quit();
 
