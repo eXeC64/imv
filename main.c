@@ -232,7 +232,7 @@ int main(int argc, char** argv)
       current_path = imv_navigator_get_current_path(&nav);
 
       if(!current_path) {
-        fprintf(stderr, "No input files left. Exiting\n.");
+        fprintf(stderr, "No input files left. Exiting.\n");
         exit(1);
       }
 
