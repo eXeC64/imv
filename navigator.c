@@ -23,6 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 void imv_init_navigator(struct imv_navigator *nav)
 {
@@ -74,6 +75,7 @@ static void add_item(struct imv_navigator *nav, const char *path)
 
 void imv_navigator_add_path(struct imv_navigator *nav, const char *path)
 {
+  char path_buf[512];
   struct stat path_info;
   stat(path, &path_info);
   if(S_ISDIR(path_info.st_mode)) {
@@ -81,7 +83,8 @@ void imv_navigator_add_path(struct imv_navigator *nav, const char *path)
     if(d) {
       struct dirent *dir;
       while((dir = readdir(d)) != NULL) {
-        add_item(nav, dir->d_name);
+        snprintf(path_buf, sizeof(path_buf), "%s/%s", path, dir->d_name);
+        add_item(nav, path_buf);
       }
     }
   } else {
@@ -91,6 +94,7 @@ void imv_navigator_add_path(struct imv_navigator *nav, const char *path)
 
 void imv_navigator_add_path_recursive(struct imv_navigator *nav, const char *path)
 {
+  char path_buf[512];
   struct stat path_info;
   stat(path, &path_info);
   if(S_ISDIR(path_info.st_mode)) {
@@ -98,7 +102,8 @@ void imv_navigator_add_path_recursive(struct imv_navigator *nav, const char *pat
     if(d) {
       struct dirent *dir;
       while((dir = readdir(d)) != NULL) {
-        imv_navigator_add_path_recursive(nav, dir->d_name);
+        snprintf(path_buf, sizeof(path_buf), "%s/%s", path, dir->d_name);
+        imv_navigator_add_path_recursive(nav, path_buf);
       }
     }
   } else {
