@@ -33,7 +33,8 @@ struct {
   int fullscreen;
   int stdin;
   int center;
-} g_options = {0,0,0,0};
+  int recursive;
+} g_options = {0,0,0,0,0};
 
 struct {
   double scale;
@@ -285,6 +286,7 @@ void print_usage(const char* name)
   "\n"
   "Flags:\n"
   "  -i: Read paths from stdin. One path per line.\n"
+  "  -r: Recursively search input paths.\n"
   "  -f: Start in fullscreen mode\n"
   "  -s: Auto scale images to fit window\n"
   "  -c: Center images in the window\n"
@@ -317,10 +319,11 @@ void parse_arg(const char* name, const char* arg)
 {
   for(const char *o = arg; *o != 0; ++o) {
     switch(*o) {
-      case 'f': g_options.fullscreen = 1; break;
-      case 's': g_options.autoscale = 1; break;
-      case 'c': g_options.center = 1; break;
-      case 'i': g_options.stdin = 1; break;
+      case 'f': g_options.fullscreen = 1;   break;
+      case 's': g_options.autoscale = 1;    break;
+      case 'c': g_options.center = 1;       break;
+      case 'i': g_options.stdin = 1;        break;
+      case 'r': g_options.recursive = 1;    break;
       case 'h': print_usage(name); exit(0); break;
       default:
         fprintf(stderr, "Unknown argument '%c'. Aborting.\n", *o);
@@ -343,7 +346,11 @@ int main(int argc, char** argv)
     if(argv[i][0] == '-') {
       parse_arg(argv[0], &argv[i][1]);
     } else {
-      imv_navigator_add_path(&nav, argv[i]);
+      if(g_options.recursive) {
+        imv_navigator_add_path_recursive(&nav, argv[i]);
+      } else {
+        imv_navigator_add_path(&nav, argv[i]);
+      }
     }
   }
 
@@ -355,7 +362,11 @@ int main(int argc, char** argv)
         buf[--len] = 0;
       }
       if(len > 0) {
-        imv_navigator_add_path(&nav, buf);
+        if(g_options.recursive) {
+          imv_navigator_add_path_recursive(&nav, buf);
+        } else {
+          imv_navigator_add_path(&nav, buf);
+        }
       }
     }
   }
