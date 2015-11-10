@@ -22,6 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #include <SDL2/SDL.h>
 #include <FreeImage.h>
 
+#include "image.h"
 #include "texture.h"
 #include "navigator.h"
 
@@ -40,15 +41,8 @@ struct {
   int x, y;
   int fullscreen;
   int redraw;
-} g_view = {1,0,0,0,1};
-
-struct {
-  FIMULTIBITMAP *mbmp;
-  FIBITMAP *last_frame; //most current bitmap frame
-  int width, height; //overall dimensions of bitmap
-  int cur_frame, next_frame, num_frames, playing; //animation state
-  double frame_time;
-} g_img = {NULL,NULL,0,0,0,0,0,0,0};
+  int playing;
+} g_view = {1,0,0,0,1,1};
 
 void toggle_fullscreen()
 {
@@ -61,12 +55,12 @@ void toggle_fullscreen()
   }
 }
 
-void toggle_playing()
+void toggle_playing(struct imv_image *img)
 {
-  if(g_img.playing) {
-    g_img.playing = 0;
-  } else if(g_img.num_frames >= 2) {
-    g_img.playing = 1;
+  if(g_view.playing) {
+    g_view.playing = 0;
+  } else if(imv_image_is_animated(img)) {
+    g_view.playing = 1;
   }
 }
 
@@ -95,187 +89,29 @@ void zoom_view(int amount)
   g_view.redraw = 1;
 }
 
-void center_view()
+void center_view(int ww, int wh, int iw, int ih)
 {
-  int wx, wy;
-  SDL_GetWindowSize(g_window, &wx, &wy);
-  g_view.x = (wx - g_img.width * g_view.scale) / 2;
-  g_view.y = (wy - g_img.height * g_view.scale) / 2;
+  g_view.x = (ww - iw * g_view.scale) / 2;
+  g_view.y = (wh - ih * g_view.scale) / 2;
   g_view.redraw = 1;
 }
 
-void scale_to_window()
+void scale_to_window(int ww, int wh, int iw, int ih)
 {
-  int ww, wh;
-  SDL_GetWindowSize(g_window, &ww, &wh);
   double window_aspect = (double)ww/(double)wh;
-  double image_aspect = (double)g_img.width/(double)g_img.height;
+  double image_aspect = (double)iw/(double)ih;
 
   if(window_aspect > image_aspect) {
     //Image will become too tall before it becomes too wide
-    g_view.scale = (double)wh/(double)g_img.height;
+    g_view.scale = (double)wh/(double)ih;
   } else {
     //Image will become too wide before it becomes too tall
-    g_view.scale = (double)ww/(double)g_img.width;
+    g_view.scale = (double)ww/(double)iw;
   }
+
   //Also center image
-  center_view();
+  center_view(ww,wh,iw,ih);
   g_view.redraw = 1;
-}
-
-void push_img_to_gpu(struct imv_texture *tex, FIBITMAP *image)
-{
-  if(g_img.last_frame) {
-    FreeImage_Unload(g_img.last_frame);
-  }
-  g_img.last_frame = FreeImage_ConvertTo32Bits(image);
-  g_img.width = FreeImage_GetWidth(g_img.last_frame);
-  g_img.height = FreeImage_GetHeight(g_img.last_frame);
-  imv_texture_set_image(tex, image);
-  g_view.redraw = 1;
-}
-
-void next_frame(struct imv_texture* tex)
-{
-  if(g_img.num_frames < 2) {
-    return;
-  }
-  FITAG *tag = NULL;
-  char disposal_method = 0;
-  int frame_time = 0;
-  short top = 0;
-  short left = 0;
-
-  g_img.cur_frame = g_img.next_frame;
-  g_img.next_frame = (g_img.cur_frame + 1) % g_img.num_frames;
-  FIBITMAP *frame = FreeImage_LockPage(g_img.mbmp, g_img.cur_frame);
-  FIBITMAP *frame32 = FreeImage_ConvertTo32Bits(frame);
-  FreeImage_FlipVertical(frame32);
-
-  //First frame is always going to use the raw frame
-  if(g_img.cur_frame > 0) {
-    FreeImage_GetMetadata(FIMD_ANIMATION, frame, "DisposalMethod", &tag);
-    if(FreeImage_GetTagValue(tag)) {
-      disposal_method = *(char*)FreeImage_GetTagValue(tag);
-    }
-  }
-
-  FreeImage_GetMetadata(FIMD_ANIMATION, frame, "FrameLeft", &tag);
-  if(FreeImage_GetTagValue(tag)) {
-    left = *(short*)FreeImage_GetTagValue(tag);
-  }
-
-  FreeImage_GetMetadata(FIMD_ANIMATION, frame, "FrameTop", &tag);
-  if(FreeImage_GetTagValue(tag)) {
-    top = *(short*)FreeImage_GetTagValue(tag);
-  }
-
-  FreeImage_GetMetadata(FIMD_ANIMATION, frame, "FrameTime", &tag);
-  if(FreeImage_GetTagValue(tag)) {
-    frame_time = *(int*)FreeImage_GetTagValue(tag);
-  }
-
-  g_img.frame_time += frame_time * 0.001;
-
-  FreeImage_UnlockPage(g_img.mbmp, frame, 0);
-
-  //If this frame is inset, we need to expand it for compositing
-  if(left != 0 || top != 0) {
-    RGBQUAD color = {0,0,0,0};
-    FIBITMAP *expanded = FreeImage_EnlargeCanvas(frame32,
-        left,
-        g_img.height - FreeImage_GetHeight(frame32) - top,
-        g_img.width - FreeImage_GetWidth(frame32) - left,
-        top,
-        &color,
-        0);
-    FreeImage_Unload(frame32);
-    frame32 = expanded;
-  }
-
-  switch(disposal_method) {
-    case 0: //nothing specified, just use the raw frame
-      push_img_to_gpu(tex, frame32);
-      break;
-    case 1: //composite over previous frame
-      if(g_img.last_frame && g_img.cur_frame > 0) {
-        FIBITMAP *bg_frame = FreeImage_ConvertTo24Bits(g_img.last_frame);
-        FIBITMAP *comp = FreeImage_Composite(frame32, 1, NULL, bg_frame);
-        FreeImage_Unload(bg_frame);
-        push_img_to_gpu(tex, comp);
-        FreeImage_Unload(comp);
-      } else {
-        //No previous frame, just render directly
-        push_img_to_gpu(tex, frame32);
-      }
-      break;
-    case 2: //TODO - set to background, composite over that
-      break;
-    case 3: //TODO - restore to previous content
-      break;
-  }
-  FreeImage_Unload(frame32);
-}
-
-int load_gif(struct imv_texture *tex, const char* path)
-{
-  FIMULTIBITMAP *gif =
-    FreeImage_OpenMultiBitmap(FIF_GIF, path,
-        /* don't create */ 0,
-        /* read only */ 1,
-        /* keep in memory */ 1,
-        /* flags */ GIF_LOAD256);
-
-  if(!gif) {
-    fprintf(stderr, "Error loading file: '%s'. Ignoring.\n", path);
-    return 1;
-  }
-
-  g_img.mbmp = gif;
-  g_img.num_frames = FreeImage_GetPageCount(gif);
-  g_img.cur_frame = 0;
-  g_img.next_frame = 0;
-  g_img.frame_time = 0;
-  g_img.playing = 1;
-
-  next_frame(tex);
-  return 0;
-}
-
-int load_image(struct imv_texture *tex, const char* path)
-{
-  if(g_img.mbmp) {
-    FreeImage_CloseMultiBitmap(g_img.mbmp, 0);
-    g_img.mbmp = NULL;
-  }
-
-  FREE_IMAGE_FORMAT fmt = FreeImage_GetFileType(path,0);
-
-  if(fmt == FIF_UNKNOWN) {
-    fprintf(stderr, "Could not identify file: '%s'. Ignoring.\n", path);
-    return 1;
-  }
-
-  if(fmt == FIF_GIF) {
-    return load_gif(tex, path);
-  }
-
-  g_img.num_frames = 0;
-  g_img.cur_frame = 0;
-  g_img.next_frame = 0;
-  g_img.frame_time = 0;
-  g_img.playing = 0;
-
-  FIBITMAP *image = FreeImage_Load(fmt, path, 0);
-  if(!image) {
-    fprintf(stderr, "Error loading file: '%s'. Ignoring.\n", path);
-    return 1;
-  }
-  FIBITMAP *frame = FreeImage_ConvertTo32Bits(image);
-  FreeImage_FlipVertical(frame);
-  push_img_to_gpu(tex, frame);
-  FreeImage_Unload(image);
-  return 0;
 }
 
 void print_usage(const char* name)
@@ -396,6 +232,9 @@ int main(int argc, char** argv)
   //Use linear sampling for scaling
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
+  struct imv_image img;
+  imv_init_image(&img);
+
   struct imv_texture tex;
   imv_init_texture(&tex, renderer);
 
@@ -414,6 +253,8 @@ int main(int argc, char** argv)
     double dt = cur_time - last_time;
 
     SDL_Event e;
+    int ww, wh;
+    SDL_GetWindowSize(g_window, &ww, &wh);
     while(!quit && SDL_PollEvent(&e)) {
       switch(e.type) {
         case SDL_QUIT:
@@ -439,9 +280,9 @@ int main(int argc, char** argv)
             case SDLK_l:      move_view(-50, 0);                       break;
             case SDLK_x:      imv_navigator_remove_current_path(&nav); break;
             case SDLK_f:      toggle_fullscreen();                     break;
-            case SDLK_PERIOD: next_frame(&tex);                        break;
-            case SDLK_SPACE:  toggle_playing();                        break;
-            case SDLK_s:      scale_to_window();                       break;
+            case SDLK_PERIOD: imv_image_load_next_frame(&img);         break;
+            case SDLK_SPACE:  toggle_playing(&img);                    break;
+            case SDLK_s:  scale_to_window(ww,wh,img.width,img.height); break;
           }
           break;
         case SDL_MOUSEWHEEL:
@@ -462,7 +303,9 @@ int main(int argc, char** argv)
       break;
     }
 
+    int resend = 0;
     while(imv_navigator_get_current_path(&nav) != current_path) {
+      resend = 1;
       current_path = imv_navigator_get_current_path(&nav);
 
       if(!current_path) {
@@ -470,7 +313,7 @@ int main(int argc, char** argv)
         exit(1);
       }
 
-      if(load_image(&tex, current_path) != 0) {
+      if(imv_image_load(&img, current_path) != 0) {
         imv_navigator_remove_current_path(&nav);
       } else {
         char title[128];
@@ -480,18 +323,24 @@ int main(int argc, char** argv)
       }
       //Autoscale if requested
       if(g_options.autoscale) {
-        scale_to_window();
+        scale_to_window(ww,wh,img.width,img.height);
       }
       if(g_options.center) {
-        center_view();
+        center_view(ww,wh,img.width,img.height);
       }
     }
 
-    if(g_img.playing) {
-      g_img.frame_time -= dt;
+    if(resend) {
+      imv_texture_set_image(&tex, img.cur_bmp);
+      g_view.redraw = 1;
+    }
 
-      while(g_img.frame_time < 0) {
-        next_frame(&tex);
+    if(g_view.playing) {
+      int last_frame = img.cur_frame;
+      imv_image_play(&img, dt);
+      if(img.cur_frame != last_frame) {
+        imv_texture_set_image(&tex, img.cur_bmp);
+        g_view.redraw = 1;
       }
     }
 
@@ -505,13 +354,7 @@ int main(int argc, char** argv)
     SDL_Delay(10);
   }
 
-  if(g_img.mbmp) {
-    FreeImage_CloseMultiBitmap(g_img.mbmp, 0);
-  }
-  if(g_img.last_frame) {
-    FreeImage_Unload(g_img.last_frame);
-  }
-
+  imv_destroy_image(&img);
   imv_destroy_texture(&tex);
   imv_destroy_navigator(&nav);
 
