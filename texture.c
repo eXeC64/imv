@@ -52,7 +52,7 @@ int imv_texture_set_image(struct imv_texture *tex, FIBITMAP *image)
 
   char* pixels = (char*)FreeImage_GetBits(frame);
 
-  //figure out how many chunks are needed, and create them
+  /* figure out how many chunks are needed, and create them */
   if(tex->num_chunks > 0) {
     for(int i = 0; i < tex->num_chunks; ++i) {
       SDL_DestroyTexture(tex->chunks[i]);

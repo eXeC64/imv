@@ -150,7 +150,7 @@ int main(int argc, char** argv)
   SDL_Renderer *renderer =
     SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-  //Use linear sampling for scaling
+  /* Use linear sampling for scaling */
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
   struct imv_image img;
@@ -162,7 +162,7 @@ int main(int argc, char** argv)
   struct imv_viewport view;
   imv_init_viewport(&view, window);
 
-  //Put us in fullscren by default if requested
+  /* Put us in fullscren by default if requested */
   if(g_options.fullscreen) {
     imv_viewport_toggle_fullscreen(&view);
   }
@@ -244,7 +244,7 @@ int main(int argc, char** argv)
         SDL_SetWindowTitle(window, (const char*)&title);
         imv_viewport_reset(&view);
       }
-      //Autoscale if requested
+      /* Autoscale if requested */
       if(g_options.autoscale) {
         imv_viewport_scale_to_window(&view, &img);
       }

@@ -98,10 +98,10 @@ void imv_viewport_scale_to_window(struct imv_viewport *view, const struct imv_im
   double image_aspect = (double)img->width / (double)img->height;
 
   if(window_aspect > image_aspect) {
-    //Image will become too tall before it becomes too wide
+    /* Image will become too tall before it becomes too wide */
     view->scale = (double)wh / (double)img->height;
   } else {
-    //Image will become too wide before it becomes too tall
+    /* Image will become too wide before it becomes too tall */
     view->scale = (double)ww / (double)img->width;
   }
 

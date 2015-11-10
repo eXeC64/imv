@@ -49,7 +49,6 @@ void imv_destroy_navigator(struct imv_navigator *nav)
   nav->num_paths = 0;
 }
 
-//add a single path item with no other checks
 static void add_item(struct imv_navigator *nav, const char *path)
 {
   struct imv_loop_item *new_item = (struct imv_loop_item*)

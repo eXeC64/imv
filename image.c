@@ -87,13 +87,13 @@ int imv_image_load(struct imv_image *img, const char* path)
     }
     img->num_frames = FreeImage_GetPageCount(img->mbmp);
 
-    //get the dimensions from the first frame
+    /* get the dimensions from the first frame */
     FIBITMAP *frame = FreeImage_LockPage(img->mbmp, 0);
     img->width = FreeImage_GetWidth(frame);
     img->height = FreeImage_GetHeight(frame);
     FreeImage_UnlockPage(img->mbmp, frame, 0);
 
-    //load a frame
+    /* load a frame */
     imv_image_load_next_frame(img);
   } else {
     FIBITMAP *image = FreeImage_Load(fmt, path, 0);
@@ -127,7 +127,7 @@ void imv_image_load_next_frame(struct imv_image *img)
   FIBITMAP *frame32 = FreeImage_ConvertTo32Bits(frame);
   FreeImage_FlipVertical(frame32);
 
-  //First frame is always going to use the raw frame
+  /* First frame is always going to use the raw frame */
   if(img->cur_frame > 0) {
     FreeImage_GetMetadata(FIMD_ANIMATION, frame, "DisposalMethod", &tag);
     if(FreeImage_GetTagValue(tag)) {
@@ -154,7 +154,7 @@ void imv_image_load_next_frame(struct imv_image *img)
 
   FreeImage_UnlockPage(img->mbmp, frame, 0);
 
-  //If this frame is inset, we need to expand it for compositing
+  /* If this frame is inset, we need to expand it for compositing */
   if(left != 0 || top != 0) {
     RGBQUAD color = {0,0,0,0};
     FIBITMAP *expanded = FreeImage_EnlargeCanvas(frame32,
@@ -169,13 +169,13 @@ void imv_image_load_next_frame(struct imv_image *img)
   }
 
   switch(disposal_method) {
-    case 0: //nothing specified, just use the raw frame
+    case 0: /* nothing specified, just use the raw frame */
       if(img->cur_bmp) {
         FreeImage_Unload(img->cur_bmp);
       }
       img->cur_bmp = frame32;
       break;
-    case 1: //composite over previous frame
+    case 1: /* composite over previous frame */
       if(img->cur_bmp && img->cur_frame > 0) {
         FIBITMAP *bg_frame = FreeImage_ConvertTo24Bits(img->cur_bmp);
         FreeImage_Unload(img->cur_bmp);
@@ -184,16 +184,16 @@ void imv_image_load_next_frame(struct imv_image *img)
         FreeImage_Unload(frame32);
         img->cur_bmp = comp;
       } else {
-        //No previous frame, just render directly
+        /* No previous frame, just render directly */
         if(img->cur_bmp) {
           FreeImage_Unload(img->cur_bmp);
         }
         img->cur_bmp = frame32;
       }
       break;
-    case 2: //TODO - set to background, composite over that
+    case 2: /* TODO - set to background, composite over that */
       break;
-    case 3: //TODO - restore to previous content
+    case 3: /* TODO - restore to previous content */
       break;
   }
 }

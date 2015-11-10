@@ -24,17 +24,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #include <FreeImage.h>
 
 struct imv_texture {
-  int width;              //width of the texture overall
-  int height;             //height of the texture overall
-  int num_chunks;         //number of chunks allocated
-  SDL_Texture **chunks;   //array of chunks
-  int num_chunks_wide;    //number of chunks per row of the image
-  int num_chunks_tall;    //number of chunks per column of the image
-  int chunk_width;        //chunk width
-  int chunk_height;       //chunk height
-  int last_chunk_width;   //width of rightmost chunk
-  int last_chunk_height;  //height of bottommost chunk
-  SDL_Renderer *renderer; //SDL renderer to draw to
+  int width;              /* width of the texture overall */
+  int height;             /* height of the texture overall */
+  int num_chunks;         /* number of chunks allocated */
+  SDL_Texture **chunks;   /* array of chunks */
+  int num_chunks_wide;    /* number of chunks per row of the image */
+  int num_chunks_tall;    /* number of chunks per column of the image */
+  int chunk_width;        /* chunk width */
+  int chunk_height;       /* chunk height */
+  int last_chunk_width;   /* width of rightmost chunk */
+  int last_chunk_height;  /* height of bottommost chunk */
+  SDL_Renderer *renderer; /* SDL renderer to draw to */
 };
 
 void imv_init_texture(struct imv_texture *tex, SDL_Renderer *r);
