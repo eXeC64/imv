@@ -25,6 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #include "image.h"
 #include "texture.h"
 #include "navigator.h"
+#include "viewport.h"
 
 SDL_Window *g_window = NULL;
 
@@ -35,84 +36,6 @@ struct {
   int center;
   int recursive;
 } g_options = {0,0,0,0,0};
-
-struct {
-  double scale;
-  int x, y;
-  int fullscreen;
-  int redraw;
-  int playing;
-} g_view = {1,0,0,0,1,1};
-
-void toggle_fullscreen()
-{
-  if(g_view.fullscreen) {
-    SDL_SetWindowFullscreen(g_window, 0);
-    g_view.fullscreen = 0;
-  } else {
-    SDL_SetWindowFullscreen(g_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-    g_view.fullscreen = 1;
-  }
-}
-
-void toggle_playing(struct imv_image *img)
-{
-  if(g_view.playing) {
-    g_view.playing = 0;
-  } else if(imv_image_is_animated(img)) {
-    g_view.playing = 1;
-  }
-}
-
-void reset_view()
-{
-  g_view.scale = 1;
-  g_view.x = 0;
-  g_view.y = 0;
-  g_view.redraw = 1;
-}
-
-void move_view(int x, int y)
-{
-  g_view.x += x;
-  g_view.y += y;
-  g_view.redraw = 1;
-}
-
-void zoom_view(int amount)
-{
-  g_view.scale += amount * 0.1;
-  if(g_view.scale > 100)
-    g_view.scale = 10;
-  else if (g_view.scale < 0.01)
-    g_view.scale = 0.1;
-  g_view.redraw = 1;
-}
-
-void center_view(int ww, int wh, int iw, int ih)
-{
-  g_view.x = (ww - iw * g_view.scale) / 2;
-  g_view.y = (wh - ih * g_view.scale) / 2;
-  g_view.redraw = 1;
-}
-
-void scale_to_window(int ww, int wh, int iw, int ih)
-{
-  double window_aspect = (double)ww/(double)wh;
-  double image_aspect = (double)iw/(double)ih;
-
-  if(window_aspect > image_aspect) {
-    //Image will become too tall before it becomes too wide
-    g_view.scale = (double)wh/(double)ih;
-  } else {
-    //Image will become too wide before it becomes too tall
-    g_view.scale = (double)ww/(double)iw;
-  }
-
-  //Also center image
-  center_view(ww,wh,iw,ih);
-  g_view.redraw = 1;
-}
 
 void print_usage(const char* name)
 {
@@ -238,9 +161,12 @@ int main(int argc, char** argv)
   struct imv_texture tex;
   imv_init_texture(&tex, renderer);
 
+  struct imv_viewport view;
+  imv_init_viewport(&view, g_window);
+
   //Put us in fullscren by default if requested
   if(g_options.fullscreen) {
-    toggle_fullscreen();
+    imv_viewport_toggle_fullscreen(&view);
   }
 
   const char* current_path = NULL;
@@ -270,32 +196,32 @@ int main(int argc, char** argv)
             case SDLK_RIGHT:  imv_navigator_next_path(&nav);           break;
             case SDLK_EQUALS:
             case SDLK_i:
-            case SDLK_UP:     zoom_view(1);                            break;
+            case SDLK_UP:     imv_viewport_zoom(&view, 1);             break;
             case SDLK_MINUS:
             case SDLK_o:
-            case SDLK_DOWN:   zoom_view(-1);                           break;
-            case SDLK_r:      reset_view();                            break;
-            case SDLK_j:      move_view(0, -50);                       break;
-            case SDLK_k:      move_view(0, 50);                        break;
-            case SDLK_h:      move_view(50, 0);                        break;
-            case SDLK_l:      move_view(-50, 0);                       break;
+            case SDLK_DOWN:   imv_viewport_zoom(&view, -1);            break;
+            case SDLK_r:      imv_viewport_reset(&view);               break;
+            case SDLK_j:      imv_viewport_move(&view, 0, -50);        break;
+            case SDLK_k:      imv_viewport_move(&view, 0, 50);         break;
+            case SDLK_h:      imv_viewport_move(&view, 50, 0);         break;
+            case SDLK_l:      imv_viewport_move(&view, -50, 0);        break;
             case SDLK_x:      imv_navigator_remove_current_path(&nav); break;
-            case SDLK_f:      toggle_fullscreen();                     break;
+            case SDLK_f:      imv_viewport_toggle_fullscreen(&view);   break;
             case SDLK_PERIOD: imv_image_load_next_frame(&img);         break;
-            case SDLK_SPACE:  toggle_playing(&img);                    break;
-            case SDLK_s:  scale_to_window(ww,wh,img.width,img.height); break;
+            case SDLK_SPACE:  imv_viewport_toggle_playing(&view, &img);break;
+            case SDLK_s:     imv_viewport_scale_to_window(&view, &img);break;
           }
           break;
         case SDL_MOUSEWHEEL:
-          zoom_view(e.wheel.y);
+          imv_viewport_zoom(&view, e.wheel.y);
           break;
         case SDL_MOUSEMOTION:
           if(e.motion.state & SDL_BUTTON_LMASK) {
-            move_view(e.motion.xrel, e.motion.yrel);
+            imv_viewport_move(&view, e.motion.xrel, e.motion.yrel);
           }
           break;
         case SDL_WINDOWEVENT:
-          g_view.redraw = 1;
+          imv_viewport_set_redraw(&view);
           break;
       }
     }
@@ -320,36 +246,36 @@ int main(int argc, char** argv)
         char title[128];
         snprintf(&title[0], sizeof(title), "imv - %s", current_path);
         SDL_SetWindowTitle(g_window, (const char*)&title);
-        reset_view();
+        imv_viewport_reset(&view);
       }
       //Autoscale if requested
       if(g_options.autoscale) {
-        scale_to_window(ww,wh,img.width,img.height);
+        imv_viewport_scale_to_window(&view, &img);
       }
       if(g_options.center) {
-        center_view(ww,wh,img.width,img.height);
+        imv_viewport_center(&view, &img);
       }
     }
 
     if(resend) {
       imv_texture_set_image(&tex, img.cur_bmp);
-      g_view.redraw = 1;
+      imv_viewport_set_redraw(&view);
     }
 
-    if(g_view.playing) {
+    if(view.playing) {
       imv_image_play(&img, dt);
     }
     if(img.cur_frame != last_frame) {
       imv_texture_set_image(&tex, img.cur_bmp);
-      g_view.redraw = 1;
+      imv_viewport_set_redraw(&view);
     }
     last_frame = img.cur_frame;
 
-    if(g_view.redraw) {
+    if(view.redraw) {
       SDL_RenderClear(renderer);
-      imv_texture_draw(&tex, g_view.x, g_view.y, g_view.scale);
+      imv_texture_draw(&tex, view.x, view.y, view.scale);
       SDL_RenderPresent(renderer);
-      g_view.redraw = 0;
+      view.redraw = 0;
     }
     last_time = SDL_GetTicks() / 1000.0;
     SDL_Delay(10);
@@ -358,6 +284,7 @@ int main(int argc, char** argv)
   imv_destroy_image(&img);
   imv_destroy_texture(&tex);
   imv_destroy_navigator(&nav);
+  imv_destroy_viewport(&view);
 
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(g_window);
