@@ -180,8 +180,6 @@ int main(int argc, char** argv)
     double dt = cur_time - last_time;
 
     SDL_Event e;
-    int ww, wh;
-    SDL_GetWindowSize(g_window, &ww, &wh);
     while(!quit && SDL_PollEvent(&e)) {
       switch(e.type) {
         case SDL_QUIT:
