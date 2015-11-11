@@ -225,6 +225,6 @@ int imv_image_has_changed(struct imv_image *img)
     img->changed = 0;
     return 1;
   } else {
-  return 0;
+    return 0;
   }
 }

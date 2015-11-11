@@ -227,7 +227,7 @@ int main(int argc, char** argv)
       char title[256];
       snprintf(&title[0], sizeof(title), "imv - [%i/%i] [LOADING] %s",
           nav.cur_path + 1, nav.num_paths, current_path);
-      SDL_SetWindowTitle(window, (const char*)&title);
+      imv_viewport_set_title(&view, title);
 
       if(!current_path) {
         fprintf(stderr, "No input files left. Exiting.\n");
@@ -240,7 +240,7 @@ int main(int argc, char** argv)
         snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s",
             nav.cur_path + 1, nav.num_paths,
             img.width, img.height, current_path);
-        SDL_SetWindowTitle(window, (const char*)&title);
+        imv_viewport_set_title(&view, title);
         imv_viewport_reset(&view);
       }
       /* Autoscale if requested */
@@ -264,9 +264,7 @@ int main(int argc, char** argv)
     }
 
     if(view.redraw) {
-      SDL_RenderClear(renderer);
       imv_texture_draw(&tex, view.x, view.y, view.scale);
-      SDL_RenderPresent(renderer);
       view.redraw = 0;
     }
     last_time = SDL_GetTicks() / 1000.0;

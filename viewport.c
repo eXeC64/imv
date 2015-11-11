@@ -112,3 +112,8 @@ void imv_viewport_set_redraw(struct imv_viewport *view)
 {
   view->redraw = 1;
 }
+
+void imv_viewport_set_title(struct imv_viewport *view, char* title)
+{
+  SDL_SetWindowTitle(view->window, title);
+}

@@ -121,6 +121,8 @@ void imv_texture_draw(struct imv_texture *tex, int bx, int by, double scale)
 {
   int offset_x = 0;
   int offset_y = 0;
+
+  SDL_RenderClear(tex->renderer);
   for(int y = 0; y < tex->num_chunks_tall; ++y) {
     for(int x = 0; x < tex->num_chunks_wide; ++x) {
       int img_w, img_h, img_access;
@@ -140,4 +142,5 @@ void imv_texture_draw(struct imv_texture *tex, int bx, int by, double scale)
     offset_x = 0;
     offset_y += tex->chunk_height * scale;
   }
+  SDL_RenderPresent(tex->renderer);
 }
