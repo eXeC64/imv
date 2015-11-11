@@ -11,7 +11,7 @@ BUILDDIR = build
 SOURCES = $(wildcard src/*.c)
 OBJECTS = $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
 
-VERSION = "v0.1.0"
+VERSION = "v1.0.0"
 
 CFLAGS += -DIMV_VERSION=\"$(VERSION)\"
 
