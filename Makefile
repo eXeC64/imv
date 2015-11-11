@@ -31,5 +31,5 @@ clean:
 	@$(RM) $(TARGET) $(OBJECTS)
 
 install: $(TARGET)
-	install -m 0755 $(TARGET) $(prefix)/bin
-	install -m 0644 doc/imv.1 $(prefix)/share/man/man1
+	install -D -m 0755 $(TARGET) $(DESTDIR)$(prefix)/bin/$(TARGET)
+	install -D -m 0644 doc/imv.1 $(DESTDIR)$(prefix)/share/man/man1/imv.1
