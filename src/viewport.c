@@ -94,11 +94,13 @@ void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *img, e
   const int wc_x = ww/2;
   const int wc_y = wh/2;
 
-  view->scale += amount * 0.1;
-  if(view->scale > 100)
-    view->scale = 10;
-  else if (view->scale < 0.01)
-    view->scale = 0.1;
+  view->scale += (view->scale / img->width) * amount * 20;
+  const int min_scale = 0.01;
+  const int max_scale = 100;
+  if(view->scale > max_scale)
+    view->scale = max_scale;
+  else if (view->scale < min_scale)
+    view->scale = min_scale;
 
   if(view->scale < prevScale) {
     if(scaledWidth < ww) {
