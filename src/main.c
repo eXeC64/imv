@@ -30,8 +30,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 struct {
   int fullscreen;
   int stdin;
-  int center;
   int recursive;
+  int actual;
 } g_options = {0,0,0,0};
 
 void print_usage(const char* name)
@@ -43,7 +43,7 @@ void print_usage(const char* name)
   "  -i: Read paths from stdin. One path per line.\n"
   "  -r: Recursively search input paths.\n"
   "  -f: Start in fullscreen mode\n"
-  "  -c: Center images in the window\n"
+  "  -a: Default to images' actual size\n"
   "  -h: Print this help\n"
   "\n"
   "Mouse:\n"
@@ -61,8 +61,8 @@ void print_usage(const char* name)
   "         'k': Pan up\n"
   "         'l': Pan right\n"
   "         'r': Reset view\n"
+  "         'a': Show image actual size\n"
   "         'c': Center view\n"
-  "         's': Scale image to fit window\n"
   "         'x': Close current image\n"
   "         'f': Toggle fullscreen\n"
   "         ' ': Toggle gif playback\n"
@@ -75,9 +75,9 @@ void parse_arg(const char* name, const char* arg)
   for(const char *o = arg; *o != 0; ++o) {
     switch(*o) {
       case 'f': g_options.fullscreen = 1;   break;
-      case 'c': g_options.center = 1;       break;
       case 'i': g_options.stdin = 1;        break;
       case 'r': g_options.recursive = 1;    break;
+      case 'a': g_options.actual = 1;       break;
       case 'h': print_usage(name); exit(0); break;
       default:
         fprintf(stderr, "Unknown argument '%c'. Aborting.\n", *o);
@@ -241,8 +241,8 @@ int main(int argc, char** argv)
         imv_viewport_set_title(&view, title);
         imv_viewport_scale_to_window(&view, &img);
       }
-      if(g_options.center) {
-        imv_viewport_center(&view, &img);
+      if(g_options.actual) {
+        imv_viewport_scale_to_actual(&view, &img);
       }
     }
 

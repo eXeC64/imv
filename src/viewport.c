@@ -90,7 +90,7 @@ void imv_viewport_center(struct imv_viewport *view, const struct imv_image* img)
   view->x = (ww - img->width * view->scale) / 2;
   view->y = (wh - img->height * view->scale) / 2;
 
-  view->locked = 0;
+  view->locked = 1;
   view->redraw = 1;
 }
 
