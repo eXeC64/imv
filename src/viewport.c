@@ -82,10 +82,17 @@ void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *img, e
     /* Translate mouse coordinates to projected coordinates */
     x -= view->x;
     y -= view->y;
-  } else x = y = 0;
+  } else {
+    x = 0;
+    y = 0;
+  }
 
-  int scaledWidth = img->width * view->scale;
-  int scaledHeight = img->height * view->scale;
+  const int scaledWidth = img->width * view->scale;
+  const int scaledHeight = img->height * view->scale;
+  const int ic_x = view->x + scaledWidth/2;
+  const int ic_y = view->y + scaledHeight/2;
+  const int wc_x = ww/2;
+  const int wc_y = wh/2;
 
   view->scale += amount * 0.1;
   if(view->scale > 100)
@@ -93,16 +100,24 @@ void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *img, e
   else if (view->scale < 0.01)
     view->scale = 0.1;
 
-  /*
-  if(amount < 0 && ww > scaledWidth - view->x) {
+  if(view->scale < prevScale) {
+    if(scaledWidth < ww) {
+      x = scaledWidth/2 - (ic_x - wc_x)*2;
+    }
+    if(scaledHeight < wh) {
+      y = scaledHeight/2 - (ic_y - wc_y)*2;
+    }
+  } else {
+    if(scaledWidth < ww) {
+      x = scaledWidth/2;
+    }
+    if(scaledHeight < wh) {
+      y = scaledHeight/2;
+    }
   }
 
-  if(amount < 0 && wh > scaledHeight - view->y) {
-  }
-  */
-
-  double changeX = x - (x * (view->scale / prevScale));
-  double changeY = y - (y * (view->scale / prevScale));
+  const double changeX = x - (x * (view->scale / prevScale));
+  const double changeY = y - (y * (view->scale / prevScale));
 
   view->x += changeX;
   view->y += changeY;
