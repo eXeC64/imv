@@ -33,6 +33,11 @@ struct imv_viewport {
   int locked;
 };
 
+enum imv_zoom_source {
+  MOUSE,
+  KBD
+};
+
 void imv_init_viewport(struct imv_viewport *view, SDL_Window *window);
 void imv_destroy_viewport(struct imv_viewport *view);
 
@@ -40,7 +45,7 @@ void imv_viewport_toggle_fullscreen(struct imv_viewport*);
 void imv_viewport_toggle_playing(struct imv_viewport*, struct imv_image*);
 void imv_viewport_reset(struct imv_viewport*);
 void imv_viewport_move(struct imv_viewport*, int, int);
-void imv_viewport_zoom(struct imv_viewport*, int);
+void imv_viewport_zoom(struct imv_viewport*, const struct imv_image*, enum imv_zoom_source, int);
 void imv_viewport_center(struct imv_viewport*, const struct imv_image*);
 void imv_viewport_scale_to_actual(struct imv_viewport*, const struct imv_image*);
 void imv_viewport_scale_to_window(struct imv_viewport*, const struct imv_image*);

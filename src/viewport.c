@@ -71,13 +71,47 @@ void imv_viewport_move(struct imv_viewport *view, int x, int y)
   view->locked = 1;
 }
 
-void imv_viewport_zoom(struct imv_viewport *view, int amount)
+void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *img, enum imv_zoom_source src, int amount)
 {
+  double prevScale = view->scale;
+  int x, y;
+
+  if(src == MOUSE) {
+    SDL_GetMouseState(&x, &y);
+    /* Translate mouse coordinates to projected coordinates */
+    x -= view->x;
+    y -= view->y;
+  } else x = y = 0;
+
+  int scaledWidth = img->width * view->scale;
+  int scaledHeight = img->height * view->scale;
+  if(x > scaledWidth) {
+    x = scaledWidth;
+  }
+
+  if(y > scaledHeight) {
+    y = scaledHeight;
+  }
+
   view->scale += amount * 0.1;
   if(view->scale > 100)
     view->scale = 10;
   else if (view->scale < 0.01)
     view->scale = 0.1;
+
+  double changeX = x - (x * (view->scale / prevScale));
+  double changeY = y - (y * (view->scale / prevScale));
+
+  if(amount < 0 &&
+    (view->x <= 0 && (view->x + changeX > 0 || !changeX))) {
+    view->x = 0;
+  } else view->x += changeX;
+
+  if(amount < 0 &&
+    (view->y <= 0 && (view->y + changeY > 0 || !changeY))) {
+    view->y = 0;
+  } else view->y += changeY;
+
   view->redraw = 1;
   view->locked = 1;
 }

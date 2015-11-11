@@ -184,10 +184,10 @@ int main(int argc, char** argv)
             case SDLK_RIGHT:  imv_navigator_next_path(&nav);           break;
             case SDLK_EQUALS:
             case SDLK_i:
-            case SDLK_UP:     imv_viewport_zoom(&view, 1);             break;
+            case SDLK_UP:     imv_viewport_zoom(&view, &img, KBD, 1);  break;
             case SDLK_MINUS:
             case SDLK_o:
-            case SDLK_DOWN:   imv_viewport_zoom(&view, -1);            break;
+            case SDLK_DOWN:   imv_viewport_zoom(&view, &img, KBD, -1); break;
             case SDLK_a:     imv_viewport_scale_to_actual(&view, &img);break;
             case SDLK_r:     imv_viewport_scale_to_window(&view, &img);break;
             case SDLK_c:      imv_viewport_center(&view, &img);        break;
@@ -203,7 +203,7 @@ int main(int argc, char** argv)
           }
           break;
         case SDL_MOUSEWHEEL:
-          imv_viewport_zoom(&view, e.wheel.y);
+          imv_viewport_zoom(&view, &img, MOUSE, e.wheel.y);
           break;
         case SDL_MOUSEMOTION:
           if(e.motion.state & SDL_BUTTON_LMASK) {
