@@ -224,6 +224,10 @@ int main(int argc, char** argv)
 
     while(imv_navigator_has_changed(&nav)) {
       const char* current_path = imv_navigator_get_current_path(&nav);
+      char title[256];
+      snprintf(&title[0], sizeof(title), "imv - [%i/%i] [LOADING] %s",
+          nav.cur_path + 1, nav.num_paths, current_path);
+      SDL_SetWindowTitle(window, (const char*)&title);
 
       if(!current_path) {
         fprintf(stderr, "No input files left. Exiting.\n");
@@ -233,7 +237,6 @@ int main(int argc, char** argv)
       if(imv_image_load(&img, current_path) != 0) {
         imv_navigator_remove_current_path(&nav);
       } else {
-        char title[256];
         snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s",
             nav.cur_path + 1, nav.num_paths,
             img.width, img.height, current_path);
