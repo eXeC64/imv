@@ -258,8 +258,10 @@ int main(int argc, char** argv)
     }
 
     if(view.redraw) {
+      SDL_RenderClear(renderer);
       imv_texture_draw(&tex, view.x, view.y, view.scale);
       view.redraw = 0;
+      SDL_RenderPresent(renderer);
     }
     last_time = SDL_GetTicks() / 1000.0;
     SDL_Delay(10);
