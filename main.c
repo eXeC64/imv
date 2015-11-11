@@ -233,8 +233,9 @@ int main(int argc, char** argv)
       if(imv_image_load(&img, current_path) != 0) {
         imv_navigator_remove_current_path(&nav);
       } else {
-        char title[128];
-        snprintf(&title[0], sizeof(title), "imv - %s", current_path);
+        char title[256];
+        snprintf(&title[0], sizeof(title), "imv - [%ix%i] %s",
+            img.width, img.height, current_path);
         SDL_SetWindowTitle(window, (const char*)&title);
         imv_viewport_reset(&view);
       }
