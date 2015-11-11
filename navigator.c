@@ -27,48 +27,39 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 
 void imv_init_navigator(struct imv_navigator *nav)
 {
-  nav->first = NULL;
-  nav->last = NULL;
-  nav->cur = NULL;
+  nav->buf_size = 512;
+  nav->paths = (char **)malloc(sizeof(char*) * nav->buf_size);
   nav->num_paths = 0;
+  nav->cur_path = 0;
   nav->last_move_direction = 1;
   nav->changed = 0;
 }
 
 void imv_destroy_navigator(struct imv_navigator *nav)
 {
-  struct imv_loop_item *next = nav->first;
-  while(next) {
-    struct imv_loop_item *cur = next;
-    next = cur->next;
-    free(cur->path);
-    free(cur);
+  if(nav->buf_size > 0) {
+    free(nav->paths);
+    nav->paths = NULL;
+    nav->buf_size = 0;
   }
-  nav->first = NULL;
-  nav->last = NULL;
-  nav->cur = NULL;
   nav->num_paths = 0;
 }
 
 static void add_item(struct imv_navigator *nav, const char *path)
 {
-  struct imv_loop_item *new_item = (struct imv_loop_item*)
-    malloc(sizeof(struct imv_loop_item));
-  new_item->path = strdup(path);
-  if(!nav->first && !nav->last) {
-    nav->first = new_item;
-    nav->last = new_item;
-    new_item->next = NULL;
-    new_item->prev = NULL;
-    nav->cur = new_item;
-    nav->changed = 1;
-  } else {
-    nav->last->next = new_item;
-    new_item->prev = nav->last;
-    new_item->next = NULL;
-    nav->last = new_item;
+  if(nav->buf_size == nav->num_paths) {
+    int new_buf_size = nav->buf_size * 2;
+    char **new_paths = malloc(sizeof(char*) * new_buf_size);
+    memcpy(new_paths, nav->paths, sizeof(char*) * nav->buf_size);
+    free(nav->paths);
+    nav->paths = new_paths;
+    nav->buf_size = new_buf_size;
   }
+  nav->paths[nav->num_paths] = strdup(path);
   nav->num_paths += 1;
+  if(nav->num_paths == 1) {
+    nav->changed = 1;
+  }
 }
 
 void imv_navigator_add_path(struct imv_navigator *nav, const char *path)
@@ -114,7 +105,7 @@ const char *imv_navigator_get_current_path(struct imv_navigator *nav)
   if(nav->num_paths == 0) {
     return NULL;
   }
-  return nav->cur->path;
+  return nav->paths[nav->cur_path];
 }
 
 void imv_navigator_next_path(struct imv_navigator *nav)
@@ -122,11 +113,9 @@ void imv_navigator_next_path(struct imv_navigator *nav)
   if(nav->num_paths == 0) {
     return;
   }
-
-  if(nav->cur->next) {
-    nav->cur = nav->cur->next;
-  } else {
-    nav->cur = nav->first;
+  nav->cur_path += 1;
+  if(nav->cur_path == nav->num_paths) {
+    nav->cur_path = 0;
   }
   nav->last_move_direction = 1;
   nav->changed = 1;
@@ -137,13 +126,10 @@ void imv_navigator_prev_path(struct imv_navigator *nav)
   if(nav->num_paths == 0) {
     return;
   }
-
-  if(nav->cur->prev) {
-    nav->cur = nav->cur->prev;
-  } else {
-    nav->cur = nav->last;
+  nav->cur_path -= 1;
+  if(nav->cur_path < 0) {
+    nav->cur_path = nav->num_paths - 1;
   }
-
   nav->last_move_direction = -1;
   nav->changed = 1;
 }
@@ -154,30 +140,23 @@ void imv_navigator_remove_current_path(struct imv_navigator *nav)
     return;
   }
 
+  free(nav->paths[nav->cur_path]);
+  for(int i = nav->cur_path; i < nav->num_paths - 1; ++i) {
+    nav->paths[i] = nav->paths[i+1];
+  }
   nav->num_paths -= 1;
 
-  struct imv_loop_item *cur = nav->cur;
-  if(cur->prev) {
-    cur->prev->next = cur->next;
-  }
-  if(cur->next) {
-    cur->next->prev = cur->prev;
-  }
-  if(nav->first == cur) {
-    nav->first = cur->next;
-  }
-  if(nav->last == cur) {
-    nav->last = cur->prev;
-  }
-
   if(nav->last_move_direction < 0) {
+    /* Move left */
     imv_navigator_prev_path(nav);
   } else {
-    imv_navigator_next_path(nav);
+    /* Try to stay where we are, unless we ran out of room */
+    if(nav->cur_path == nav->num_paths) {
+      nav->cur_path = 0;
+    }
   }
 
-  free(cur->path);
-  free(cur);
+  nav->changed = 1;
 }
 
 int imv_navigator_has_changed(struct imv_navigator *nav)

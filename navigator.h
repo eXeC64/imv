@@ -20,15 +20,11 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 
-struct imv_loop_item {
-  struct imv_loop_item *prev;
-  struct imv_loop_item *next;
-  char *path;
-};
-
 struct imv_navigator {
-  struct imv_loop_item *first, *last, *cur;
   int num_paths;
+  int buf_size;
+  int cur_path;
+  char **paths;
   int last_move_direction;
   int changed;
 };
