@@ -78,6 +78,10 @@ void imv_navigator_add_path(struct imv_navigator *nav, const char *path)
     if(d) {
       struct dirent *dir;
       while((dir = readdir(d)) != NULL) {
+        if(strcmp(dir->d_name, "..") == 0 ||
+            strcmp(dir->d_name, ".") == 0) {
+          continue;
+        }
         snprintf(path_buf, sizeof(path_buf), "%s/%s", path, dir->d_name);
         add_item(nav, path_buf);
       }
@@ -97,6 +101,10 @@ void imv_navigator_add_path_recursive(struct imv_navigator *nav, const char *pat
     if(d) {
       struct dirent *dir;
       while((dir = readdir(d)) != NULL) {
+        if(strcmp(dir->d_name, "..") == 0 ||
+            strcmp(dir->d_name, ".") == 0) {
+          continue;
+        }
         snprintf(path_buf, sizeof(path_buf), "%s/%s", path, dir->d_name);
         imv_navigator_add_path_recursive(nav, path_buf);
       }
