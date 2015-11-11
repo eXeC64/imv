@@ -85,12 +85,12 @@ void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *img, e
 
   int scaledWidth = img->width * view->scale;
   int scaledHeight = img->height * view->scale;
-  if(x > scaledWidth) {
-    x = scaledWidth;
+  if(x > scaledWidth || x < view->x) {
+    x = scaledWidth / 2;
   }
 
-  if(y > scaledHeight) {
-    y = scaledHeight;
+  if(y > scaledHeight || view->y) {
+    y = scaledHeight / 2;
   }
 
   view->scale += amount * 0.1;
