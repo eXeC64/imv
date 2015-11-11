@@ -42,6 +42,7 @@ void imv_viewport_reset(struct imv_viewport*);
 void imv_viewport_move(struct imv_viewport*, int, int);
 void imv_viewport_zoom(struct imv_viewport*, int);
 void imv_viewport_center(struct imv_viewport*, const struct imv_image*);
+void imv_viewport_scale_to_actual(struct imv_viewport*, const struct imv_image*);
 void imv_viewport_scale_to_window(struct imv_viewport*, const struct imv_image*);
 void imv_viewport_set_redraw(struct imv_viewport*);
 void imv_viewport_set_title(struct imv_viewport*, char*);

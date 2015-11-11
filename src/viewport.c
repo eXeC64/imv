@@ -55,12 +55,12 @@ void imv_viewport_toggle_playing(struct imv_viewport *view, struct imv_image *im
   }
 }
 
-void imv_viewport_reset(struct imv_viewport *view)
+void imv_viewport_scale_to_actual(struct imv_viewport *view, const struct imv_image *img)
 {
   view->scale = 1;
-  view->x = view->y = 0;
   view->redraw = 1;
-  view->locked = 0;
+  view->locked = 1;
+  imv_viewport_center(view, img);
 }
 
 void imv_viewport_move(struct imv_viewport *view, int x, int y)

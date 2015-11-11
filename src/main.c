@@ -188,7 +188,8 @@ int main(int argc, char** argv)
             case SDLK_MINUS:
             case SDLK_o:
             case SDLK_DOWN:   imv_viewport_zoom(&view, -1);            break;
-            case SDLK_r:      imv_viewport_reset(&view);               break;
+            case SDLK_a:     imv_viewport_scale_to_actual(&view, &img);break;
+            case SDLK_r:     imv_viewport_scale_to_window(&view, &img);break;
             case SDLK_c:      imv_viewport_center(&view, &img);        break;
             case SDLK_j:      imv_viewport_move(&view, 0, -50);        break;
             case SDLK_k:      imv_viewport_move(&view, 0, 50);         break;
@@ -238,7 +239,7 @@ int main(int argc, char** argv)
             nav.cur_path + 1, nav.num_paths,
             img.width, img.height, current_path);
         imv_viewport_set_title(&view, title);
-        imv_viewport_reset(&view);
+        imv_viewport_scale_to_window(&view, &img);
       }
       if(g_options.center) {
         imv_viewport_center(&view, &img);
