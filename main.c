@@ -167,8 +167,6 @@ int main(int argc, char** argv)
     imv_viewport_toggle_fullscreen(&view);
   }
 
-  const char* current_path = NULL;
-
   double last_time = SDL_GetTicks() / 1000.0;
   int last_frame = img.cur_frame;
 
@@ -226,8 +224,8 @@ int main(int argc, char** argv)
       break;
     }
 
-    while(imv_navigator_get_current_path(&nav) != current_path) {
-      current_path = imv_navigator_get_current_path(&nav);
+    while(imv_navigator_has_changed(&nav)) {
+      const char* current_path = imv_navigator_get_current_path(&nav);
 
       if(!current_path) {
         fprintf(stderr, "No input files left. Exiting.\n");

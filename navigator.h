@@ -30,6 +30,7 @@ struct imv_navigator {
   struct imv_loop_item *first, *last, *cur;
   int num_paths;
   int last_move_direction;
+  int changed;
 };
 
 void imv_init_navigator(struct imv_navigator *nav);
@@ -42,5 +43,7 @@ const char *imv_navigator_get_current_path(struct imv_navigator *nav);
 void imv_navigator_next_path(struct imv_navigator *nav);
 void imv_navigator_prev_path(struct imv_navigator *nav);
 void imv_navigator_remove_current_path(struct imv_navigator *nav);
+
+int imv_navigator_has_changed(struct imv_navigator *nav);
 
 #endif

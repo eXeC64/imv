@@ -32,6 +32,7 @@ void imv_init_navigator(struct imv_navigator *nav)
   nav->cur = NULL;
   nav->num_paths = 0;
   nav->last_move_direction = 1;
+  nav->changed = 0;
 }
 
 void imv_destroy_navigator(struct imv_navigator *nav)
@@ -60,6 +61,7 @@ static void add_item(struct imv_navigator *nav, const char *path)
     new_item->next = NULL;
     new_item->prev = NULL;
     nav->cur = new_item;
+    nav->changed = 1;
   } else {
     nav->last->next = new_item;
     new_item->prev = nav->last;
@@ -127,6 +129,7 @@ void imv_navigator_next_path(struct imv_navigator *nav)
     nav->cur = nav->first;
   }
   nav->last_move_direction = 1;
+  nav->changed = 1;
 }
 
 void imv_navigator_prev_path(struct imv_navigator *nav)
@@ -142,6 +145,7 @@ void imv_navigator_prev_path(struct imv_navigator *nav)
   }
 
   nav->last_move_direction = -1;
+  nav->changed = 1;
 }
 
 void imv_navigator_remove_current_path(struct imv_navigator *nav)
@@ -174,4 +178,14 @@ void imv_navigator_remove_current_path(struct imv_navigator *nav)
 
   free(cur->path);
   free(cur);
+}
+
+int imv_navigator_has_changed(struct imv_navigator *nav)
+{
+  if(nav->changed) {
+    nav->changed = 0;
+    return 1;
+  } else {
+    return 0;
+  }
 }
