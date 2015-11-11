@@ -30,6 +30,7 @@ struct imv_viewport {
   int fullscreen;
   int redraw;
   int playing;
+  int locked;
 };
 
 void imv_init_viewport(struct imv_viewport *view, SDL_Window *window);
@@ -44,5 +45,6 @@ void imv_viewport_center(struct imv_viewport*, const struct imv_image*);
 void imv_viewport_scale_to_window(struct imv_viewport*, const struct imv_image*);
 void imv_viewport_set_redraw(struct imv_viewport*);
 void imv_viewport_set_title(struct imv_viewport*, char*);
+void imv_viewport_updated(struct imv_viewport*, struct imv_image*);
 
 #endif

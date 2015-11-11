@@ -28,12 +28,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #include "viewport.h"
 
 struct {
-  int autoscale;
   int fullscreen;
   int stdin;
   int center;
   int recursive;
-} g_options = {0,0,0,0,0};
+} g_options = {0,0,0,0};
 
 void print_usage(const char* name)
 {
@@ -44,7 +43,6 @@ void print_usage(const char* name)
   "  -i: Read paths from stdin. One path per line.\n"
   "  -r: Recursively search input paths.\n"
   "  -f: Start in fullscreen mode\n"
-  "  -s: Auto scale images to fit window\n"
   "  -c: Center images in the window\n"
   "  -h: Print this help\n"
   "\n"
@@ -77,7 +75,6 @@ void parse_arg(const char* name, const char* arg)
   for(const char *o = arg; *o != 0; ++o) {
     switch(*o) {
       case 'f': g_options.fullscreen = 1;   break;
-      case 's': g_options.autoscale = 1;    break;
       case 'c': g_options.center = 1;       break;
       case 'i': g_options.stdin = 1;        break;
       case 'r': g_options.recursive = 1;    break;
@@ -213,7 +210,7 @@ int main(int argc, char** argv)
           }
           break;
         case SDL_WINDOWEVENT:
-          imv_viewport_set_redraw(&view);
+          imv_viewport_updated(&view, &img);
           break;
       }
     }
@@ -242,10 +239,6 @@ int main(int argc, char** argv)
             img.width, img.height, current_path);
         imv_viewport_set_title(&view, title);
         imv_viewport_reset(&view);
-      }
-      /* Autoscale if requested */
-      if(g_options.autoscale) {
-        imv_viewport_scale_to_window(&view, &img);
       }
       if(g_options.center) {
         imv_viewport_center(&view, &img);

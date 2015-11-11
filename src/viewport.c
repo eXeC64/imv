@@ -26,6 +26,7 @@ void imv_init_viewport(struct imv_viewport *view, SDL_Window *window)
   view->scale = 1;
   view->x = view->y = view->fullscreen = view->redraw = 0;
   view->playing = 1;
+  view->locked = 0;
 }
 
 void imv_destroy_viewport(struct imv_viewport *view)
@@ -59,6 +60,7 @@ void imv_viewport_reset(struct imv_viewport *view)
   view->scale = 1;
   view->x = view->y = 0;
   view->redraw = 1;
+  view->locked = 0;
 }
 
 void imv_viewport_move(struct imv_viewport *view, int x, int y)
@@ -66,6 +68,7 @@ void imv_viewport_move(struct imv_viewport *view, int x, int y)
   view->x += x;
   view->y += y;
   view->redraw = 1;
+  view->locked = 1;
 }
 
 void imv_viewport_zoom(struct imv_viewport *view, int amount)
@@ -76,6 +79,7 @@ void imv_viewport_zoom(struct imv_viewport *view, int amount)
   else if (view->scale < 0.01)
     view->scale = 0.1;
   view->redraw = 1;
+  view->locked = 1;
 }
 
 void imv_viewport_center(struct imv_viewport *view, const struct imv_image* img)
@@ -86,6 +90,7 @@ void imv_viewport_center(struct imv_viewport *view, const struct imv_image* img)
   view->x = (ww - img->width * view->scale) / 2;
   view->y = (wh - img->height * view->scale) / 2;
 
+  view->locked = 0;
   view->redraw = 1;
 }
 
@@ -106,6 +111,7 @@ void imv_viewport_scale_to_window(struct imv_viewport *view, const struct imv_im
   }
 
   imv_viewport_center(view, img);
+  view->locked = 0;
 }
 
 void imv_viewport_set_redraw(struct imv_viewport *view)
@@ -116,4 +122,15 @@ void imv_viewport_set_redraw(struct imv_viewport *view)
 void imv_viewport_set_title(struct imv_viewport *view, char* title)
 {
   SDL_SetWindowTitle(view->window, title);
+}
+
+void imv_viewport_updated(struct imv_viewport *view, struct imv_image* img)
+{
+  view->redraw = 1;
+  if(view->locked) {
+    return;
+  }
+
+  imv_viewport_scale_to_window(view, img);
+  imv_viewport_center(view, img);
 }
