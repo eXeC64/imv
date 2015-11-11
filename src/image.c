@@ -157,28 +157,14 @@ void imv_image_load_next_frame(struct imv_image *img)
   FreeImage_UnlockPage(img->mbmp, frame, 0);
 
   /* If this frame is inset, we need to expand it for compositing */
-  if(left != 0 || top != 0) {
+  if(img->width != (int)FreeImage_GetWidth(frame32) ||
+     img->height != (int)FreeImage_GetHeight(frame32)) {
     RGBQUAD color = {0,0,0,0};
     FIBITMAP *expanded = FreeImage_EnlargeCanvas(frame32,
         left,
         img->height - FreeImage_GetHeight(frame32) - top,
         img->width - FreeImage_GetWidth(frame32) - left,
         top,
-        &color,
-        0);
-    FreeImage_Unload(frame32);
-    frame32 = expanded;
-  }
-
-  /* If the frame is still too small, enlarge it to fit */
-  if(img->width != (int)FreeImage_GetWidth(frame32) ||
-     img->height != (int)FreeImage_GetHeight(frame32)) {
-    RGBQUAD color = {0,0,0,0};
-    FIBITMAP *expanded = FreeImage_EnlargeCanvas(frame32,
-        0,
-        img->height - FreeImage_GetHeight(frame32),
-        img->width - FreeImage_GetWidth(frame32),
-        0,
         &color,
         0);
     FreeImage_Unload(frame32);
