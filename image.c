@@ -29,6 +29,7 @@ void imv_init_image(struct imv_image *img)
   img->next_frame = 0;
   img->num_frames = 0;
   img->frame_time = 0;
+  img->changed = 0;
 }
 
 void imv_destroy_image(struct imv_image *img)
@@ -106,6 +107,7 @@ int imv_image_load(struct imv_image *img, const char* path)
     img->height = FreeImage_GetHeight(img->cur_bmp);
   }
 
+  img->changed = 1;
   return 0;
 }
 
@@ -196,6 +198,7 @@ void imv_image_load_next_frame(struct imv_image *img)
     case 3: /* TODO - restore to previous content */
       break;
   }
+  img->changed = 1;
 }
 
 int imv_image_is_animated(struct imv_image *img)
@@ -213,5 +216,15 @@ void imv_image_play(struct imv_image *img, double time)
   if(img->frame_time < 0) {
     img->frame_time = 0;
     imv_image_load_next_frame(img);
+  }
+}
+
+int imv_image_has_changed(struct imv_image *img)
+{
+  if(img->changed) {
+    img->changed = 0;
+    return 1;
+  } else {
+  return 0;
   }
 }

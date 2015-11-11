@@ -30,6 +30,7 @@ struct imv_image {
   int cur_frame;
   int next_frame;
   int num_frames;
+  int changed;
   double frame_time;
 };
 
@@ -42,5 +43,7 @@ void imv_image_load_next_frame(struct imv_image *img);
 
 int imv_image_is_animated(struct imv_image *img);
 void imv_image_play(struct imv_image *img, double time);
+
+int imv_image_has_changed(struct imv_image *img);
 
 #endif

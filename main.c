@@ -226,9 +226,7 @@ int main(int argc, char** argv)
       break;
     }
 
-    int resend = 0;
     while(imv_navigator_get_current_path(&nav) != current_path) {
-      resend = 1;
       current_path = imv_navigator_get_current_path(&nav);
 
       if(!current_path) {
@@ -253,7 +251,7 @@ int main(int argc, char** argv)
       }
     }
 
-    if(resend) {
+    if(imv_image_has_changed(&img)) {
       imv_texture_set_image(&tex, img.cur_bmp);
       imv_viewport_set_redraw(&view);
     }
