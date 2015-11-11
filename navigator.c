@@ -126,6 +126,7 @@ const char *imv_navigator_get_current_path(struct imv_navigator *nav)
 
 void imv_navigator_next_path(struct imv_navigator *nav)
 {
+  int prev_path = nav->cur_path;
   if(nav->num_paths == 0) {
     return;
   }
@@ -134,11 +135,12 @@ void imv_navigator_next_path(struct imv_navigator *nav)
     nav->cur_path = 0;
   }
   nav->last_move_direction = 1;
-  nav->changed = 1;
+  nav->changed = prev_path != nav->cur_path;
 }
 
 void imv_navigator_prev_path(struct imv_navigator *nav)
 {
+  int prev_path = nav->cur_path;
   if(nav->num_paths == 0) {
     return;
   }
@@ -147,7 +149,7 @@ void imv_navigator_prev_path(struct imv_navigator *nav)
     nav->cur_path = nav->num_paths - 1;
   }
   nav->last_move_direction = -1;
-  nav->changed = 1;
+  nav->changed = prev_path != nav->cur_path;
 }
 
 void imv_navigator_remove_current_path(struct imv_navigator *nav)
