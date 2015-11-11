@@ -29,4 +29,4 @@ clean:
 
 install: $(TARGET)
 	install -m 0755 $(TARGET) $(prefix)/bin
-	install -m 0644 $(TARGET).1 $(prefix)/share/man/man1
+	install -m 0644 doc/imv.1 $(prefix)/share/man/man1
