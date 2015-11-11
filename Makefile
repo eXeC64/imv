@@ -12,20 +12,19 @@ SOURCES = $(wildcard src/*.c)
 OBJECTS = $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
 
 $(TARGET): $(OBJECTS)
-	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	@echo "LINKING $@"
+	@$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 debug: CFLAGS += -DDEBUG -g -pg
 debug: $(TARGET)
 
-$(BUILDDIR)/%.o: src/%.c $(BUILDDIR)
-	$(CC) -c $(CFLAGS) -o $@ $<
-
-$(BUILDDIR):
-	mkdir -p $(BUILDDIR)
+$(BUILDDIR)/%.o: src/%.c
+	@mkdir -p $(BUILDDIR)
+	@echo "COMPILING $@"
+	@$(CC) -c $(CFLAGS) -o $@ $<
 
 clean:
-	$(RM) $(TARGET) $(OBJECTS)
-	rmdir $(BUILDDIR)
+	@$(RM) $(TARGET) $(OBJECTS)
 
 install: $(TARGET)
 	install -m 0755 $(TARGET) $(prefix)/bin
