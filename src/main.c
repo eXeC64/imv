@@ -37,6 +37,7 @@ struct {
 void print_usage(const char* name)
 {
   fprintf(stdout,
+  "imv %s\n"
   "Usage: %s [-ifsh] [images...]\n"
   "\n"
   "Flags:\n"
@@ -67,7 +68,7 @@ void print_usage(const char* name)
   "         'f': Toggle fullscreen\n"
   "         ' ': Toggle gif playback\n"
   "         '.': Step a frame of gif playback\n"
-  ,name);
+  , IMV_VERSION, name);
 }
 
 void parse_arg(const char* name, const char* arg)

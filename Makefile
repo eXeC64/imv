@@ -11,6 +11,10 @@ BUILDDIR = build
 SOURCES = $(wildcard src/*.c)
 OBJECTS = $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
 
+VERSION = "v0.1.0"
+
+CFLAGS += -DIMV_VERSION=\"$(VERSION)\"
+
 $(TARGET): $(OBJECTS)
 	@echo "LINKING $@"
 	@$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
