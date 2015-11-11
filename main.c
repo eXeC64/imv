@@ -168,13 +168,9 @@ int main(int argc, char** argv)
   }
 
   double last_time = SDL_GetTicks() / 1000.0;
-  int last_frame = img.cur_frame;
 
   int quit = 0;
   while(!quit) {
-    double cur_time = SDL_GetTicks() / 1000.0;
-    double dt = cur_time - last_time;
-
     SDL_Event e;
     while(!quit && SDL_PollEvent(&e)) {
       switch(e.type) {
@@ -249,19 +245,16 @@ int main(int argc, char** argv)
       }
     }
 
+    if(view.playing) {
+      double cur_time = SDL_GetTicks() / 1000.0;
+      double dt = cur_time - last_time;
+      imv_image_play(&img, dt);
+    }
+
     if(imv_image_has_changed(&img)) {
       imv_texture_set_image(&tex, img.cur_bmp);
       imv_viewport_set_redraw(&view);
     }
-
-    if(view.playing) {
-      imv_image_play(&img, dt);
-    }
-    if(img.cur_frame != last_frame) {
-      imv_texture_set_image(&tex, img.cur_bmp);
-      imv_viewport_set_redraw(&view);
-    }
-    last_frame = img.cur_frame;
 
     if(view.redraw) {
       SDL_RenderClear(renderer);
