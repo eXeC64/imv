@@ -170,6 +170,21 @@ void imv_image_load_next_frame(struct imv_image *img)
     frame32 = expanded;
   }
 
+  /* If the frame is still too small, enlarge it to fit */
+  if(img->width != (int)FreeImage_GetWidth(frame32) ||
+     img->height != (int)FreeImage_GetHeight(frame32)) {
+    RGBQUAD color = {0,0,0,0};
+    FIBITMAP *expanded = FreeImage_EnlargeCanvas(frame32,
+        0,
+        img->height - FreeImage_GetHeight(frame32),
+        img->width - FreeImage_GetWidth(frame32),
+        0,
+        &color,
+        0);
+    FreeImage_Unload(frame32);
+    frame32 = expanded;
+  }
+
   switch(disposal_method) {
     case 0: /* nothing specified, just use the raw frame */
       if(img->cur_bmp) {
