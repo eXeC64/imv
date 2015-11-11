@@ -85,6 +85,7 @@ void imv_navigator_add_path(struct imv_navigator *nav, const char *path)
         snprintf(path_buf, sizeof(path_buf), "%s/%s", path, dir->d_name);
         add_item(nav, path_buf);
       }
+      closedir(d);
     }
   } else {
    add_item(nav, path); 
@@ -108,6 +109,7 @@ void imv_navigator_add_path_recursive(struct imv_navigator *nav, const char *pat
         snprintf(path_buf, sizeof(path_buf), "%s/%s", path, dir->d_name);
         imv_navigator_add_path_recursive(nav, path_buf);
       }
+      closedir(d);
     }
   } else {
    add_item(nav, path); 
