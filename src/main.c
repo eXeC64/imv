@@ -84,7 +84,10 @@ void parse_arg(const char* name, const char* arg)
   for(const char *o = arg; *o != 0; ++o) {
     switch(*o) {
       case 'f': g_options.fullscreen = 1;   break;
-      case 'i': g_options.stdin = 1;        break;
+      case 'i':
+        g_options.stdin = 1;
+        fprintf(stderr, "Warning: '-i' is deprecated. Just use '-' instead.\n");
+        break;
       case 'r': g_options.recursive = 1;    break;
       case 'a': g_options.actual = 1;       break;
       case 'h': print_usage(name); exit(0); break;
@@ -106,7 +109,9 @@ int main(int argc, char** argv)
   imv_init_navigator(&nav);
 
   for(int i = 1; i < argc; ++i) {
-    if(argv[i][0] == '-') {
+    if(strcmp(argv[i], "-") == 0) {
+        g_options.stdin = 1;
+    } else if(argv[i][0] == '-') {
       parse_arg(argv[0], &argv[i][1]);
     } else {
       if(g_options.recursive) {
