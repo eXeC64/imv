@@ -41,4 +41,4 @@ Installation
 
 License
 -------
-`imv` is published under the [MIT](LICENSE) license.
+`imv` is published under the [GPLv2](LICENSE) license.
