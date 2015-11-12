@@ -27,17 +27,27 @@ Usage
 ### Open an image fullscreen (and scale to fit screen)
     imv -fs image.jpeg
 
-### Sorting images
-    find . "*.png" | sort | imv -i
-
-### Shuffling images
+### Viewing images in a random order
     find . "*.png" | shuf | imv -i
+
+### Image picker
+imv can be used to select images in a pipeline by using the 'p' hotkey to print
+the current image's path to stdout.
+
+#### Picking a wallpaper
+    custom-set-wallpaper-script "$(find ./wallpaper -type f -name '*.jpg' | imv - | tail -n1)"
+
+#### Deleting unwanted images
+    find -type f -name '*.jpg' | imv - | xargs rm -v
+
+#### Choosing pictures to email
+    find ./holiday_pics -type f -name '*.jpg' | imv -p | xargs cp -t ~/outbox
 
 Installation
 ------------
 
-    make
-    make install
+    $ make
+    # make install
 
 License
 -------
