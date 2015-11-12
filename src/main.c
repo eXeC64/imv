@@ -191,10 +191,10 @@ int main(int argc, char** argv)
             case SDLK_a:     imv_viewport_scale_to_actual(&view, &img);break;
             case SDLK_r:     imv_viewport_scale_to_window(&view, &img);break;
             case SDLK_c:      imv_viewport_center(&view, &img);        break;
-            case SDLK_j:      imv_viewport_move(&view, 0, -50);        break;
-            case SDLK_k:      imv_viewport_move(&view, 0, 50);         break;
-            case SDLK_h:      imv_viewport_move(&view, 50, 0);         break;
-            case SDLK_l:      imv_viewport_move(&view, -50, 0);        break;
+            case SDLK_j:      imv_viewport_move(&view, 0, 50);        break;
+            case SDLK_k:      imv_viewport_move(&view, 0, -50);         break;
+            case SDLK_h:      imv_viewport_move(&view, -50, 0);         break;
+            case SDLK_l:      imv_viewport_move(&view, 50, 0);        break;
             case SDLK_x:      imv_navigator_remove_current_path(&nav); break;
             case SDLK_f:      imv_viewport_toggle_fullscreen(&view);   break;
             case SDLK_PERIOD: imv_image_load_next_frame(&img);         break;
