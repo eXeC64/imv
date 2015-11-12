@@ -68,6 +68,13 @@ void print_usage(const char* name)
   "         'f': Toggle fullscreen\n"
   "         ' ': Toggle gif playback\n"
   "         '.': Step a frame of gif playback\n"
+  "\n"
+  "Legal:\n"
+  "imv is published under the MIT open source license.\n"
+  "\n"
+  "This software uses the FreeImage open source image library.\n"
+  "See http://freeimage.sourceforge.net for details.\n"
+  "FreeImage is used under the GNU GPLv2.\n"
   , IMV_VERSION, name);
 }
 
