@@ -104,10 +104,6 @@ void parse_args(int argc, char** argv)
         exit(1);
     }
   }
-
-  if(optind<argc && !strcmp("-",argv[optind])){
-    g_options.stdin = 1;
-  }
 }
 
 int main(int argc, char** argv)
@@ -123,6 +119,10 @@ int main(int argc, char** argv)
   parse_args(argc,argv);
 
   for(int i = optind; i < argc; ++i) {
+    if(!strcmp("-",argv[i])) {
+      g_options.stdin = 1;
+      continue;
+    }
     if(g_options.recursive) {
       imv_navigator_add_path_recursive(&nav, argv[i]);
     } else {
