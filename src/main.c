@@ -68,6 +68,7 @@ void print_usage(const char* name)
   "         'f': Toggle fullscreen\n"
   "         ' ': Toggle gif playback\n"
   "         '.': Step a frame of gif playback\n"
+  "         'p': Print current image path to stdout\n"
   "\n"
   "Legal:\n"
   "imv is published under the MIT open source license.\n"
@@ -208,6 +209,7 @@ int main(int argc, char** argv)
             case SDLK_PERIOD: imv_image_load_next_frame(&img);         break;
             case SDLK_SPACE:  imv_viewport_toggle_playing(&view, &img);break;
             case SDLK_s:     imv_viewport_scale_to_window(&view, &img);break;
+            case SDLK_p:    puts(imv_navigator_get_current_path(&nav));break;
           }
           break;
         case SDL_MOUSEWHEEL:
