@@ -41,7 +41,7 @@ the current image's path to stdout.
     find -type f -name '*.jpg' | imv - | xargs rm -v
 
 #### Choosing pictures to email
-    find ./holiday_pics -type f -name '*.jpg' | imv -p | xargs cp -t ~/outbox
+    find ./holiday_pics -type f -name '*.jpg' | imv - | xargs cp -t ~/outbox
 
 Installation
 ------------
