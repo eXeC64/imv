@@ -25,8 +25,8 @@ void imv_init_texture(struct imv_texture *tex, SDL_Renderer *r)
 
   SDL_RendererInfo ri;
   SDL_GetRendererInfo(r, &ri);
-  tex->chunk_width = ri.max_texture_width;
-  tex->chunk_height = ri.max_texture_height;
+  tex->chunk_width = ri.max_texture_width != 0 ? ri.max_texture_width : 4096;
+  tex->chunk_height = ri.max_texture_height != 0 ? ri.max_texture_height : 4096;
 }
 
 void imv_destroy_texture(struct imv_texture *tex)
