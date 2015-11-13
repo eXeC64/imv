@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <stddef.h>
 #include <SDL2/SDL.h>
 #include <FreeImage.h>
+#include <getopt.h>
 
 #include "image.h"
 #include "texture.h"
@@ -80,10 +81,16 @@ void print_usage(const char* name)
   , IMV_VERSION, name);
 }
 
-void parse_arg(const char* name, const char* arg)
+void parse_args(int argc, char** argv)
 {
-  for(const char *o = arg; *o != 0; ++o) {
-    switch(*o) {
+  /* Do not print getopt errors */
+  opterr = 0;
+
+  const char* name = argv[0];
+  char o;
+
+  while((o = getopt(argc, argv, "firah")) != -1) {
+    switch(o) {
       case 'f': g_options.fullscreen = 1;   break;
       case 'i':
         g_options.stdin = 1;
@@ -92,8 +99,8 @@ void parse_arg(const char* name, const char* arg)
       case 'r': g_options.recursive = 1;    break;
       case 'a': g_options.actual = 1;       break;
       case 'h': print_usage(name); exit(0); break;
-      default:
-        fprintf(stderr, "Unknown argument '%c'. Aborting.\n", *o);
+      case '?':
+        fprintf(stderr, "Unknown argument '%c'. Aborting.\n", optopt);
         exit(1);
     }
   }
@@ -109,17 +116,17 @@ int main(int argc, char** argv)
   struct imv_navigator nav;
   imv_init_navigator(&nav);
 
-  for(int i = 1; i < argc; ++i) {
-    if(strcmp(argv[i], "-") == 0) {
-        g_options.stdin = 1;
-    } else if(argv[i][0] == '-') {
-      parse_arg(argv[0], &argv[i][1]);
+  parse_args(argc,argv);
+
+  for(int i = optind; i < argc; ++i) {
+    if(!strcmp("-",argv[i])) {
+      g_options.stdin = 1;
+      continue;
+    }
+    if(g_options.recursive) {
+      imv_navigator_add_path_recursive(&nav, argv[i]);
     } else {
-      if(g_options.recursive) {
-        imv_navigator_add_path_recursive(&nav, argv[i]);
-      } else {
-        imv_navigator_add_path(&nav, argv[i]);
-      }
+      imv_navigator_add_path(&nav, argv[i]);
     }
   }
 
