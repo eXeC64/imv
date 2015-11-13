@@ -3,14 +3,14 @@
 imv \- image viewer
 .SH SYNOPSIS
 .nf
-\fBimv\fP [OPTIONS] [IMAGES]
+\fBimv\fP [-irfah] [-n NUM] [images...]
 .fi
 .sp
 .SH DESCRIPTION
 .sp
 \fBimv\fP is a X11/Wayland image viewer aimed at users of tiling window managers.
 It supports a wide variety of image file formats, including animated gif files.
-.SH OPTIONS
+.SH FLAGS
 .TP
 .B -i
 Read paths from stdin. One path per line.
@@ -26,7 +26,11 @@ Default to showing images at actual size.
 .TP
 .B -h
 Print help.
-.SH CONTROLs
+.SH OPTIONS
+.TP
+.BI "-n " NUM
+Start at picture number NUM.
+.SH CONTROLS
 .sp
 imv can be controlled using the mouse or keyboard.
 .TP
