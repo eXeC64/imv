@@ -31,13 +31,14 @@ struct {
   int stdin;
   int recursive;
   int actual;
-} g_options = {0,0,0,0};
+  long int start_at;
+} g_options = {0,0,0,0,0};
 
 void print_usage(const char* name)
 {
   fprintf(stdout,
   "imv %s\n"
-  "Usage: %s [-irfah] [images...]\n"
+  "Usage: %s [-irfah] [-n NUM] [images...]\n"
   "\n"
   "Flags:\n"
   "  -i: Read paths from stdin. One path per line.\n"
@@ -45,6 +46,9 @@ void print_usage(const char* name)
   "  -f: Start in fullscreen mode\n"
   "  -a: Default to images' actual size\n"
   "  -h: Print this help\n"
+  "\n"
+  "Options:\n"
+  "  -n NUM: Starts at picture number NUM.\n"
   "\n"
   "Mouse:\n"
   "   Click+Drag to Pan\n"
@@ -88,8 +92,10 @@ void parse_args(int argc, char** argv)
 
   const char* name = argv[0];
   char o;
+  char* end;
+  long int n;
 
-  while((o = getopt(argc, argv, "firah")) != -1) {
+  while((o = getopt(argc, argv, "firahn:")) != -1) {
     switch(o) {
       case 'f': g_options.fullscreen = 1;   break;
       case 'i':
@@ -99,6 +105,14 @@ void parse_args(int argc, char** argv)
       case 'r': g_options.recursive = 1;    break;
       case 'a': g_options.actual = 1;       break;
       case 'h': print_usage(name); exit(0); break;
+      case 'n':
+        n = strtol(optarg,&end,0);
+        if(*end != '\0' || n <= 0) {
+            fprintf(stderr, "Warning: wrong value for '-n'.\n");
+        } else {
+            g_options.start_at = n - 1;
+        }
+        break;
       case '?':
         fprintf(stderr, "Unknown argument '%c'. Aborting.\n", optopt);
         exit(1);
@@ -188,6 +202,10 @@ int main(int argc, char** argv)
   }
 
   double last_time = SDL_GetTicks() / 1000.0;
+
+  for(long int i = 0; i < g_options.start_at; ++i) {
+    imv_navigator_next_path(&nav);
+  }
 
   int quit = 0;
   while(!quit) {
