@@ -197,8 +197,16 @@ void imv_image_load_next_frame(struct imv_image *img)
       }
       break;
     case 2: /* TODO - set to background, composite over that */
+      if(img->cur_bmp) {
+        FreeImage_Unload(img->cur_bmp);
+      }
+      img->cur_bmp = frame32;
       break;
     case 3: /* TODO - restore to previous content */
+      if(img->cur_bmp) {
+        FreeImage_Unload(img->cur_bmp);
+      }
+      img->cur_bmp = frame32;
       break;
   }
   img->changed = 1;
