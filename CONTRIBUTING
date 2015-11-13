@@ -1,0 +1,17 @@
+                         imv Contributing Guidelines
+                         ===========================
+
+1) Please keep pull requests rebased onto the latest master. All merges should
+   be simple fast-forward merges. While rebasing, tidy up and merge your commits
+   as you think appropriate.
+
+2) Please ensure that your changes fit with the existing coding style of imv.
+   Strictly no tabs, and 2 spaces of indentation.
+
+3) All contributions must be provided under the license included with imv: the
+   GNU General Public License Version 2. You retain the copyright ownership of
+   any contributions you make.
+
+4) If your pull request isn't immediately accepted please don't take it
+   personally. We hope to retain a high level of code quality as the project
+   matures.
