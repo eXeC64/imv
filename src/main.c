@@ -37,7 +37,7 @@ void print_usage(const char* name)
 {
   fprintf(stdout,
   "imv %s\n"
-  "Usage: %s [-ifsh] [images...]\n"
+  "Usage: %s [-irfah] [images...]\n"
   "\n"
   "Flags:\n"
   "  -i: Read paths from stdin. One path per line.\n"
