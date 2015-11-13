@@ -265,6 +265,7 @@ int main(int argc, char** argv)
     if(view.playing) {
       double cur_time = SDL_GetTicks() / 1000.0;
       double dt = cur_time - last_time;
+      last_time = SDL_GetTicks() / 1000.0;
       imv_image_play(&img, dt);
     }
 
@@ -279,7 +280,6 @@ int main(int argc, char** argv)
       view.redraw = 0;
       SDL_RenderPresent(renderer);
     }
-    last_time = SDL_GetTicks() / 1000.0;
     SDL_Delay(10);
   }
 

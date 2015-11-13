@@ -150,6 +150,10 @@ void imv_image_load_next_frame(struct imv_image *img)
     frame_time = *(int*)FreeImage_GetTagValue(tag);
   }
 
+  /* some gifs don't provide a frame time at all */
+  if(frame_time == 0) {
+    frame_time = 100;
+  }
   img->frame_time += frame_time * 0.001;
 
   FreeImage_UnlockPage(img->mbmp, frame, 0);
