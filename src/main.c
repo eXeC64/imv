@@ -237,7 +237,6 @@ int main(int argc, char** argv)
             case SDLK_f:      imv_viewport_toggle_fullscreen(&view);   break;
             case SDLK_PERIOD: imv_image_load_next_frame(&img);         break;
             case SDLK_SPACE:  imv_viewport_toggle_playing(&view, &img);break;
-            case SDLK_s:     imv_viewport_scale_to_window(&view, &img);break;
             case SDLK_p:    puts(imv_navigator_get_current_path(&nav));break;
           }
           break;
