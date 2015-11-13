@@ -175,6 +175,16 @@ void imv_navigator_remove_current_path(struct imv_navigator *nav)
   nav->changed = 1;
 }
 
+void imv_navigator_set_path(struct imv_navigator *nav, const int path)
+{
+  if(path <= 0 || path >= nav->num_paths) {
+    return;
+  }
+  int prev_path = nav->cur_path;
+  nav->cur_path = path;
+  nav->changed = prev_path != nav->cur_path;
+}
+
 int imv_navigator_has_changed(struct imv_navigator *nav)
 {
   if(nav->changed) {

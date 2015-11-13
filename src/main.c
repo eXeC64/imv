@@ -31,7 +31,7 @@ struct {
   int stdin;
   int recursive;
   int actual;
-  long int start_at;
+  int start_at;
 } g_options = {0,0,0,0,0};
 
 void print_usage(const char* name)
@@ -48,7 +48,7 @@ void print_usage(const char* name)
   "  -h: Print this help\n"
   "\n"
   "Options:\n"
-  "  -n NUM: Starts at picture number NUM.\n"
+  "  -n NUM: Start at picture number NUM.\n"
   "\n"
   "Mouse:\n"
   "   Click+Drag to Pan\n"
@@ -93,7 +93,7 @@ void parse_args(int argc, char** argv)
   const char* name = argv[0];
   char o;
   char* end;
-  long int n;
+  int n;
 
   while((o = getopt(argc, argv, "firahn:")) != -1) {
     switch(o) {
@@ -108,9 +108,9 @@ void parse_args(int argc, char** argv)
       case 'n':
         n = strtol(optarg,&end,0);
         if(*end != '\0' || n <= 0) {
-            fprintf(stderr, "Warning: wrong value for '-n'.\n");
+          fprintf(stderr, "Warning: wrong value for '-n'.\n");
         } else {
-            g_options.start_at = n - 1;
+          g_options.start_at = n - 1;
         }
         break;
       case '?':
@@ -203,9 +203,7 @@ int main(int argc, char** argv)
 
   double last_time = SDL_GetTicks() / 1000.0;
 
-  for(long int i = 0; i < g_options.start_at; ++i) {
-    imv_navigator_next_path(&nav);
-  }
+  imv_navigator_set_path(&nav, g_options.start_at);
 
   int quit = 0;
   while(!quit) {
