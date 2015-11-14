@@ -125,10 +125,9 @@ void imv_texture_draw(struct imv_texture *tex, int bx, int by, double scale)
   int offset_y = 0;
   for(int y = 0; y < tex->num_chunks_tall; ++y) {
     for(int x = 0; x < tex->num_chunks_wide; ++x) {
-      int img_w, img_h, img_access;
-      unsigned int img_format;
-      SDL_QueryTexture(tex->chunks[x + y * tex->num_chunks_wide],
-          &img_format, &img_access, &img_w, &img_h);
+      int img_w, img_h;
+      SDL_QueryTexture(tex->chunks[x + y * tex->num_chunks_wide], NULL, NULL,
+        &img_w, &img_h);
       SDL_Rect view_area = {
         bx + offset_x,
         by + offset_y,

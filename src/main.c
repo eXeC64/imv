@@ -26,13 +26,19 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "navigator.h"
 #include "viewport.h"
 
+SDL_Texture *create_chequered(SDL_Renderer *renderer);
+
 struct {
   int fullscreen;
   int stdin;
   int recursive;
   int actual;
   int start_at;
-} g_options = {0,0,0,0,0};
+  int solid_bg;
+  int bg_r;
+  int bg_g;
+  int bg_b;
+} g_options = {0,0,0,0,0,0,0,0,0};
 
 void print_usage(const char* name)
 {
@@ -187,6 +193,9 @@ int main(int argc, char** argv)
   /* Use linear sampling for scaling */
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
+  /* construct a chequered background texture */
+  SDL_Texture *chequered_tex = create_chequered(renderer);
+
   struct imv_image img;
   imv_init_image(&img);
 
@@ -297,7 +306,23 @@ int main(int argc, char** argv)
     }
 
     if(view.redraw) {
-      SDL_RenderClear(renderer);
+      if(g_options.solid_bg) {
+        SDL_SetRenderDrawColor(renderer,
+            g_options.bg_r, g_options.bg_g, g_options.bg_b, 255);
+        SDL_RenderClear(renderer);
+      } else {
+        /* chequered background */
+        int ww, wh;
+        SDL_GetWindowSize(window, &ww, &wh);
+        int img_w, img_h;
+        SDL_QueryTexture(chequered_tex, NULL, NULL, &img_w, &img_h);
+        for(int y = 0; y < wh; y += img_h) {
+          for(int x = 0; x < ww; x += img_w) {
+            SDL_Rect dst_rect = {x,y,img_w,img_h};
+            SDL_RenderCopy(renderer, chequered_tex, NULL, &dst_rect);
+          }
+        }
+      }
       imv_texture_draw(&tex, view.x, view.y, view.scale);
       view.redraw = 0;
       SDL_RenderPresent(renderer);
@@ -310,9 +335,46 @@ int main(int argc, char** argv)
   imv_destroy_navigator(&nav);
   imv_destroy_viewport(&view);
 
+  SDL_DestroyTexture(chequered_tex);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();
 
   return 0;
+}
+
+SDL_Texture *create_chequered(SDL_Renderer *renderer)
+{
+  SDL_RendererInfo ri;
+  SDL_GetRendererInfo(renderer, &ri);
+  int width = 512;
+  int height = 512;
+  if(ri.max_texture_width != 0 && ri.max_texture_width < width) {
+    width = ri.max_texture_width;
+  }
+  if(ri.max_texture_height != 0 && ri.max_texture_height < height) {
+    height = ri.max_texture_height;
+  }
+  const int box_size = 16;
+  /* Create a chequered texture */
+  const unsigned char l = 196;
+  const unsigned char d = 96;
+
+  size_t pixels_len = 3 * width * height;
+  unsigned char *pixels = malloc(pixels_len);
+  for(int y = 0; y < height; y++) {
+    for(int x = 0; x < width; x += box_size) {
+      unsigned char color = l;
+      if(((x/box_size) % 2 == 0) ^ ((y/box_size) % 2 == 0)) {
+        color = d;
+      }
+      memset(pixels + 3 * x + 3 * width * y, color, 3 * box_size);
+    }
+  }
+  SDL_Texture *ret = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24,
+    SDL_TEXTUREACCESS_STATIC,
+    width, height);
+  SDL_UpdateTexture(ret, NULL, pixels, 3 * width);
+  free(pixels);
+  return ret;
 }
