@@ -159,9 +159,7 @@ void imv_image_load_next_frame(struct imv_image *img)
   /* If this frame is inset, we need to expand it for compositing */
   if(img->width != (int)FreeImage_GetWidth(frame32) ||
      img->height != (int)FreeImage_GetHeight(frame32)) {
-    RGBQUAD color = {0,0,0,0};
-    FIBITMAP *expanded = FreeImage_AllocateEx(img->width, img->height, 32,
-      &color, 0, NULL, 0, 0, 0);
+    FIBITMAP *expanded = FreeImage_Allocate(img->width, img->height, 32, 0,0,0);
     FreeImage_Paste(expanded, frame32, left, top, 255);
     FreeImage_Unload(frame32);
     frame32 = expanded;
