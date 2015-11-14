@@ -99,7 +99,6 @@ int imv_image_load(struct imv_image *img, const char* path)
     if(!image) {
       return 1;
     }
-    FreeImage_FlipVertical(image);
     img->cur_bmp = FreeImage_ConvertTo32Bits(image);
     img->width = FreeImage_GetWidth(img->cur_bmp);
     img->height = FreeImage_GetHeight(img->cur_bmp);
@@ -125,7 +124,6 @@ void imv_image_load_next_frame(struct imv_image *img)
   img->next_frame = (img->cur_frame + 1) % img->num_frames;
   FIBITMAP *frame = FreeImage_LockPage(img->mbmp, img->cur_frame);
   FIBITMAP *frame32 = FreeImage_ConvertTo32Bits(frame);
-  FreeImage_FlipVertical(frame32);
 
   /* First frame is always going to use the raw frame */
   if(img->cur_frame > 0) {
@@ -164,9 +162,9 @@ void imv_image_load_next_frame(struct imv_image *img)
     RGBQUAD color = {0,0,0,0};
     FIBITMAP *expanded = FreeImage_EnlargeCanvas(frame32,
         left,
-        img->height - FreeImage_GetHeight(frame32) - top,
-        img->width - FreeImage_GetWidth(frame32) - left,
         top,
+        img->width - FreeImage_GetWidth(frame32) - left,
+        img->height - FreeImage_GetHeight(frame32) - top,
         &color,
         0);
     FreeImage_Unload(frame32);

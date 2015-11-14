@@ -44,11 +44,8 @@ void imv_destroy_texture(struct imv_texture *tex)
 
 int imv_texture_set_image(struct imv_texture *tex, FIBITMAP *image)
 {
-  FIBITMAP *frame = FreeImage_ConvertTo32Bits(image);
-  tex->width = FreeImage_GetWidth(frame);
-  tex->height = FreeImage_GetHeight(frame);
-
-  char* pixels = (char*)FreeImage_GetBits(frame);
+  tex->width = FreeImage_GetWidth(image);
+  tex->height = FreeImage_GetHeight(image);
 
   /* figure out how many chunks are needed, and create them */
   if(tex->num_chunks > 0) {
@@ -81,10 +78,12 @@ int imv_texture_set_image(struct imv_texture *tex, FIBITMAP *image)
       const int is_last_v_chunk = (y == tex->num_chunks_tall - 1);
       tex->chunks[x + y * tex->num_chunks_wide] =
         SDL_CreateTexture(tex->renderer,
-          SDL_PIXELFORMAT_RGB888,
+          SDL_PIXELFORMAT_ARGB8888,
           SDL_TEXTUREACCESS_STATIC,
           is_last_h_chunk ? tex->last_chunk_width : tex->chunk_width,
           is_last_v_chunk ? tex->last_chunk_height : tex->chunk_height);
+      SDL_SetTextureBlendMode(tex->chunks[x + y * tex->num_chunks_wide],
+          SDL_BLENDMODE_BLEND);
       if(tex->chunks[x + y * tex->num_chunks_wide] == NULL) {
         failed_at = x + y * tex->num_chunks_wide;
         break;
@@ -102,16 +101,21 @@ int imv_texture_set_image(struct imv_texture *tex, FIBITMAP *image)
     return 1;
   }
 
+  BYTE* pixels = (BYTE*)malloc(4 * tex->width * tex->height);
+  FreeImage_ConvertToRawBits(pixels, image, 4 * tex->width, 32,
+      FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+
   for(int y = 0; y < tex->num_chunks_tall; ++y) {
     for(int x = 0; x < tex->num_chunks_wide; ++x) {
       ptrdiff_t offset = 4 * x * tex->chunk_width +
         y * 4 * tex->width * tex->chunk_height;
-      char* addr = pixels + offset;
+      BYTE* addr = pixels + offset;
       SDL_UpdateTexture(tex->chunks[x + y * tex->num_chunks_wide],
           NULL, addr, 4 * tex->width);
     }
   }
 
+  free(pixels);
   return 0;
 }
 
@@ -119,7 +123,6 @@ void imv_texture_draw(struct imv_texture *tex, int bx, int by, double scale)
 {
   int offset_x = 0;
   int offset_y = 0;
-
   for(int y = 0; y < tex->num_chunks_tall; ++y) {
     for(int x = 0; x < tex->num_chunks_wide; ++x) {
       int img_w, img_h, img_access;
