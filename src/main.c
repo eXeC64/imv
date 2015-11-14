@@ -36,23 +36,25 @@ struct {
   int recursive;
   int actual;
   int start_at;
+  int nearest_neighbour;
   int solid_bg;
   unsigned char bg_r;
   unsigned char bg_g;
   unsigned char bg_b;
-} g_options = {0,0,0,0,0,1,0,0,0};
+} g_options = {0,0,0,0,0,0,1,0,0,0};
 
 void print_usage(const char* name)
 {
   fprintf(stdout,
   "imv %s\n"
-  "Usage: %s [-irfah] [-n NUM] [-b BG] [images...]\n"
+  "Usage: %s [-irfauh] [-n NUM] [-b BG] [images...]\n"
   "\n"
   "Flags:\n"
   "  -i: Read paths from stdin. One path per line.\n"
   "  -r: Recursively search input paths.\n"
   "  -f: Start in fullscreen mode\n"
   "  -a: Default to images' actual size\n"
+  "  -u: Use nearest neighbour resampling.\n"
   "  -h: Print this help\n"
   "\n"
   "Options:\n"
@@ -104,16 +106,17 @@ void parse_args(int argc, char** argv)
   char* end;
   int n;
 
-  while((o = getopt(argc, argv, "firahn:b:")) != -1) {
+  while((o = getopt(argc, argv, "firauhn:b:")) != -1) {
     switch(o) {
       case 'f': g_options.fullscreen = 1;   break;
       case 'i':
         g_options.stdin = 1;
         fprintf(stderr, "Warning: '-i' is deprecated. Just use '-' instead.\n");
         break;
-      case 'r': g_options.recursive = 1;    break;
-      case 'a': g_options.actual = 1;       break;
-      case 'h': print_usage(name); exit(0); break;
+      case 'r': g_options.recursive = 1;           break;
+      case 'a': g_options.actual = 1;              break;
+      case 'u': g_options.nearest_neighbour = 1;   break;
+      case 'h': print_usage(name); exit(0);        break;
       case 'n':
         n = strtol(optarg,&end,0);
         if(*end != '\0' || n <= 0) {
@@ -205,8 +208,9 @@ int main(int argc, char** argv)
   SDL_Renderer *renderer =
     SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-  /* Use linear sampling for scaling */
-  SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+  /* use the appropriate resampling method */
+  SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,
+    g_options.nearest_neighbour ? "0" : "1");
 
   /* construct a chequered background texture */
   SDL_Texture *chequered_tex = create_chequered(renderer);
