@@ -27,6 +27,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "viewport.h"
 
 SDL_Texture *create_chequered(SDL_Renderer *renderer);
+int parse_hex_color(const char* str,
+  unsigned char *r, unsigned char *g, unsigned char *b);
 
 struct {
   int fullscreen;
@@ -35,16 +37,16 @@ struct {
   int actual;
   int start_at;
   int solid_bg;
-  int bg_r;
-  int bg_g;
-  int bg_b;
-} g_options = {0,0,0,0,0,0,0,0,0};
+  unsigned char bg_r;
+  unsigned char bg_g;
+  unsigned char bg_b;
+} g_options = {0,0,0,0,0,1,0,0,0};
 
 void print_usage(const char* name)
 {
   fprintf(stdout,
   "imv %s\n"
-  "Usage: %s [-irfah] [-n NUM] [images...]\n"
+  "Usage: %s [-irfah] [-n NUM] [-b BG] [images...]\n"
   "\n"
   "Flags:\n"
   "  -i: Read paths from stdin. One path per line.\n"
@@ -55,6 +57,7 @@ void print_usage(const char* name)
   "\n"
   "Options:\n"
   "  -n NUM: Start at picture number NUM.\n"
+  "  -b BG: Set the background. Either 'checks' or a hex color value.\n"
   "\n"
   "Mouse:\n"
   "   Click+Drag to Pan\n"
@@ -101,7 +104,7 @@ void parse_args(int argc, char** argv)
   char* end;
   int n;
 
-  while((o = getopt(argc, argv, "firahn:")) != -1) {
+  while((o = getopt(argc, argv, "firahn:b:")) != -1) {
     switch(o) {
       case 'f': g_options.fullscreen = 1;   break;
       case 'i':
@@ -117,6 +120,18 @@ void parse_args(int argc, char** argv)
           fprintf(stderr, "Warning: wrong value for '-n'.\n");
         } else {
           g_options.start_at = n - 1;
+        }
+        break;
+      case 'b':
+        if(strcmp("checks", optarg) == 0) {
+          g_options.solid_bg = 0;
+        } else {
+          g_options.solid_bg = 1;
+          if(parse_hex_color(optarg,
+              &g_options.bg_r, &g_options.bg_g, &g_options.bg_b) != 0) {
+            fprintf(stderr, "Invalid hex color: '%s'\n", optarg);
+            exit(1);
+          }
         }
         break;
       case '?':
@@ -377,4 +392,36 @@ SDL_Texture *create_chequered(SDL_Renderer *renderer)
   SDL_UpdateTexture(ret, NULL, pixels, 3 * width);
   free(pixels);
   return ret;
+}
+
+int parse_hex(char c) {
+  if(c >= '0' && c <= '9') {
+    return c - '0';
+  } else if (c >= 'a' && c <= 'f') {
+    return c - 'a' + 10;
+  }
+  return -1;
+}
+
+int parse_hex_color(const char* str,
+  unsigned char *r, unsigned char *g, unsigned char *b)
+{
+  if(str[0] == '#') {
+    ++str;
+  }
+
+  if(strlen(str) != 6) {
+    return 1;
+  }
+
+  for(int i = 0; i < 6; ++i) {
+    if(parse_hex(str[i]) == -1) {
+      return 1;
+    }
+  }
+
+  *r = (parse_hex(str[0]) << 4) + parse_hex(str[1]);
+  *g = (parse_hex(str[2]) << 4) + parse_hex(str[3]);
+  *b = (parse_hex(str[4]) << 4) + parse_hex(str[5]);
+  return 0;
 }
