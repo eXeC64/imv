@@ -160,13 +160,9 @@ void imv_image_load_next_frame(struct imv_image *img)
   if(img->width != (int)FreeImage_GetWidth(frame32) ||
      img->height != (int)FreeImage_GetHeight(frame32)) {
     RGBQUAD color = {0,0,0,0};
-    FIBITMAP *expanded = FreeImage_EnlargeCanvas(frame32,
-        left,
-        top,
-        img->width - FreeImage_GetWidth(frame32) - left,
-        img->height - FreeImage_GetHeight(frame32) - top,
-        &color,
-        0);
+    FIBITMAP *expanded = FreeImage_AllocateEx(img->width, img->height, 32,
+      &color, 0, NULL, 0, 0, 0);
+    FreeImage_Paste(expanded, frame32, left, top, 255);
     FreeImage_Unload(frame32);
     frame32 = expanded;
   }
