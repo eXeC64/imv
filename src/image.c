@@ -107,6 +107,7 @@ int imv_image_load(struct imv_image *img, const char* path)
     img->cur_bmp = FreeImage_ConvertTo32Bits(image);
     img->width = FreeImage_GetWidth(img->cur_bmp);
     img->height = FreeImage_GetHeight(img->cur_bmp);
+    FreeImage_Unload(image);
   }
 
   img->changed = 1;
