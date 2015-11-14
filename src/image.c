@@ -90,10 +90,15 @@ int imv_image_load(struct imv_image *img, const char* path)
     FIBITMAP *frame = FreeImage_LockPage(img->mbmp, 0);
     img->width = FreeImage_GetWidth(frame);
     img->height = FreeImage_GetHeight(frame);
+    if(!imv_image_is_animated(img)) {
+      img->cur_bmp = FreeImage_ConvertTo32Bits(frame);
+    }
     FreeImage_UnlockPage(img->mbmp, frame, 0);
 
-    /* load a frame */
-    imv_image_load_next_frame(img);
+    if(imv_image_is_animated(img)) {
+      /* load a frame */
+      imv_image_load_next_frame(img);
+    }
   } else {
     FIBITMAP *image = FreeImage_Load(fmt, path, 0);
     if(!image) {
