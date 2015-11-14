@@ -71,53 +71,56 @@ void imv_viewport_move(struct imv_viewport *view, int x, int y)
 
 void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *img, enum imv_zoom_source src, int amount)
 {
-  double prevScale = view->scale;
+  double prev_scale = view->scale;
   int x, y, ww, wh;
   SDL_GetWindowSize(view->window, &ww, &wh);
 
-  if(src == MOUSE) {
+  /* x and y cordinates are relative to the image */
+  if(src == IMV_ZOOM_MOUSE) {
     SDL_GetMouseState(&x, &y);
-    /* Translate mouse coordinates to projected coordinates */
     x -= view->x;
     y -= view->y;
   } else {
-    x = 0;
-    y = 0;
+    x = view->scale * img->width / 2;
+    y = view->scale * img->height / 2;
   }
 
-  const int scaledWidth = img->width * view->scale;
-  const int scaledHeight = img->height * view->scale;
-  const int ic_x = view->x + scaledWidth/2;
-  const int ic_y = view->y + scaledHeight/2;
+  const int scaled_width = img->width * view->scale;
+  const int scaled_height = img->height * view->scale;
+  const int ic_x = view->x + scaled_width/2;
+  const int ic_y = view->y + scaled_height/2;
   const int wc_x = ww/2;
   const int wc_y = wh/2;
 
-  view->scale += (view->scale / img->width) * amount * 20;
-  const int min_scale = 0.01;
-  const int max_scale = 100;
-  if(view->scale > max_scale)
-    view->scale = max_scale;
-  else if (view->scale < min_scale)
-    view->scale = min_scale;
+  double delta_scale = 0.04 * ww * amount / img->width;
+  view->scale += delta_scale;
 
-  if(view->scale < prevScale) {
-    if(scaledWidth < ww) {
-      x = scaledWidth/2 - (ic_x - wc_x)*2;
+  const double min_scale = 0.1;
+  const double max_scale = 100;
+  if(view->scale > max_scale) {
+    view->scale = max_scale;
+  } else if (view->scale < min_scale) {
+    view->scale = min_scale;
+  }
+
+  if(view->scale < prev_scale) {
+    if(scaled_width < ww) {
+      x = scaled_width/2 - (ic_x - wc_x)*2;
     }
-    if(scaledHeight < wh) {
-      y = scaledHeight/2 - (ic_y - wc_y)*2;
+    if(scaled_height < wh) {
+      y = scaled_height/2 - (ic_y - wc_y)*2;
     }
   } else {
-    if(scaledWidth < ww) {
-      x = scaledWidth/2;
+    if(scaled_width < ww) {
+      x = scaled_width/2;
     }
-    if(scaledHeight < wh) {
-      y = scaledHeight/2;
+    if(scaled_height < wh) {
+      y = scaled_height/2;
     }
   }
 
-  const double changeX = x - (x * (view->scale / prevScale));
-  const double changeY = y - (y * (view->scale / prevScale));
+  const double changeX = x - (x * (view->scale / prev_scale));
+  const double changeY = y - (y * (view->scale / prev_scale));
 
   view->x += changeX;
   view->y += changeY;

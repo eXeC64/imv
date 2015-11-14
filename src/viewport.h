@@ -32,8 +32,8 @@ struct imv_viewport {
 };
 
 enum imv_zoom_source {
-  MOUSE,
-  KBD
+  IMV_ZOOM_MOUSE,
+  IMV_ZOOM_KEYBOARD
 };
 
 void imv_init_viewport(struct imv_viewport *view, SDL_Window *window);
