@@ -1,6 +1,25 @@
 imv Changelog
 =============
 
+v1.1.0 - 2015-11-14
+-------------------
+
+* Relicensed to GPL
+* Added support for transparency
+* Added 'p' hotkey to print the current image's path to stdout
+* Added '-n' option to start at a specific image
+* Added '-b' option to set the background
+* Added '-u' option to set resampling to nearest-neighbour
+* Changed '-i' option to '-' for reading paths from stdin
+* Added a .desktop file, for xdg-open support
+* Fixed compilation on Fedora 22
+* Fixed crash when using SDL's software renderer
+* Fixed bug where single frame gifs would not be rendered
+* Fixed animated gif playback speed for some unusual gifs
+* Fixed slow zoom speed on large images
+* Fixed a memory leak
+* Added a FreeImage copyright notice for GPL compliance
+
 v1.0.0 - 2015-11-11
 -------------------
 Intitial release
