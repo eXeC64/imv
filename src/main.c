@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <SDL2/SDL.h>
 #include <FreeImage.h>
 #include <getopt.h>
+#include <ctype.h>
 
 #include "image.h"
 #include "texture.h"
@@ -407,6 +408,8 @@ int parse_hex(char c) {
     return c - '0';
   } else if (c >= 'a' && c <= 'f') {
     return c - 'a' + 10;
+  } else if (c >= 'A' && c <= 'F') {
+    return c - 'A' + 10;
   }
   return -1;
 }
@@ -423,7 +426,7 @@ int parse_hex_color(const char* str,
   }
 
   for(int i = 0; i < 6; ++i) {
-    if(parse_hex(str[i]) == -1) {
+    if(!isxdigit(str[i])) {
       return 1;
     }
   }
