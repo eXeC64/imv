@@ -18,6 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <stdio.h>
 #include <stddef.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include <FreeImage.h>
 #include <getopt.h>
 #include <ctype.h>
@@ -42,7 +43,8 @@ struct {
   unsigned char bg_r;
   unsigned char bg_g;
   unsigned char bg_b;
-} g_options = {0,0,0,0,0,0,1,0,0,0};
+  int overlay;
+} g_options = {0,0,0,0,0,0,1,0,0,0,0};
 
 void print_usage(const char* name)
 {
@@ -56,6 +58,7 @@ void print_usage(const char* name)
   "  -f: Start in fullscreen mode\n"
   "  -a: Default to images' actual size\n"
   "  -u: Use nearest neighbour resampling.\n"
+  "  -d: Show overlay\n"
   "  -h: Print this help\n"
   "\n"
   "Options:\n"
@@ -81,6 +84,7 @@ void print_usage(const char* name)
   "         'c': Center view\n"
   "         'x': Close current image\n"
   "         'f': Toggle fullscreen\n"
+  "         'd': Toggle overlay\n"
   "         ' ': Toggle gif playback\n"
   "         '.': Step a frame of gif playback\n"
   "         'p': Print current image path to stdout\n"
@@ -107,7 +111,7 @@ void parse_args(int argc, char** argv)
   char* end;
   int n;
 
-  while((o = getopt(argc, argv, "firauhn:b:")) != -1) {
+  while((o = getopt(argc, argv, "firaudhn:b:")) != -1) {
     switch(o) {
       case 'f': g_options.fullscreen = 1;   break;
       case 'i':
@@ -117,6 +121,7 @@ void parse_args(int argc, char** argv)
       case 'r': g_options.recursive = 1;           break;
       case 'a': g_options.actual = 1;              break;
       case 'u': g_options.nearest_neighbour = 1;   break;
+      case 'd': g_options.overlay = 1;             break;
       case 'h': print_usage(name); exit(0);        break;
       case 'n':
         n = strtol(optarg,&end,0);
@@ -216,6 +221,14 @@ int main(int argc, char** argv)
   /* construct a chequered background texture */
   SDL_Texture *chequered_tex = create_chequered(renderer);
 
+  TTF_Init();
+  TTF_Font *font = TTF_OpenFont("/usr/share/fonts/TTF/FreeSerif.ttf", 24);
+  if(!font) {
+    fprintf(stderr, "Error loading font: %s\n", TTF_GetError());
+  }
+  SDL_Surface *overlay_surf = NULL;
+  SDL_Texture *overlay_tex = NULL;
+
   struct imv_image img;
   imv_init_image(&img);
 
@@ -271,6 +284,10 @@ int main(int argc, char** argv)
             case SDLK_PERIOD: imv_image_load_next_frame(&img);         break;
             case SDLK_SPACE:  imv_viewport_toggle_playing(&view, &img);break;
             case SDLK_p:    puts(imv_navigator_get_current_path(&nav));break;
+            case SDLK_d:
+              g_options.overlay = !g_options.overlay;
+              imv_viewport_set_redraw(&view);
+              break;
           }
           break;
         case SDL_MOUSEWHEEL:
@@ -311,7 +328,25 @@ int main(int argc, char** argv)
             img.width, img.height, current_path);
         imv_viewport_set_title(&view, title);
         imv_viewport_scale_to_window(&view, &img);
+
+        if(overlay_surf) {
+          free(overlay_surf);
+          overlay_surf = NULL;
+        }
+        if(overlay_tex) {
+          SDL_DestroyTexture(overlay_tex);
+          overlay_tex = NULL;
+        }
+
+        if(font) {
+          snprintf(&title[0], sizeof(title), "[%i/%i] %s",
+            nav.cur_path + 1, nav.num_paths, current_path);
+          SDL_Color w = {255,255,255,255};
+          overlay_surf = TTF_RenderUTF8_Blended(font, &title[0], w);
+          overlay_tex = SDL_CreateTextureFromSurface(renderer, overlay_surf);
+        }
       }
+
       if(g_options.actual) {
         imv_viewport_scale_to_actual(&view, &img);
       }
@@ -348,6 +383,15 @@ int main(int argc, char** argv)
         }
       }
       imv_texture_draw(&tex, view.x, view.y, view.scale);
+      if(g_options.overlay && font) {
+        int ow, oh;
+        SDL_QueryTexture(overlay_tex, NULL, NULL, &ow, &oh);
+        SDL_Rect or = {0,0,ow,oh};
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 160);
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+        SDL_RenderFillRect(renderer, &or);
+        SDL_RenderCopy(renderer, overlay_tex, NULL, &or);
+      }
       view.redraw = 0;
       SDL_RenderPresent(renderer);
     }
@@ -359,6 +403,10 @@ int main(int argc, char** argv)
   imv_destroy_navigator(&nav);
   imv_destroy_viewport(&view);
 
+  if(font) {
+    TTF_CloseFont(font);
+  }
+  TTF_Quit();
   SDL_DestroyTexture(chequered_tex);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);

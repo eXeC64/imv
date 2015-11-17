@@ -3,7 +3,7 @@
 prefix = /usr
 
 CFLAGS = -W -Wall -std=gnu11 `sdl2-config --cflags`
-LDFLAGS = `sdl2-config --libs` -lfreeimage
+LDFLAGS = `sdl2-config --libs` -lfreeimage -lSDL2_ttf
 
 TARGET = imv
 BUILDDIR = build
