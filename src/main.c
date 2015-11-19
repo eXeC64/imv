@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <FreeImage.h>
+#include <fontconfig/fontconfig.h>
 #include <getopt.h>
 #include <ctype.h>
 
@@ -44,13 +45,14 @@ struct {
   unsigned char bg_g;
   unsigned char bg_b;
   int overlay;
-} g_options = {0,0,0,0,0,0,1,0,0,0,0};
+  const char *font;
+} g_options = {0,0,0,0,0,0,1,0,0,0,0,"FreeMono:24"};
 
 void print_usage(const char* name)
 {
   fprintf(stdout,
   "imv %s\n"
-  "Usage: %s [-rfaudh] [-n NUM] [-b BG] [-] [images...]\n"
+  "Usage: %s [-rfaudh] [-n NUM] [-b BG] [-e FONT:SIZE] [-] [images...]\n"
   "\n"
   "Flags:\n"
   "   -: Read paths from stdin. One path per line.\n"
@@ -64,6 +66,7 @@ void print_usage(const char* name)
   "Options:\n"
   "  -n NUM: Start at picture number NUM.\n"
   "  -b BG: Set the background. Either 'checks' or a hex color value.\n"
+  "  -e FONT:SIZE: Set the font used for the overlay. Defaults to FreeMono:24"
   "\n"
   "Mouse:\n"
   "   Click+Drag to Pan\n"
@@ -111,7 +114,7 @@ void parse_args(int argc, char** argv)
   char* end;
   int n;
 
-  while((o = getopt(argc, argv, "firaudhn:b:")) != -1) {
+  while((o = getopt(argc, argv, "firaudhn:b:e:")) != -1) {
     switch(o) {
       case 'f': g_options.fullscreen = 1;   break;
       case 'i':
@@ -143,11 +146,52 @@ void parse_args(int argc, char** argv)
           }
         }
         break;
+      case 'e':
+        g_options.font = optarg;
+        break;
       case '?':
         fprintf(stderr, "Unknown argument '%c'. Aborting.\n", optopt);
         exit(1);
     }
   }
+}
+
+TTF_Font *load_font(const char *font_spec)
+{
+  int font_size;
+  char *font_name;
+
+  /* figure out font size from name, or default to 24 */
+  char *sep = strchr(font_spec, ':');
+  if(sep) {
+    font_name = strndup(font_spec, sep - font_spec);
+    font_size = strtol(sep+1, NULL, 10);
+  } else {
+    font_name = strdup(font_spec);
+    font_size = 24;
+  }
+
+
+  FcConfig *cfg = FcInitLoadConfigAndFonts();
+  FcPattern *pattern = FcNameParse((const FcChar8*)font_name);
+  FcConfigSubstitute(cfg, pattern, FcMatchPattern);
+  FcDefaultSubstitute(pattern);
+
+  TTF_Font *ret = NULL;
+
+  FcResult result = FcResultNoMatch;
+  FcPattern* font = FcFontMatch(cfg, pattern, &result);
+  if (font) {
+    FcChar8 *path = NULL;
+    if (FcPatternGetString(font, FC_FILE, 0, &path) == FcResultMatch) {
+      ret = TTF_OpenFont((char*)path, font_size);
+    }
+    FcPatternDestroy(font);
+  }
+  FcPatternDestroy(pattern);
+
+  free(font_name);
+  return ret;
 }
 
 int main(int argc, char** argv)
@@ -222,7 +266,7 @@ int main(int argc, char** argv)
   SDL_Texture *chequered_tex = create_chequered(renderer);
 
   TTF_Init();
-  TTF_Font *font = TTF_OpenFont("/usr/share/fonts/TTF/FreeSerif.ttf", 24);
+  TTF_Font *font = load_font(g_options.font);
   if(!font) {
     fprintf(stderr, "Error loading font: %s\n", TTF_GetError());
   }

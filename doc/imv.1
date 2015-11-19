@@ -3,7 +3,7 @@
 imv \- image viewer
 .SH SYNOPSIS
 .nf
-\fBimv\fP [-rfaudh] [-n NUM] [images...]
+\fBimv\fP [-rfaudh] [-n NUM] [-b COLOR] [-e FONT:SIZE] [images...]
 .fi
 .sp
 .SH DESCRIPTION
@@ -39,6 +39,10 @@ Start at picture number NUM.
 .TP
 .BI "-b " BG
 Set the background color. Either 'checks' or a hex color value.
+.TP
+.BI "-e " FONT:SIZE
+Set the font used by the overlay. FONT can be any valid system font, such as
+FreeSans, FreeMono, etc. Defaults to FreeMono:24.
 .SH CONTROLS
 .sp
 imv can be controlled using the mouse or keyboard.
