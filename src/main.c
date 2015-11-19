@@ -50,10 +50,10 @@ void print_usage(const char* name)
 {
   fprintf(stdout,
   "imv %s\n"
-  "Usage: %s [-irfauh] [-n NUM] [-b BG] [images...]\n"
+  "Usage: %s [-rfaudh] [-n NUM] [-b BG] [-] [images...]\n"
   "\n"
   "Flags:\n"
-  "  -i: Read paths from stdin. One path per line.\n"
+  "   -: Read paths from stdin. One path per line.\n"
   "  -r: Recursively search input paths.\n"
   "  -f: Start in fullscreen mode\n"
   "  -a: Default to images' actual size\n"
