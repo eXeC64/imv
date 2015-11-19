@@ -19,7 +19,7 @@ Usage
     imv image1.png another_image.jpeg yet_another.TIFF
 
 ### Opening images via stdin
-    find . "*.png" | imv -i
+    find . "*.png" | imv -
 
 ### Autoscale images to fit the window
     imv -s *.gif
@@ -28,7 +28,7 @@ Usage
     imv -fs image.jpeg
 
 ### Viewing images in a random order
-    find . "*.png" | shuf | imv -i
+    find . "*.png" | shuf | imv -
 
 ### Image picker
 imv can be used to select images in a pipeline by using the 'p' hotkey to print
