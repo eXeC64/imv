@@ -46,6 +46,8 @@ the current image's path to stdout.
 Installation
 ------------
 
+`imv` depends on `FontConfig`, `SDL2`, `SDL_TTF`, and `FreeImage`.
+
     $ make
     # make install
 
