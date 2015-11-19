@@ -15,30 +15,30 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include "image.h"
+#include "loader.h"
 
-void imv_init_image(struct imv_image *img)
+void imv_init_loader(struct imv_loader *ldr)
 {
-  img->mbmp = NULL;
-  img->cur_bmp = NULL;
-  img->width = 0;
-  img->height = 0;
-  img->cur_frame = 0;
-  img->next_frame = 0;
-  img->num_frames = 0;
-  img->frame_time = 0;
-  img->changed = 0;
+  ldr->mbmp = NULL;
+  ldr->cur_bmp = NULL;
+  ldr->width = 0;
+  ldr->height = 0;
+  ldr->cur_frame = 0;
+  ldr->next_frame = 0;
+  ldr->num_frames = 0;
+  ldr->frame_time = 0;
+  ldr->changed = 0;
 }
 
-void imv_destroy_image(struct imv_image *img)
+void imv_destroy_loader(struct imv_loader *ldr)
 {
-  if(img->cur_bmp) {
-    FreeImage_Unload(img->cur_bmp);
-    img->cur_bmp = NULL;
+  if(ldr->cur_bmp) {
+    FreeImage_Unload(ldr->cur_bmp);
+    ldr->cur_bmp = NULL;
   }
-  if(img->mbmp) {
-    FreeImage_CloseMultiBitmap(img->mbmp, 0);
-    img->mbmp = NULL;
+  if(ldr->mbmp) {
+    FreeImage_CloseMultiBitmap(ldr->mbmp, 0);
+    ldr->mbmp = NULL;
   }
 }
 
@@ -51,16 +51,16 @@ int imv_can_load_image(const char* path)
   }
 }
 
-int imv_image_load(struct imv_image *img, const char* path)
+int imv_loader_load(struct imv_loader *ldr, const char* path)
 {
-  if(img->mbmp) {
-    FreeImage_CloseMultiBitmap(img->mbmp, 0);
-    img->mbmp = NULL;
+  if(ldr->mbmp) {
+    FreeImage_CloseMultiBitmap(ldr->mbmp, 0);
+    ldr->mbmp = NULL;
   }
 
-  if(img->cur_bmp) {
-    FreeImage_Unload(img->cur_bmp);
-    img->cur_bmp = NULL;
+  if(ldr->cur_bmp) {
+    FreeImage_Unload(ldr->cur_bmp);
+    ldr->cur_bmp = NULL;
   }
 
 
@@ -70,53 +70,53 @@ int imv_image_load(struct imv_image *img, const char* path)
     return 1;
   }
 
-  img->num_frames = 0;
-  img->cur_frame = 0;
-  img->next_frame = 0;
-  img->frame_time = 0;
+  ldr->num_frames = 0;
+  ldr->cur_frame = 0;
+  ldr->next_frame = 0;
+  ldr->frame_time = 0;
 
   if(fmt == FIF_GIF) {
-    img->mbmp = FreeImage_OpenMultiBitmap(FIF_GIF, path,
+    ldr->mbmp = FreeImage_OpenMultiBitmap(FIF_GIF, path,
       /* don't create file */ 0,
       /* read only */ 1,
       /* keep in memory */ 1,
       /* flags */ GIF_LOAD256);
-    if(!img->mbmp) {
+    if(!ldr->mbmp) {
       return 1;
     }
-    img->num_frames = FreeImage_GetPageCount(img->mbmp);
+    ldr->num_frames = FreeImage_GetPageCount(ldr->mbmp);
 
     /* get the dimensions from the first frame */
-    FIBITMAP *frame = FreeImage_LockPage(img->mbmp, 0);
-    img->width = FreeImage_GetWidth(frame);
-    img->height = FreeImage_GetHeight(frame);
-    if(!imv_image_is_animated(img)) {
-      img->cur_bmp = FreeImage_ConvertTo32Bits(frame);
+    FIBITMAP *frame = FreeImage_LockPage(ldr->mbmp, 0);
+    ldr->width = FreeImage_GetWidth(frame);
+    ldr->height = FreeImage_GetHeight(frame);
+    if(!imv_loader_is_animated(ldr)) {
+      ldr->cur_bmp = FreeImage_ConvertTo32Bits(frame);
     }
-    FreeImage_UnlockPage(img->mbmp, frame, 0);
+    FreeImage_UnlockPage(ldr->mbmp, frame, 0);
 
-    if(imv_image_is_animated(img)) {
+    if(imv_loader_is_animated(ldr)) {
       /* load a frame */
-      imv_image_load_next_frame(img);
+      imv_loader_load_next_frame(ldr);
     }
   } else {
     FIBITMAP *image = FreeImage_Load(fmt, path, 0);
     if(!image) {
       return 1;
     }
-    img->cur_bmp = FreeImage_ConvertTo32Bits(image);
-    img->width = FreeImage_GetWidth(img->cur_bmp);
-    img->height = FreeImage_GetHeight(img->cur_bmp);
+    ldr->cur_bmp = FreeImage_ConvertTo32Bits(image);
+    ldr->width = FreeImage_GetWidth(ldr->cur_bmp);
+    ldr->height = FreeImage_GetHeight(ldr->cur_bmp);
     FreeImage_Unload(image);
   }
 
-  img->changed = 1;
+  ldr->changed = 1;
   return 0;
 }
 
-void imv_image_load_next_frame(struct imv_image *img)
+void imv_loader_load_next_frame(struct imv_loader *ldr)
 {
-  if(!imv_image_is_animated(img)) {
+  if(!imv_loader_is_animated(ldr)) {
     return;
   }
 
@@ -126,13 +126,13 @@ void imv_image_load_next_frame(struct imv_image *img)
   short top = 0;
   short left = 0;
 
-  img->cur_frame = img->next_frame;
-  img->next_frame = (img->cur_frame + 1) % img->num_frames;
-  FIBITMAP *frame = FreeImage_LockPage(img->mbmp, img->cur_frame);
+  ldr->cur_frame = ldr->next_frame;
+  ldr->next_frame = (ldr->cur_frame + 1) % ldr->num_frames;
+  FIBITMAP *frame = FreeImage_LockPage(ldr->mbmp, ldr->cur_frame);
   FIBITMAP *frame32 = FreeImage_ConvertTo32Bits(frame);
 
   /* First frame is always going to use the raw frame */
-  if(img->cur_frame > 0) {
+  if(ldr->cur_frame > 0) {
     FreeImage_GetMetadata(FIMD_ANIMATION, frame, "DisposalMethod", &tag);
     if(FreeImage_GetTagValue(tag)) {
       disposal_method = *(char*)FreeImage_GetTagValue(tag);
@@ -158,14 +158,14 @@ void imv_image_load_next_frame(struct imv_image *img)
   if(frame_time == 0) {
     frame_time = 100;
   }
-  img->frame_time += frame_time * 0.001;
+  ldr->frame_time += frame_time * 0.001;
 
-  FreeImage_UnlockPage(img->mbmp, frame, 0);
+  FreeImage_UnlockPage(ldr->mbmp, frame, 0);
 
   /* If this frame is inset, we need to expand it for compositing */
-  if(img->width != (int)FreeImage_GetWidth(frame32) ||
-     img->height != (int)FreeImage_GetHeight(frame32)) {
-    FIBITMAP *expanded = FreeImage_Allocate(img->width, img->height, 32, 0,0,0);
+  if(ldr->width != (int)FreeImage_GetWidth(frame32) ||
+     ldr->height != (int)FreeImage_GetHeight(frame32)) {
+    FIBITMAP *expanded = FreeImage_Allocate(ldr->width, ldr->height, 32, 0,0,0);
     FreeImage_Paste(expanded, frame32, left, top, 255);
     FreeImage_Unload(frame32);
     frame32 = expanded;
@@ -173,65 +173,65 @@ void imv_image_load_next_frame(struct imv_image *img)
 
   switch(disposal_method) {
     case 0: /* nothing specified, just use the raw frame */
-      if(img->cur_bmp) {
-        FreeImage_Unload(img->cur_bmp);
+      if(ldr->cur_bmp) {
+        FreeImage_Unload(ldr->cur_bmp);
       }
-      img->cur_bmp = frame32;
+      ldr->cur_bmp = frame32;
       break;
     case 1: /* composite over previous frame */
-      if(img->cur_bmp && img->cur_frame > 0) {
-        FIBITMAP *bg_frame = FreeImage_ConvertTo24Bits(img->cur_bmp);
-        FreeImage_Unload(img->cur_bmp);
+      if(ldr->cur_bmp && ldr->cur_frame > 0) {
+        FIBITMAP *bg_frame = FreeImage_ConvertTo24Bits(ldr->cur_bmp);
+        FreeImage_Unload(ldr->cur_bmp);
         FIBITMAP *comp = FreeImage_Composite(frame32, 1, NULL, bg_frame);
         FreeImage_Unload(bg_frame);
         FreeImage_Unload(frame32);
-        img->cur_bmp = comp;
+        ldr->cur_bmp = comp;
       } else {
         /* No previous frame, just render directly */
-        if(img->cur_bmp) {
-          FreeImage_Unload(img->cur_bmp);
+        if(ldr->cur_bmp) {
+          FreeImage_Unload(ldr->cur_bmp);
         }
-        img->cur_bmp = frame32;
+        ldr->cur_bmp = frame32;
       }
       break;
     case 2: /* TODO - set to background, composite over that */
-      if(img->cur_bmp) {
-        FreeImage_Unload(img->cur_bmp);
+      if(ldr->cur_bmp) {
+        FreeImage_Unload(ldr->cur_bmp);
       }
-      img->cur_bmp = frame32;
+      ldr->cur_bmp = frame32;
       break;
     case 3: /* TODO - restore to previous content */
-      if(img->cur_bmp) {
-        FreeImage_Unload(img->cur_bmp);
+      if(ldr->cur_bmp) {
+        FreeImage_Unload(ldr->cur_bmp);
       }
-      img->cur_bmp = frame32;
+      ldr->cur_bmp = frame32;
       break;
   }
-  img->changed = 1;
+  ldr->changed = 1;
 }
 
-int imv_image_is_animated(struct imv_image *img)
+int imv_loader_is_animated(struct imv_loader *ldr)
 {
-  return img->num_frames > 1;
+  return ldr->num_frames > 1;
 }
 
-void imv_image_play(struct imv_image *img, double time)
+void imv_loader_play(struct imv_loader *ldr, double time)
 {
-  if(!imv_image_is_animated(img)) {
+  if(!imv_loader_is_animated(ldr)) {
     return;
   }
 
-  img->frame_time -= time;
-  if(img->frame_time < 0) {
-    img->frame_time = 0;
-    imv_image_load_next_frame(img);
+  ldr->frame_time -= time;
+  if(ldr->frame_time < 0) {
+    ldr->frame_time = 0;
+    imv_loader_load_next_frame(ldr);
   }
 }
 
-int imv_image_has_changed(struct imv_image *img)
+int imv_loader_has_changed(struct imv_loader *ldr)
 {
-  if(img->changed) {
-    img->changed = 0;
+  if(ldr->changed) {
+    ldr->changed = 0;
     return 1;
   } else {
     return 0;

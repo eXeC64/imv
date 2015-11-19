@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <FreeImage.h>
 
-struct imv_image {
+struct imv_loader {
   FIMULTIBITMAP *mbmp;
   FIBITMAP *cur_bmp;
   int width;
@@ -32,16 +32,16 @@ struct imv_image {
   double frame_time;
 };
 
-void imv_init_image(struct imv_image *img);
-void imv_destroy_image(struct imv_image *img);
+void imv_init_loader(struct imv_loader *img);
+void imv_destroy_loader(struct imv_loader *img);
 
 int imv_can_load_image(const char* path);
-int imv_image_load(struct imv_image *img, const char* path);
-void imv_image_load_next_frame(struct imv_image *img);
+int imv_loader_load(struct imv_loader *img, const char* path);
+void imv_loader_load_next_frame(struct imv_loader *img);
 
-int imv_image_is_animated(struct imv_image *img);
-void imv_image_play(struct imv_image *img, double time);
+int imv_loader_is_animated(struct imv_loader *img);
+void imv_loader_play(struct imv_loader *img, double time);
 
-int imv_image_has_changed(struct imv_image *img);
+int imv_loader_has_changed(struct imv_loader *img);
 
 #endif

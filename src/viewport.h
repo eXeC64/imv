@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include <SDL2/SDL.h>
-#include "image.h"
+#include "loader.h"
 
 struct imv_viewport {
   SDL_Window *window;
@@ -40,15 +40,15 @@ void imv_init_viewport(struct imv_viewport *view, SDL_Window *window);
 void imv_destroy_viewport(struct imv_viewport *view);
 
 void imv_viewport_toggle_fullscreen(struct imv_viewport*);
-void imv_viewport_toggle_playing(struct imv_viewport*, struct imv_image*);
+void imv_viewport_toggle_playing(struct imv_viewport*, struct imv_loader*);
 void imv_viewport_reset(struct imv_viewport*);
 void imv_viewport_move(struct imv_viewport*, int, int);
-void imv_viewport_zoom(struct imv_viewport*, const struct imv_image*, enum imv_zoom_source, int);
-void imv_viewport_center(struct imv_viewport*, const struct imv_image*);
-void imv_viewport_scale_to_actual(struct imv_viewport*, const struct imv_image*);
-void imv_viewport_scale_to_window(struct imv_viewport*, const struct imv_image*);
+void imv_viewport_zoom(struct imv_viewport*, const struct imv_loader*, enum imv_zoom_source, int);
+void imv_viewport_center(struct imv_viewport*, const struct imv_loader*);
+void imv_viewport_scale_to_actual(struct imv_viewport*, const struct imv_loader*);
+void imv_viewport_scale_to_window(struct imv_viewport*, const struct imv_loader*);
 void imv_viewport_set_redraw(struct imv_viewport*);
 void imv_viewport_set_title(struct imv_viewport*, char*);
-void imv_viewport_updated(struct imv_viewport*, struct imv_image*);
+void imv_viewport_updated(struct imv_viewport*, struct imv_loader*);
 
 #endif

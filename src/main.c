@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <getopt.h>
 #include <ctype.h>
 
-#include "image.h"
+#include "loader.h"
 #include "texture.h"
 #include "navigator.h"
 #include "viewport.h"
@@ -273,8 +273,8 @@ int main(int argc, char** argv)
   SDL_Surface *overlay_surf = NULL;
   SDL_Texture *overlay_tex = NULL;
 
-  struct imv_image img;
-  imv_init_image(&img);
+  struct imv_loader ldr;
+  imv_init_loader(&ldr);
 
   struct imv_texture tex;
   imv_init_texture(&tex, renderer);
@@ -309,24 +309,24 @@ int main(int argc, char** argv)
             case SDLK_EQUALS:
             case SDLK_i:
             case SDLK_UP:
-              imv_viewport_zoom(&view, &img, IMV_ZOOM_KEYBOARD, 1);
+              imv_viewport_zoom(&view, &ldr, IMV_ZOOM_KEYBOARD, 1);
               break;
             case SDLK_MINUS:
             case SDLK_o:
             case SDLK_DOWN:
-              imv_viewport_zoom(&view, &img, IMV_ZOOM_KEYBOARD, -1);
+              imv_viewport_zoom(&view, &ldr, IMV_ZOOM_KEYBOARD, -1);
               break;
-            case SDLK_a:     imv_viewport_scale_to_actual(&view, &img);break;
-            case SDLK_r:     imv_viewport_scale_to_window(&view, &img);break;
-            case SDLK_c:      imv_viewport_center(&view, &img);        break;
+            case SDLK_a:     imv_viewport_scale_to_actual(&view, &ldr);break;
+            case SDLK_r:     imv_viewport_scale_to_window(&view, &ldr);break;
+            case SDLK_c:      imv_viewport_center(&view, &ldr);        break;
             case SDLK_j:      imv_viewport_move(&view, 0, -50);        break;
             case SDLK_k:      imv_viewport_move(&view, 0, 50);         break;
             case SDLK_h:      imv_viewport_move(&view, 50, 0);         break;
             case SDLK_l:      imv_viewport_move(&view, -50, 0);        break;
             case SDLK_x:      imv_navigator_remove_current_path(&nav); break;
             case SDLK_f:      imv_viewport_toggle_fullscreen(&view);   break;
-            case SDLK_PERIOD: imv_image_load_next_frame(&img);         break;
-            case SDLK_SPACE:  imv_viewport_toggle_playing(&view, &img);break;
+            case SDLK_PERIOD: imv_loader_load_next_frame(&ldr);         break;
+            case SDLK_SPACE:  imv_viewport_toggle_playing(&view, &ldr);break;
             case SDLK_p:    puts(imv_navigator_get_current_path(&nav));break;
             case SDLK_d:
               g_options.overlay = !g_options.overlay;
@@ -335,7 +335,7 @@ int main(int argc, char** argv)
           }
           break;
         case SDL_MOUSEWHEEL:
-          imv_viewport_zoom(&view, &img, IMV_ZOOM_MOUSE, e.wheel.y);
+          imv_viewport_zoom(&view, &ldr, IMV_ZOOM_MOUSE, e.wheel.y);
           break;
         case SDL_MOUSEMOTION:
           if(e.motion.state & SDL_BUTTON_LMASK) {
@@ -343,7 +343,7 @@ int main(int argc, char** argv)
           }
           break;
         case SDL_WINDOWEVENT:
-          imv_viewport_updated(&view, &img);
+          imv_viewport_updated(&view, &ldr);
           break;
       }
     }
@@ -364,14 +364,14 @@ int main(int argc, char** argv)
         exit(1);
       }
 
-      if(imv_image_load(&img, current_path) != 0) {
+      if(imv_loader_load(&ldr, current_path) != 0) {
         imv_navigator_remove_current_path(&nav);
       } else {
         snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s",
             nav.cur_path + 1, nav.num_paths,
-            img.width, img.height, current_path);
+            ldr.width, ldr.height, current_path);
         imv_viewport_set_title(&view, title);
-        imv_viewport_scale_to_window(&view, &img);
+        imv_viewport_scale_to_window(&view, &ldr);
 
         if(overlay_surf) {
           free(overlay_surf);
@@ -392,7 +392,7 @@ int main(int argc, char** argv)
       }
 
       if(g_options.actual) {
-        imv_viewport_scale_to_actual(&view, &img);
+        imv_viewport_scale_to_actual(&view, &ldr);
       }
     }
 
@@ -400,11 +400,11 @@ int main(int argc, char** argv)
       double cur_time = SDL_GetTicks() / 1000.0;
       double dt = cur_time - last_time;
       last_time = SDL_GetTicks() / 1000.0;
-      imv_image_play(&img, dt);
+      imv_loader_play(&ldr, dt);
     }
 
-    if(imv_image_has_changed(&img)) {
-      imv_texture_set_image(&tex, img.cur_bmp);
+    if(imv_loader_has_changed(&ldr)) {
+      imv_texture_set_image(&tex, ldr.cur_bmp);
       imv_viewport_set_redraw(&view);
     }
 
@@ -442,7 +442,7 @@ int main(int argc, char** argv)
     SDL_Delay(10);
   }
 
-  imv_destroy_image(&img);
+  imv_destroy_loader(&ldr);
   imv_destroy_texture(&tex);
   imv_destroy_navigator(&nav);
   imv_destroy_viewport(&view);

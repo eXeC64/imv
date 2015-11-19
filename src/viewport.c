@@ -16,7 +16,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include "viewport.h"
-#include "image.h"
 
 void imv_init_viewport(struct imv_viewport *view, SDL_Window *window)
 {
@@ -44,21 +43,21 @@ void imv_viewport_toggle_fullscreen(struct imv_viewport *view)
   }
 }
 
-void imv_viewport_toggle_playing(struct imv_viewport *view, struct imv_image *img)
+void imv_viewport_toggle_playing(struct imv_viewport *view, struct imv_loader *ldr)
 {
   if(view->playing) {
     view->playing = 0;
-  } else if(imv_image_is_animated(img)) {
+  } else if(imv_loader_is_animated(ldr)) {
     view->playing = 1;
   }
 }
 
-void imv_viewport_scale_to_actual(struct imv_viewport *view, const struct imv_image *img)
+void imv_viewport_scale_to_actual(struct imv_viewport *view, const struct imv_loader *ldr)
 {
   view->scale = 1;
   view->redraw = 1;
   view->locked = 1;
-  imv_viewport_center(view, img);
+  imv_viewport_center(view, ldr);
 }
 
 void imv_viewport_move(struct imv_viewport *view, int x, int y)
@@ -69,30 +68,30 @@ void imv_viewport_move(struct imv_viewport *view, int x, int y)
   view->locked = 1;
 }
 
-void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *img, enum imv_zoom_source src, int amount)
+void imv_viewport_zoom(struct imv_viewport *view, const struct imv_loader *ldr, enum imv_zoom_source src, int amount)
 {
   double prev_scale = view->scale;
   int x, y, ww, wh;
   SDL_GetWindowSize(view->window, &ww, &wh);
 
-  /* x and y cordinates are relative to the image */
+  /* x and y cordinates are relative to the loader */
   if(src == IMV_ZOOM_MOUSE) {
     SDL_GetMouseState(&x, &y);
     x -= view->x;
     y -= view->y;
   } else {
-    x = view->scale * img->width / 2;
-    y = view->scale * img->height / 2;
+    x = view->scale * ldr->width / 2;
+    y = view->scale * ldr->height / 2;
   }
 
-  const int scaled_width = img->width * view->scale;
-  const int scaled_height = img->height * view->scale;
+  const int scaled_width = ldr->width * view->scale;
+  const int scaled_height = ldr->height * view->scale;
   const int ic_x = view->x + scaled_width/2;
   const int ic_y = view->y + scaled_height/2;
   const int wc_x = ww/2;
   const int wc_y = wh/2;
 
-  double delta_scale = 0.04 * ww * amount / img->width;
+  double delta_scale = 0.04 * ww * amount / ldr->width;
   view->scale += delta_scale;
 
   const double min_scale = 0.1;
@@ -129,35 +128,35 @@ void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *img, e
   view->locked = 1;
 }
 
-void imv_viewport_center(struct imv_viewport *view, const struct imv_image* img)
+void imv_viewport_center(struct imv_viewport *view, const struct imv_loader* ldr)
 {
   int ww, wh;
   SDL_GetWindowSize(view->window, &ww, &wh);
 
-  view->x = (ww - img->width * view->scale) / 2;
-  view->y = (wh - img->height * view->scale) / 2;
+  view->x = (ww - ldr->width * view->scale) / 2;
+  view->y = (wh - ldr->height * view->scale) / 2;
 
   view->locked = 1;
   view->redraw = 1;
 }
 
-void imv_viewport_scale_to_window(struct imv_viewport *view, const struct imv_image* img)
+void imv_viewport_scale_to_window(struct imv_viewport *view, const struct imv_loader* ldr)
 {
   int ww, wh;
   SDL_GetWindowSize(view->window, &ww, &wh);
 
   double window_aspect = (double)ww / (double)wh;
-  double image_aspect = (double)img->width / (double)img->height;
+  double image_aspect = (double)ldr->width / (double)ldr->height;
 
   if(window_aspect > image_aspect) {
     /* Image will become too tall before it becomes too wide */
-    view->scale = (double)wh / (double)img->height;
+    view->scale = (double)wh / (double)ldr->height;
   } else {
     /* Image will become too wide before it becomes too tall */
-    view->scale = (double)ww / (double)img->width;
+    view->scale = (double)ww / (double)ldr->width;
   }
 
-  imv_viewport_center(view, img);
+  imv_viewport_center(view, ldr);
   view->locked = 0;
 }
 
@@ -171,13 +170,13 @@ void imv_viewport_set_title(struct imv_viewport *view, char* title)
   SDL_SetWindowTitle(view->window, title);
 }
 
-void imv_viewport_updated(struct imv_viewport *view, struct imv_image* img)
+void imv_viewport_updated(struct imv_viewport *view, struct imv_loader* ldr)
 {
   view->redraw = 1;
   if(view->locked) {
     return;
   }
 
-  imv_viewport_scale_to_window(view, img);
-  imv_viewport_center(view, img);
+  imv_viewport_scale_to_window(view, ldr);
+  imv_viewport_center(view, ldr);
 }
