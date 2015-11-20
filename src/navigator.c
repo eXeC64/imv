@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 void imv_init_navigator(struct imv_navigator *nav)
 {
   nav->buf_size = 512;
-  nav->paths = (char **)malloc(sizeof(char*) * nav->buf_size);
+  nav->paths = malloc(sizeof(char*) * nav->buf_size);
   nav->num_paths = 0;
   nav->cur_path = 0;
   nav->last_move_direction = 1;

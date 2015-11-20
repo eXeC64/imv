@@ -69,7 +69,7 @@ int imv_texture_set_image(struct imv_texture *tex, FIBITMAP *image)
   }
 
   tex->num_chunks = tex->num_chunks_wide * tex->num_chunks_tall;
-  tex->chunks = (SDL_Texture**)malloc(sizeof(SDL_Texture*) * tex->num_chunks);
+  tex->chunks = malloc(sizeof(SDL_Texture*) * tex->num_chunks);
 
   int failed_at = -1;
   for(int y = 0; y < tex->num_chunks_tall; ++y) {
@@ -101,7 +101,7 @@ int imv_texture_set_image(struct imv_texture *tex, FIBITMAP *image)
     return 1;
   }
 
-  BYTE* pixels = (BYTE*)malloc(4 * tex->width * tex->height);
+  BYTE* pixels = malloc(4 * tex->width * tex->height);
   FreeImage_ConvertToRawBits(pixels, image, 4 * tex->width, 32,
       FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
 
