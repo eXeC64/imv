@@ -38,6 +38,7 @@ void imv_navigator_next_path(struct imv_navigator *nav);
 void imv_navigator_prev_path(struct imv_navigator *nav);
 void imv_navigator_remove_current_path(struct imv_navigator *nav);
 void imv_navigator_set_path(struct imv_navigator *nav, const int path);
+int imv_navigator_find_path(struct imv_navigator *nav, const char *path);
 
 int imv_navigator_has_changed(struct imv_navigator *nav);
 

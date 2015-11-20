@@ -3,7 +3,7 @@
 imv \- image viewer
 .SH SYNOPSIS
 .nf
-\fBimv\fP [-rfaudh] [-n NUM] [-b COLOR] [-e FONT:SIZE] [images...]
+\fBimv\fP [-rfaudh] [-n <NUM|PATH>] [-b COLOR] [-e FONT:SIZE] [images...]
 .fi
 .sp
 .SH DESCRIPTION
@@ -34,8 +34,8 @@ Show overlay.
 Print help.
 .SH OPTIONS
 .TP
-.BI "-n " NUM
-Start at picture number NUM.
+.BI "-n " <NUM|PATH>
+Start at image number NUM, or the image with the path PATH.
 .TP
 .BI "-b " BG
 Set the background color. Either 'checks' or a hex color value.

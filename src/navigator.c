@@ -185,6 +185,27 @@ void imv_navigator_set_path(struct imv_navigator *nav, const int path)
   nav->changed = prev_path != nav->cur_path;
 }
 
+int imv_navigator_find_path(struct imv_navigator *nav, const char *path)
+{
+  /* first try to match the exact path */
+  for(int i = 0; i < nav->num_paths; ++i) {
+    if(strcmp(path, nav->paths[i]) == 0) {
+      return i;
+    }
+  }
+
+  /* no exact matches, try the final portion of the path */
+  for(int i = 0; i < nav->num_paths; ++i) {
+    char *last_sep = strrchr(nav->paths[i], '/');
+    if(last_sep && strcmp(last_sep+1, path) == 0) {
+      return i;
+    }
+  }
+
+  /* no matches at all, give up */
+  return -1;
+}
+
 int imv_navigator_has_changed(struct imv_navigator *nav)
 {
   if(nav->changed) {

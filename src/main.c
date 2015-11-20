@@ -38,21 +38,21 @@ struct {
   int stdin;
   int recursive;
   int actual;
-  int start_at;
   int nearest_neighbour;
   int solid_bg;
   unsigned char bg_r;
   unsigned char bg_g;
   unsigned char bg_b;
   int overlay;
+  const char *start_at;
   const char *font;
-} g_options = {0,0,0,0,0,0,1,0,0,0,0,"FreeMono:24"};
+} g_options = {0,0,0,0,0,1,0,0,0,0,NULL,"FreeMono:24"};
 
 void print_usage(const char* name)
 {
   fprintf(stdout,
   "imv %s\n"
-  "Usage: %s [-rfaudh] [-n NUM] [-b BG] [-e FONT:SIZE] [-] [images...]\n"
+  "Usage: %s [-rfaudh] [-n <NUM|PATH>] [-b BG] [-e FONT:SIZE] [-] [images...]\n"
   "\n"
   "Flags:\n"
   "   -: Read paths from stdin. One path per line.\n"
@@ -64,7 +64,7 @@ void print_usage(const char* name)
   "  -h: Print this help\n"
   "\n"
   "Options:\n"
-  "  -n NUM: Start at picture number NUM.\n"
+  "  -n <NUM|PATH>: Start at picture number NUM, or with the path PATH.\n"
   "  -b BG: Set the background. Either 'checks' or a hex color value.\n"
   "  -e FONT:SIZE: Set the font used for the overlay. Defaults to FreeMono:24"
   "\n"
@@ -111,8 +111,6 @@ void parse_args(int argc, char** argv)
 
   const char* name = argv[0];
   char o;
-  char* end;
-  int n;
 
   while((o = getopt(argc, argv, "firaudhn:b:e:")) != -1) {
     switch(o) {
@@ -127,12 +125,7 @@ void parse_args(int argc, char** argv)
       case 'd': g_options.overlay = 1;             break;
       case 'h': print_usage(name); exit(0);        break;
       case 'n':
-        n = strtol(optarg,&end,0);
-        if(*end != '\0' || n <= 0) {
-          fprintf(stderr, "Warning: wrong value for '-n'.\n");
-        } else {
-          g_options.start_at = n - 1;
-        }
+        g_options.start_at = optarg;
         break;
       case 'b':
         if(strcmp("checks", optarg) == 0) {
@@ -240,6 +233,15 @@ int main(int argc, char** argv)
     exit(1);
   }
 
+  /* go to the chosen starting image if possible */
+  if(g_options.start_at) {
+    int start_index = imv_navigator_find_path(&nav, g_options.start_at);
+    if(start_index < 0) {
+      start_index = strtol(g_options.start_at,NULL,10) - 1;
+    }
+    imv_navigator_set_path(&nav, start_index);
+  }
+
   if(SDL_Init(SDL_INIT_VIDEO) != 0) {
     fprintf(stderr, "SDL Failed to Init: %s\n", SDL_GetError());
     exit(1);
@@ -288,8 +290,6 @@ int main(int argc, char** argv)
   }
 
   double last_time = SDL_GetTicks() / 1000.0;
-
-  imv_navigator_set_path(&nav, g_options.start_at);
 
   int quit = 0;
   while(!quit) {
