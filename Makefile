@@ -1,4 +1,4 @@
-.PHONY: clean install
+.PHONY: clean install uninstall
 
 prefix = /usr
 
@@ -31,6 +31,11 @@ clean:
 	@$(RM) $(TARGET) $(OBJECTS)
 
 install: $(TARGET)
-	install -D -m 0755 $(TARGET) $(DESTDIR)$(prefix)/bin/$(TARGET)
+	install -D -m 0755 $(TARGET) $(DESTDIR)$(prefix)/bin/imv
 	install -D -m 0644 doc/imv.1 $(DESTDIR)$(prefix)/share/man/man1/imv.1
 	install -D -m 0644 files/imv.desktop $(DESTDIR)$(prefix)/share/applications/imv.desktop
+
+uninstall:
+	$(RM) $(DESTDIR)$(prefix)/bin/imv
+	$(RM) $(DESTDIR)$(prefix)/share/man/man1/imv.1
+	$(RM) $(DESTDIR)$(prefix)/share/applications/imv.desktop
