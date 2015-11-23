@@ -1,5 +1,5 @@
-#ifndef IMV_IMAGE_H
-#define IMV_IMAGE_H
+#ifndef IMV_LOADER_H
+#define IMV_LOADER_H
 
 /* Copyright (c) 2015 Harry Jeffery
 
