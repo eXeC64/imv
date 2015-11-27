@@ -309,24 +309,24 @@ int main(int argc, char** argv)
             case SDLK_EQUALS:
             case SDLK_i:
             case SDLK_UP:
-              imv_viewport_zoom(&view, &ldr, IMV_ZOOM_KEYBOARD, 1);
+              imv_viewport_zoom(&view, &tex, IMV_ZOOM_KEYBOARD, 1);
               break;
             case SDLK_MINUS:
             case SDLK_o:
             case SDLK_DOWN:
-              imv_viewport_zoom(&view, &ldr, IMV_ZOOM_KEYBOARD, -1);
+              imv_viewport_zoom(&view, &tex, IMV_ZOOM_KEYBOARD, -1);
               break;
-            case SDLK_a:     imv_viewport_scale_to_actual(&view, &ldr);break;
-            case SDLK_r:     imv_viewport_scale_to_window(&view, &ldr);break;
-            case SDLK_c:      imv_viewport_center(&view, &ldr);        break;
+            case SDLK_a:     imv_viewport_scale_to_actual(&view, &tex);break;
+            case SDLK_r:     imv_viewport_scale_to_window(&view, &tex);break;
+            case SDLK_c:      imv_viewport_center(&view, &tex);        break;
             case SDLK_j:      imv_viewport_move(&view, 0, -50);        break;
             case SDLK_k:      imv_viewport_move(&view, 0, 50);         break;
             case SDLK_h:      imv_viewport_move(&view, 50, 0);         break;
             case SDLK_l:      imv_viewport_move(&view, -50, 0);        break;
             case SDLK_x:      imv_navigator_remove_current_path(&nav); break;
             case SDLK_f:      imv_viewport_toggle_fullscreen(&view);   break;
-            case SDLK_PERIOD: imv_loader_load_next_frame(&ldr);         break;
-            case SDLK_SPACE:  imv_viewport_toggle_playing(&view, &ldr);break;
+            case SDLK_PERIOD: imv_loader_load_next_frame(&ldr);        break;
+            case SDLK_SPACE:  imv_viewport_toggle_playing(&view, &tex);break;
             case SDLK_p:    puts(imv_navigator_get_current_path(&nav));break;
             case SDLK_d:
               g_options.overlay = !g_options.overlay;
@@ -335,7 +335,7 @@ int main(int argc, char** argv)
           }
           break;
         case SDL_MOUSEWHEEL:
-          imv_viewport_zoom(&view, &ldr, IMV_ZOOM_MOUSE, e.wheel.y);
+          imv_viewport_zoom(&view, &tex, IMV_ZOOM_MOUSE, e.wheel.y);
           break;
         case SDL_MOUSEMOTION:
           if(e.motion.state & SDL_BUTTON_LMASK) {
@@ -343,7 +343,7 @@ int main(int argc, char** argv)
           }
           break;
         case SDL_WINDOWEVENT:
-          imv_viewport_updated(&view, &ldr);
+          imv_viewport_updated(&view, &tex);
           break;
       }
     }
