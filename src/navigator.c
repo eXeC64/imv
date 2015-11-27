@@ -150,6 +150,41 @@ void imv_navigator_prev_path(struct imv_navigator *nav)
   nav->changed = prev_path != nav->cur_path;
 }
 
+void imv_navigator_remove_path(struct imv_navigator *nav, const char *path)
+{
+  int removed = -1;
+  for(int i = 0; i < nav->num_paths; ++i) {
+    if(strcmp(path, nav->paths[i]) == 0) {
+      removed = i;
+      free(nav->paths[i]);
+      break;
+    }
+  }
+
+  if(removed == -1) {
+    return;
+  }
+
+  for(int i = removed; i < nav->num_paths - 2; ++i) {
+    nav->paths[i] = nav->paths[i+1];
+  }
+
+  nav->num_paths -= 1;
+
+  if(nav->cur_path == removed) {
+    /* We just removed the current path */
+    if(nav->last_move_direction < 0) {
+      /* Move left */
+      imv_navigator_prev_path(nav);
+    } else {
+      /* Try to stay where we are, unless we ran out of room */
+      if(nav->cur_path == nav->num_paths) {
+        nav->cur_path = 0;
+      }
+    }
+  }
+}
+
 void imv_navigator_remove_current_path(struct imv_navigator *nav)
 {
   if(nav->num_paths == 0) {
