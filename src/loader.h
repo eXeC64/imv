@@ -19,29 +19,36 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include <FreeImage.h>
+#include <SDL2/SDL.h>
+#include <pthread.h>
+
+struct imv_texture;
 
 struct imv_loader {
+  pthread_mutex_t lock;
+  pthread_t bg_thread;
+  char *path;
+  FIBITMAP *out_bmp;
+  char *out_err;
   FIMULTIBITMAP *mbmp;
-  FIBITMAP *cur_bmp;
+  FIBITMAP *bmp;
   int width;
   int height;
   int cur_frame;
   int next_frame;
   int num_frames;
-  int changed;
   double frame_time;
 };
 
 void imv_init_loader(struct imv_loader *img);
 void imv_destroy_loader(struct imv_loader *img);
 
-int imv_can_load_image(const char* path);
-int imv_loader_load(struct imv_loader *img, const char* path);
-void imv_loader_load_next_frame(struct imv_loader *img);
+void imv_loader_load_path(struct imv_loader *ldr, const char *path);
 
-int imv_loader_is_animated(struct imv_loader *img);
-void imv_loader_play(struct imv_loader *img, double time);
+FIBITMAP *imv_loader_get_image(struct imv_loader *ldr);
+char *imv_loader_get_error(struct imv_loader *ldr);
 
-int imv_loader_has_changed(struct imv_loader *img);
+/* void imv_loader_next_frame(struct imv_loader *ldr); */
+/* void imv_loader_time_passed(struct imv_loader *ldr, double dt); */
 
 #endif

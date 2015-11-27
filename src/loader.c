@@ -16,107 +16,205 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include "loader.h"
+#include "texture.h"
+#include <stdlib.h>
+#include <pthread.h>
 
 void imv_init_loader(struct imv_loader *ldr)
 {
+  pthread_mutex_init(&ldr->lock, NULL);
+  ldr->bg_thread = 0;
+  ldr->path = NULL;
+  ldr->out_bmp = NULL;
+  ldr->out_err = NULL;
   ldr->mbmp = NULL;
-  ldr->cur_bmp = NULL;
+  ldr->bmp = NULL;
   ldr->width = 0;
   ldr->height = 0;
   ldr->cur_frame = 0;
   ldr->next_frame = 0;
   ldr->num_frames = 0;
   ldr->frame_time = 0;
-  ldr->changed = 0;
 }
 
 void imv_destroy_loader(struct imv_loader *ldr)
 {
-  if(ldr->cur_bmp) {
-    FreeImage_Unload(ldr->cur_bmp);
-    ldr->cur_bmp = NULL;
+  /* wait for any existing bg thread to finish */
+  pthread_join(ldr->bg_thread, NULL);
+  pthread_mutex_destroy(&ldr->lock);
+
+  if(ldr->bmp) {
+    FreeImage_Unload(ldr->bmp);
   }
   if(ldr->mbmp) {
     FreeImage_CloseMultiBitmap(ldr->mbmp, 0);
-    ldr->mbmp = NULL;
+  }
+  if(ldr->path) {
+    free(ldr->path);
   }
 }
 
-int imv_can_load_image(const char* path)
+static void *imv_loader_bg_new_img(void *data);
+static void *imv_loader_bg_next_frame(void *data);
+
+void imv_loader_load_path(struct imv_loader *ldr, const char *path)
 {
-  if(FreeImage_GetFileType(path, 0) == FIF_UNKNOWN) {
-    return 0;
-  } else {
-    return 1;
+  pthread_mutex_lock(&ldr->lock);
+
+  /* cancel existing thread if already running */
+  if(ldr->bg_thread) {
+    /* TODO - change to signal */
+    pthread_cancel(ldr->bg_thread);
   }
+
+  /* kick off a new thread to load the image */
+  ldr->path = strdup(path);
+  pthread_create(&ldr->bg_thread, NULL, &imv_loader_bg_new_img, ldr);
+
+  pthread_mutex_unlock(&ldr->lock);
 }
 
-int imv_loader_load(struct imv_loader *ldr, const char* path)
+FIBITMAP *imv_loader_get_image(struct imv_loader *ldr)
 {
-  if(ldr->mbmp) {
-    FreeImage_CloseMultiBitmap(ldr->mbmp, 0);
-    ldr->mbmp = NULL;
+  FIBITMAP *ret = NULL;
+  pthread_mutex_lock(&ldr->lock);
+
+  if(ldr->out_bmp) {
+    ret = ldr->out_bmp;
+    ldr->out_bmp = NULL;
   }
 
-  if(ldr->cur_bmp) {
-    FreeImage_Unload(ldr->cur_bmp);
-    ldr->cur_bmp = NULL;
+  pthread_mutex_unlock(&ldr->lock);
+  return ret;
+}
+
+char *imv_loader_get_error(struct imv_loader *ldr)
+{
+  char *err = NULL;
+  pthread_mutex_lock(&ldr->lock);
+
+  if(ldr->out_err) {
+    err = ldr->out_err;
+    ldr->out_err = NULL;
   }
 
+  pthread_mutex_unlock(&ldr->lock);
+  return err;
+}
 
-  FREE_IMAGE_FORMAT fmt = FreeImage_GetFileType(path,0);
+void imv_loader_next_frame(struct imv_loader *ldr)
+{
+  pthread_mutex_lock(&ldr->lock);
+  /* TODO */
+  pthread_mutex_unlock(&ldr->lock);
+}
+
+void imv_loader_time_passed(struct imv_loader *ldr, double dt)
+{
+  pthread_mutex_lock(&ldr->lock);
+  /* TODO */
+  pthread_mutex_unlock(&ldr->lock);
+}
+
+void imv_loader_error_occurred(struct imv_loader *ldr)
+{
+  pthread_mutex_lock(&ldr->lock);
+  if(ldr->out_err) {
+    free(ldr->out_err);
+  }
+  ldr->out_err = strdup(ldr->path);
+  pthread_mutex_unlock(&ldr->lock);
+}
+
+static void *imv_loader_bg_new_img(void *data)
+{
+  struct imv_loader *ldr = data;
+
+  pthread_mutex_lock(&ldr->lock);
+  char *path = strdup(ldr->path);
+  pthread_mutex_unlock(&ldr->lock);
+
+  FREE_IMAGE_FORMAT fmt = FreeImage_GetFileType(path, 0);
 
   if(fmt == FIF_UNKNOWN) {
-    return 1;
+    imv_loader_error_occurred(ldr);
+    free(path);
+    return 0;
   }
 
-  ldr->num_frames = 0;
-  ldr->cur_frame = 0;
-  ldr->next_frame = 0;
-  ldr->frame_time = 0;
+  int num_frames = 1;
+  FIMULTIBITMAP *mbmp = NULL;
+  FIBITMAP *bmp = NULL;
+  int width, height;
 
   if(fmt == FIF_GIF) {
-    ldr->mbmp = FreeImage_OpenMultiBitmap(FIF_GIF, path,
+    mbmp = FreeImage_OpenMultiBitmap(FIF_GIF, path,
       /* don't create file */ 0,
       /* read only */ 1,
       /* keep in memory */ 1,
       /* flags */ GIF_LOAD256);
-    if(!ldr->mbmp) {
-      return 1;
+    free(path);
+    if(!mbmp) {
+      imv_loader_error_occurred(ldr);
+      return 0;
     }
-    ldr->num_frames = FreeImage_GetPageCount(ldr->mbmp);
+    num_frames = FreeImage_GetPageCount(mbmp);
 
-    /* get the dimensions from the first frame */
-    FIBITMAP *frame = FreeImage_LockPage(ldr->mbmp, 0);
-    ldr->width = FreeImage_GetWidth(frame);
-    ldr->height = FreeImage_GetHeight(frame);
-    if(!imv_loader_is_animated(ldr)) {
-      ldr->cur_bmp = FreeImage_ConvertTo32Bits(frame);
-    }
-    FreeImage_UnlockPage(ldr->mbmp, frame, 0);
-
-    if(imv_loader_is_animated(ldr)) {
-      /* load a frame */
-      imv_loader_load_next_frame(ldr);
-    }
+    FIBITMAP *frame = FreeImage_LockPage(mbmp, 0);
+    width = FreeImage_GetWidth(frame);
+    height = FreeImage_GetHeight(frame);
+    bmp = FreeImage_ConvertTo32Bits(frame);
+    FreeImage_UnlockPage(mbmp, frame, 0);
   } else {
     FIBITMAP *image = FreeImage_Load(fmt, path, 0);
+    free(path);
     if(!image) {
-      return 1;
+      imv_loader_error_occurred(ldr);
+      return 0;
     }
-    ldr->cur_bmp = FreeImage_ConvertTo32Bits(image);
-    ldr->width = FreeImage_GetWidth(ldr->cur_bmp);
-    ldr->height = FreeImage_GetHeight(ldr->cur_bmp);
+    width = FreeImage_GetWidth(bmp);
+    height = FreeImage_GetHeight(bmp);
+    bmp = FreeImage_ConvertTo32Bits(image);
     FreeImage_Unload(image);
   }
 
-  ldr->changed = 1;
+  /* now update the loader */
+  pthread_mutex_lock(&ldr->lock);
+
+  if(ldr->mbmp) {
+    FreeImage_CloseMultiBitmap(ldr->mbmp, 0);
+  }
+
+  if(ldr->bmp) {
+    FreeImage_Unload(ldr->bmp);
+  }
+
+  ldr->mbmp = mbmp;
+  ldr->bmp = bmp;
+  ldr->out_bmp = bmp;
+  ldr->width = width;
+  ldr->height = height;
+  ldr->cur_frame = 0;
+  ldr->next_frame = 1;
+  ldr->num_frames = num_frames;
+  ldr->frame_time = 0;
+
+  pthread_mutex_unlock(&ldr->lock);
   return 0;
 }
 
-void imv_loader_load_next_frame(struct imv_loader *ldr)
+/* TODO - rewrite */
+static void *imv_loader_bg_next_frame(void *data)
 {
-  if(!imv_loader_is_animated(ldr)) {
+  struct imv_loader *ldr = data;
+  return 0;
+}
+
+#if 0
+  pthread_mutex_lock(&ldr->lock);
+  int num_frames = ldr->num_frames;
+  pthread_mutex_unlock(&ldr->lock);
+  if(num_frames < 2) {
     return;
   }
 
@@ -209,31 +307,4 @@ void imv_loader_load_next_frame(struct imv_loader *ldr)
   }
   ldr->changed = 1;
 }
-
-int imv_loader_is_animated(struct imv_loader *ldr)
-{
-  return ldr->num_frames > 1;
-}
-
-void imv_loader_play(struct imv_loader *ldr, double time)
-{
-  if(!imv_loader_is_animated(ldr)) {
-    return;
-  }
-
-  ldr->frame_time -= time;
-  if(ldr->frame_time < 0) {
-    ldr->frame_time = 0;
-    imv_loader_load_next_frame(ldr);
-  }
-}
-
-int imv_loader_has_changed(struct imv_loader *ldr)
-{
-  if(ldr->changed) {
-    ldr->changed = 0;
-    return 1;
-  } else {
-    return 0;
-  }
-}
+#endif
