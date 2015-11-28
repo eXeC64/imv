@@ -200,12 +200,21 @@ static void *imv_loader_bg_new_img(void *data)
     FreeImage_UnlockPage(mbmp, frame, 0);
 
   } else {
+    /* Future TODO: If we load image line-by-line we could stop loading large
+     * ones before wasting much more time/memory on them. */
     FIBITMAP *image = FreeImage_Load(fmt, path, 0);
     free(path);
     if(!image) {
       imv_loader_error_occurred(ldr);
       return 0;
     }
+
+    /* Check for cancellation before we convert pixel format */
+    if(is_thread_cancelled()) {
+      FreeImage_Unload(image);
+      return 0;
+    }
+
     width = FreeImage_GetWidth(bmp);
     height = FreeImage_GetHeight(bmp);
     bmp = FreeImage_ConvertTo32Bits(image);
