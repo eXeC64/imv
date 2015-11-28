@@ -49,6 +49,6 @@ FIBITMAP *imv_loader_get_image(struct imv_loader *ldr);
 char *imv_loader_get_error(struct imv_loader *ldr);
 
 void imv_loader_load_next_frame(struct imv_loader *ldr);
-/* void imv_loader_time_passed(struct imv_loader *ldr, double dt); */
+void imv_loader_time_passed(struct imv_loader *ldr, double dt);
 
 #endif
