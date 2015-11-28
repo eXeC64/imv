@@ -340,6 +340,7 @@ int main(int argc, char** argv)
 
       if(is_new_image) {
         is_new_image = 0;
+        view.playing = 1;
         const char *current_path = imv_navigator_get_current_path(&nav);
         char title[256];
         snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s",
