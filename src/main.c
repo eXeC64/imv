@@ -319,15 +319,15 @@ int main(int argc, char** argv)
 
     if(imv_navigator_has_changed(&nav)) {
       const char *current_path = imv_navigator_get_current_path(&nav);
-      char title[256];
-      snprintf(&title[0], sizeof(title), "imv - [%i/%i] [LOADING] %s",
-          nav.cur_path + 1, nav.num_paths, current_path);
-      imv_viewport_set_title(&view, title);
-
       if(!current_path) {
         fprintf(stderr, "No input files left. Exiting.\n");
         exit(1);
       }
+
+      char title[256];
+      snprintf(&title[0], sizeof(title), "imv - [%i/%i] [LOADING] %s",
+          nav.cur_path + 1, nav.num_paths, current_path);
+      imv_viewport_set_title(&view, title);
 
       imv_loader_load_path(&ldr, current_path);
       is_new_image = 1;
