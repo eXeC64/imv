@@ -352,8 +352,14 @@ int main(int argc, char** argv)
       break;
     }
 
-    while(imv_navigator_has_changed(&nav)) {
-      const char* current_path = imv_navigator_get_current_path(&nav);
+    char *err_path = imv_loader_get_error(&ldr);
+    if(err_path) {
+      imv_navigator_remove_path(&nav, err_path);
+      free(err_path);
+    }
+
+    if(imv_navigator_has_changed(&nav)) {
+      const char *current_path = imv_navigator_get_current_path(&nav);
       char title[256];
       snprintf(&title[0], sizeof(title), "imv - [%i/%i] [LOADING] %s",
           nav.cur_path + 1, nav.num_paths, current_path);
@@ -364,49 +370,26 @@ int main(int argc, char** argv)
         exit(1);
       }
 
-      if(imv_loader_load(&ldr, current_path) != 0) {
-        imv_navigator_remove_current_path(&nav);
-      } else {
-        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s",
-            nav.cur_path + 1, nav.num_paths,
-            ldr.width, ldr.height, current_path);
-        imv_viewport_set_title(&view, title);
-        imv_viewport_scale_to_window(&view, &ldr);
+      imv_loader_load_path(&ldr, current_path);
+    }
 
-        if(overlay_surf) {
-          free(overlay_surf);
-          overlay_surf = NULL;
-        }
-        if(overlay_tex) {
-          SDL_DestroyTexture(overlay_tex);
-          overlay_tex = NULL;
-        }
+    FIBITMAP *bmp = imv_loader_get_image(&ldr);
+    if(bmp) {
+      imv_texture_set_image(&tex, bmp);
+      FreeImage_Unload(bmp);
 
-        if(font) {
-          snprintf(&title[0], sizeof(title), "[%i/%i] %s",
-            nav.cur_path + 1, nav.num_paths, current_path);
-          SDL_Color w = {255,255,255,255};
-          overlay_surf = TTF_RenderUTF8_Blended(font, &title[0], w);
-          overlay_tex = SDL_CreateTextureFromSurface(renderer, overlay_surf);
-        }
-      }
-
+      const char *current_path = imv_navigator_get_current_path(&nav);
+      char title[256];
+      snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s",
+          nav.cur_path + 1, nav.num_paths,
+          tex.width, tex.height, current_path);
+      imv_viewport_set_title(&view, title);
+      imv_viewport_scale_to_window(&view, &tex);
       if(g_options.actual) {
-        imv_viewport_scale_to_actual(&view, &ldr);
+        imv_viewport_scale_to_actual(&view, &tex);
       }
     }
 
-    if(view.playing) {
-      double cur_time = SDL_GetTicks() / 1000.0;
-      double dt = cur_time - last_time;
-      last_time = SDL_GetTicks() / 1000.0;
-      imv_loader_play(&ldr, dt);
-    }
-
-    if(imv_loader_has_changed(&ldr)) {
-      imv_texture_set_image(&tex, ldr.cur_bmp);
-      imv_viewport_set_redraw(&view);
-    }
 
     if(view.redraw) {
       if(g_options.solid_bg) {

@@ -43,14 +43,8 @@ void imv_destroy_navigator(struct imv_navigator *nav)
   nav->num_paths = 0;
 }
 
-int imv_can_load_image(const char* path);
-
 static void add_item(struct imv_navigator *nav, const char *path)
 {
-  if(!imv_can_load_image(path)) {
-    return;
-  }
-
   if(nav->buf_size == nav->num_paths) {
     int new_buf_size = nav->buf_size * 2;
     char **new_paths = malloc(sizeof(char*) * new_buf_size);

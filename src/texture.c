@@ -19,9 +19,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 void imv_init_texture(struct imv_texture *tex, SDL_Renderer *r)
 {
+  memset(tex, 0, sizeof(struct imv_texture));
   tex->renderer = r;
-  tex->num_chunks = 0;
-  tex->chunks = NULL;
 
   SDL_RendererInfo ri;
   SDL_GetRendererInfo(r, &ri);

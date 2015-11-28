@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "texture.h"
 #include <stdlib.h>
 #include <pthread.h>
+#include <signal.h>
 
 void imv_init_loader(struct imv_loader *ldr)
 {
@@ -59,19 +60,16 @@ static void *imv_loader_bg_next_frame(void *data);
 
 void imv_loader_load_path(struct imv_loader *ldr, const char *path)
 {
-  pthread_mutex_lock(&ldr->lock);
-
   /* cancel existing thread if already running */
   if(ldr->bg_thread) {
-    /* TODO - change to signal */
-    pthread_cancel(ldr->bg_thread);
+    pthread_kill(ldr->bg_thread, SIGUSR1);
+    pthread_join(ldr->bg_thread, NULL);
   }
 
   /* kick off a new thread to load the image */
+  /* no need to lock as we're the only thread at this point */
   ldr->path = strdup(path);
   pthread_create(&ldr->bg_thread, NULL, &imv_loader_bg_new_img, ldr);
-
-  pthread_mutex_unlock(&ldr->lock);
 }
 
 FIBITMAP *imv_loader_get_image(struct imv_loader *ldr)
@@ -102,7 +100,7 @@ char *imv_loader_get_error(struct imv_loader *ldr)
   return err;
 }
 
-void imv_loader_next_frame(struct imv_loader *ldr)
+void imv_loader_load_next_frame(struct imv_loader *ldr)
 {
   pthread_mutex_lock(&ldr->lock);
   /* TODO */
@@ -126,8 +124,26 @@ void imv_loader_error_occurred(struct imv_loader *ldr)
   pthread_mutex_unlock(&ldr->lock);
 }
 
+static void setup_thread_cancellation()
+{
+  sigset_t sigmask;
+  sigemptyset(&sigmask);
+  sigaddset(&sigmask, SIGUSR1);
+  /* block USR1 delivery so we can poll for it */
+  sigprocmask(SIG_SETMASK, &sigmask, NULL);
+}
+
+static int is_thread_cancelled()
+{
+  sigset_t sigmask;
+  sigpending(&sigmask);
+  return sigismember(&sigmask, SIGUSR1);
+}
+
 static void *imv_loader_bg_new_img(void *data)
 {
+  setup_thread_cancellation();
+
   struct imv_loader *ldr = data;
 
   pthread_mutex_lock(&ldr->lock);
@@ -138,6 +154,11 @@ static void *imv_loader_bg_new_img(void *data)
 
   if(fmt == FIF_UNKNOWN) {
     imv_loader_error_occurred(ldr);
+    free(path);
+    return 0;
+  }
+
+  if(is_thread_cancelled()) {
     free(path);
     return 0;
   }
@@ -158,6 +179,12 @@ static void *imv_loader_bg_new_img(void *data)
       imv_loader_error_occurred(ldr);
       return 0;
     }
+
+    if(is_thread_cancelled()) {
+      FreeImage_CloseMultiBitmap(mbmp, 0);
+      return 0;
+    }
+
     num_frames = FreeImage_GetPageCount(mbmp);
 
     FIBITMAP *frame = FreeImage_LockPage(mbmp, 0);
@@ -170,6 +197,10 @@ static void *imv_loader_bg_new_img(void *data)
     free(path);
     if(!image) {
       imv_loader_error_occurred(ldr);
+      return 0;
+    }
+    if(is_thread_cancelled()) {
+      FreeImage_Unload(image);
       return 0;
     }
     width = FreeImage_GetWidth(bmp);
@@ -191,7 +222,10 @@ static void *imv_loader_bg_new_img(void *data)
 
   ldr->mbmp = mbmp;
   ldr->bmp = bmp;
-  ldr->out_bmp = bmp;
+  if(ldr->out_bmp) {
+    FreeImage_Unload(ldr->out_bmp);
+  }
+  ldr->out_bmp = FreeImage_Clone(bmp);
   ldr->width = width;
   ldr->height = height;
   ldr->cur_frame = 0;
