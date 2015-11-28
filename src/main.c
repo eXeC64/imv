@@ -393,9 +393,9 @@ int main(int argc, char** argv)
     if(view.playing) {
       double cur_time = SDL_GetTicks() / 1000.0;
       double dt = cur_time - last_time;
-      last_time = SDL_GetTicks() / 1000.0;
       imv_loader_time_passed(&ldr, dt);
     }
+    last_time = SDL_GetTicks() / 1000.0;
 
     if(view.redraw) {
       if(g_options.solid_bg) {
