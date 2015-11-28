@@ -349,7 +349,7 @@ int main(int argc, char** argv)
         imv_viewport_set_title(&view, title);
 
         if(overlay_surf) {
-          free(overlay_surf);
+          SDL_FreeSurface(overlay_surf);
           overlay_surf = NULL;
         }
         if(overlay_tex) {
