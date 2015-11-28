@@ -69,16 +69,16 @@ void imv_loader_load_path(struct imv_loader *ldr, const char *path)
   /* cancel existing thread if already running */
   if(ldr->bg_thread) {
     pthread_kill(ldr->bg_thread, SIGUSR1);
-    pthread_join(ldr->bg_thread, NULL);
   }
 
   /* kick off a new thread to load the image */
-  /* no need to lock as we're the only thread at this point */
+  pthread_mutex_lock(&ldr->lock);
   if(ldr->path) {
     free(ldr->path);
   }
   ldr->path = strdup(path);
   pthread_create(&ldr->bg_thread, NULL, &imv_loader_bg_new_img, ldr);
+  pthread_mutex_unlock(&ldr->lock);
 }
 
 FIBITMAP *imv_loader_get_image(struct imv_loader *ldr)
@@ -166,11 +166,6 @@ static void *imv_loader_bg_new_img(void *data)
     return 0;
   }
 
-  if(is_thread_cancelled()) {
-    free(path);
-    return 0;
-  }
-
   int num_frames = 1;
   FIMULTIBITMAP *mbmp = NULL;
   FIBITMAP *bmp = NULL;
@@ -186,11 +181,6 @@ static void *imv_loader_bg_new_img(void *data)
     free(path);
     if(!mbmp) {
       imv_loader_error_occurred(ldr);
-      return 0;
-    }
-
-    if(is_thread_cancelled()) {
-      FreeImage_CloseMultiBitmap(mbmp, 0);
       return 0;
     }
 
@@ -216,10 +206,6 @@ static void *imv_loader_bg_new_img(void *data)
       imv_loader_error_occurred(ldr);
       return 0;
     }
-    if(is_thread_cancelled()) {
-      FreeImage_Unload(image);
-      return 0;
-    }
     width = FreeImage_GetWidth(bmp);
     height = FreeImage_GetHeight(bmp);
     bmp = FreeImage_ConvertTo32Bits(image);
@@ -228,6 +214,18 @@ static void *imv_loader_bg_new_img(void *data)
 
   /* now update the loader */
   pthread_mutex_lock(&ldr->lock);
+
+  /* check for cancellation before finishing */
+  if(is_thread_cancelled()) {
+    if(mbmp) {
+      FreeImage_CloseMultiBitmap(mbmp, 0);
+    }
+    if(bmp) {
+      FreeImage_Unload(bmp);
+    }
+    pthread_mutex_unlock(&ldr->lock);
+    return 0;
+  }
 
   if(ldr->mbmp) {
     FreeImage_CloseMultiBitmap(ldr->mbmp, 0);
