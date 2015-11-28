@@ -21,21 +21,27 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <pthread.h>
 #include <signal.h>
 
+static void block_usr1_signal()
+{
+  sigset_t sigmask;
+  sigemptyset(&sigmask);
+  sigaddset(&sigmask, SIGUSR1);
+  sigprocmask(SIG_SETMASK, &sigmask, NULL);
+}
+
+static int is_thread_cancelled()
+{
+  sigset_t sigmask;
+  sigpending(&sigmask);
+  return sigismember(&sigmask, SIGUSR1);
+}
+
 void imv_init_loader(struct imv_loader *ldr)
 {
+  memset(ldr, 0, sizeof(struct imv_loader));
   pthread_mutex_init(&ldr->lock, NULL);
-  ldr->bg_thread = 0;
-  ldr->path = NULL;
-  ldr->out_bmp = NULL;
-  ldr->out_err = NULL;
-  ldr->mbmp = NULL;
-  ldr->bmp = NULL;
-  ldr->width = 0;
-  ldr->height = 0;
-  ldr->cur_frame = 0;
-  ldr->next_frame = 0;
-  ldr->num_frames = 0;
-  ldr->frame_time = 0;
+  /* ignore this signal in case we accidentally receive it */
+  block_usr1_signal();
 }
 
 void imv_destroy_loader(struct imv_loader *ldr)
@@ -68,6 +74,9 @@ void imv_loader_load_path(struct imv_loader *ldr, const char *path)
 
   /* kick off a new thread to load the image */
   /* no need to lock as we're the only thread at this point */
+  if(ldr->path) {
+    free(ldr->path);
+  }
   ldr->path = strdup(path);
   pthread_create(&ldr->bg_thread, NULL, &imv_loader_bg_new_img, ldr);
 }
@@ -102,7 +111,13 @@ char *imv_loader_get_error(struct imv_loader *ldr)
 
 void imv_loader_load_next_frame(struct imv_loader *ldr)
 {
-  /* TODO kick off next frame thread */
+  /* wait for existing thread to finish if already running */
+  if(ldr->bg_thread) {
+    pthread_join(ldr->bg_thread, NULL);
+  }
+
+  /* kick off a new thread */
+  pthread_create(&ldr->bg_thread, NULL, &imv_loader_bg_next_frame, ldr);
 }
 
 void imv_loader_time_passed(struct imv_loader *ldr, double dt)
@@ -118,7 +133,7 @@ void imv_loader_time_passed(struct imv_loader *ldr, double dt)
   pthread_mutex_unlock(&ldr->lock);
 
   if(get_frame) {
-    imv_loader_load_next_frame();
+    imv_loader_load_next_frame(ldr);
   }
 }
 
@@ -132,25 +147,10 @@ void imv_loader_error_occurred(struct imv_loader *ldr)
   pthread_mutex_unlock(&ldr->lock);
 }
 
-static void setup_thread_cancellation()
-{
-  sigset_t sigmask;
-  sigemptyset(&sigmask);
-  sigaddset(&sigmask, SIGUSR1);
-  /* block USR1 delivery so we can poll for it */
-  sigprocmask(SIG_SETMASK, &sigmask, NULL);
-}
-
-static int is_thread_cancelled()
-{
-  sigset_t sigmask;
-  sigpending(&sigmask);
-  return sigismember(&sigmask, SIGUSR1);
-}
-
 static void *imv_loader_bg_new_img(void *data)
 {
-  setup_thread_cancellation();
+  /* so we can poll for it */
+  block_usr1_signal();
 
   struct imv_loader *ldr = data;
 
@@ -254,19 +254,15 @@ static void *imv_loader_bg_new_img(void *data)
   return 0;
 }
 
-/* TODO - rewrite */
 static void *imv_loader_bg_next_frame(void *data)
 {
   struct imv_loader *ldr = data;
-  return 0;
-}
 
-#if 0
   pthread_mutex_lock(&ldr->lock);
   int num_frames = ldr->num_frames;
-  pthread_mutex_unlock(&ldr->lock);
   if(num_frames < 2) {
-    return;
+    pthread_mutex_unlock(&ldr->lock);
+    return 0;
   }
 
   FITAG *tag = NULL;
@@ -322,40 +318,46 @@ static void *imv_loader_bg_next_frame(void *data)
 
   switch(disposal_method) {
     case 0: /* nothing specified, just use the raw frame */
-      if(ldr->cur_bmp) {
-        FreeImage_Unload(ldr->cur_bmp);
+      if(ldr->bmp) {
+        FreeImage_Unload(ldr->bmp);
       }
-      ldr->cur_bmp = frame32;
+      ldr->bmp = frame32;
       break;
     case 1: /* composite over previous frame */
-      if(ldr->cur_bmp && ldr->cur_frame > 0) {
-        FIBITMAP *bg_frame = FreeImage_ConvertTo24Bits(ldr->cur_bmp);
-        FreeImage_Unload(ldr->cur_bmp);
+      if(ldr->bmp && ldr->cur_frame > 0) {
+        FIBITMAP *bg_frame = FreeImage_ConvertTo24Bits(ldr->bmp);
+        FreeImage_Unload(ldr->bmp);
         FIBITMAP *comp = FreeImage_Composite(frame32, 1, NULL, bg_frame);
         FreeImage_Unload(bg_frame);
         FreeImage_Unload(frame32);
-        ldr->cur_bmp = comp;
+        ldr->bmp = comp;
       } else {
         /* No previous frame, just render directly */
-        if(ldr->cur_bmp) {
-          FreeImage_Unload(ldr->cur_bmp);
+        if(ldr->bmp) {
+          FreeImage_Unload(ldr->bmp);
         }
-        ldr->cur_bmp = frame32;
+        ldr->bmp = frame32;
       }
       break;
     case 2: /* TODO - set to background, composite over that */
-      if(ldr->cur_bmp) {
-        FreeImage_Unload(ldr->cur_bmp);
+      if(ldr->bmp) {
+        FreeImage_Unload(ldr->bmp);
       }
-      ldr->cur_bmp = frame32;
+      ldr->bmp = frame32;
       break;
     case 3: /* TODO - restore to previous content */
-      if(ldr->cur_bmp) {
-        FreeImage_Unload(ldr->cur_bmp);
+      if(ldr->bmp) {
+        FreeImage_Unload(ldr->bmp);
       }
-      ldr->cur_bmp = frame32;
+      ldr->bmp = frame32;
       break;
   }
-  ldr->changed = 1;
+
+  if(ldr->out_bmp) {
+    FreeImage_Unload(ldr->out_bmp);
+  }
+  ldr->out_bmp = FreeImage_Clone(ldr->bmp);
+
+  pthread_mutex_unlock(&ldr->lock);
+  return 0;
 }
-#endif
