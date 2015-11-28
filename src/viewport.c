@@ -43,7 +43,7 @@ void imv_viewport_toggle_fullscreen(struct imv_viewport *view)
   }
 }
 
-void imv_viewport_toggle_playing(struct imv_viewport *view, struct imv_texture *tex)
+void imv_viewport_toggle_playing(struct imv_viewport *view)
 {
   view->playing = !view->playing;
 }
