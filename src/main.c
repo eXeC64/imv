@@ -290,6 +290,7 @@ int main(int argc, char** argv)
   }
 
   double last_time = SDL_GetTicks() / 1000.0;
+  int is_new_image = 1;
 
   int quit = 0;
   while(!quit) {
@@ -371,6 +372,7 @@ int main(int argc, char** argv)
       }
 
       imv_loader_load_path(&ldr, current_path);
+      is_new_image = 1;
     }
 
     FIBITMAP *bmp = imv_loader_get_image(&ldr);
@@ -378,15 +380,20 @@ int main(int argc, char** argv)
       imv_texture_set_image(&tex, bmp);
       FreeImage_Unload(bmp);
 
-      const char *current_path = imv_navigator_get_current_path(&nav);
-      char title[256];
-      snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s",
-          nav.cur_path + 1, nav.num_paths,
-          tex.width, tex.height, current_path);
-      imv_viewport_set_title(&view, title);
-      imv_viewport_scale_to_window(&view, &tex);
-      if(g_options.actual) {
-        imv_viewport_scale_to_actual(&view, &tex);
+      if(is_new_image) {
+        is_new_image = 0;
+        const char *current_path = imv_navigator_get_current_path(&nav);
+        char title[256];
+        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s",
+            nav.cur_path + 1, nav.num_paths,
+            tex.width, tex.height, current_path);
+        imv_viewport_set_title(&view, title);
+        imv_viewport_scale_to_window(&view, &tex);
+        if(g_options.actual) {
+          imv_viewport_scale_to_actual(&view, &tex);
+        }
+      } else {
+        imv_viewport_updated(&view, &tex);
       }
     }
 
