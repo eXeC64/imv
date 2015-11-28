@@ -388,6 +388,23 @@ int main(int argc, char** argv)
             nav.cur_path + 1, nav.num_paths,
             tex.width, tex.height, current_path);
         imv_viewport_set_title(&view, title);
+
+        if(overlay_surf) {
+          free(overlay_surf);
+          overlay_surf = NULL;
+        }
+        if(overlay_tex) {
+          SDL_DestroyTexture(overlay_tex);
+          overlay_tex = NULL;
+        }
+        if(font) {
+          snprintf(&title[0], sizeof(title), "[%i/%i] %s",
+            nav.cur_path + 1, nav.num_paths, current_path);
+          SDL_Color w = {255,255,255,255};
+          overlay_surf = TTF_RenderUTF8_Blended(font, &title[0], w);
+          overlay_tex = SDL_CreateTextureFromSurface(renderer, overlay_surf);
+        }
+
         imv_viewport_scale_to_window(&view, &tex);
         if(g_options.actual) {
           imv_viewport_scale_to_actual(&view, &tex);
