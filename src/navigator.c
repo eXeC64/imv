@@ -159,7 +159,7 @@ void imv_navigator_remove_path(struct imv_navigator *nav, const char *path)
     return;
   }
 
-  for(int i = removed; i < nav->num_paths - 2; ++i) {
+  for(int i = removed; i < nav->num_paths - 1; ++i) {
     nav->paths[i] = nav->paths[i+1];
   }
 
@@ -177,6 +177,7 @@ void imv_navigator_remove_path(struct imv_navigator *nav, const char *path)
       }
     }
   }
+  nav->changed = 1;
 }
 
 void imv_navigator_remove_current_path(struct imv_navigator *nav)
