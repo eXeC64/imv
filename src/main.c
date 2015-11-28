@@ -423,6 +423,12 @@ int main(int argc, char** argv)
     TTF_CloseFont(font);
   }
   TTF_Quit();
+  if(overlay_surf) {
+    SDL_FreeSurface(overlay_surf);
+  }
+  if(overlay_tex) {
+    SDL_DestroyTexture(overlay_tex);
+  }
   SDL_DestroyTexture(chequered_tex);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
