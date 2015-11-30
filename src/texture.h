@@ -35,10 +35,17 @@ struct imv_texture {
   SDL_Renderer *renderer; /* SDL renderer to draw to */
 };
 
+
+/* Initialises an instance of imv_texture */
 void imv_init_texture(struct imv_texture *tex, SDL_Renderer *r);
+
+/* Cleans up all resources owned by a imv_texture instance */
 void imv_destroy_texture(struct imv_texture *tex);
 
+/* Updates the texture to contain the data in the image parameter */
 int imv_texture_set_image(struct imv_texture *tex, FIBITMAP *image);
+
+/* Draw the texture at the given position with the given scale */
 void imv_texture_draw(struct imv_texture *tex, int x, int y, double scale);
 
 #endif
