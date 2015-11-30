@@ -40,15 +40,30 @@ struct imv_loader {
   double frame_time;
 };
 
+/* Initialises an instance of imv_loader */
 void imv_init_loader(struct imv_loader *img);
+
+/* Cleans up all resources owned by a imv_loader instance */
 void imv_destroy_loader(struct imv_loader *img);
 
+/* Asynchronously load the given file */
 void imv_loader_load_path(struct imv_loader *ldr, const char *path);
 
+/* Returns image data if available. NULL if not. Caller is responsible for
+ * cleaning up the data returned. Each image is only returned once. */
 FIBITMAP *imv_loader_get_image(struct imv_loader *ldr);
+
+/* If a file failed to loadd, return the path to that file. Otherwise returns
+ * NULL. Only returns the path once. Caller is responsible for cleaning up the
+ * string returned. */
 char *imv_loader_get_error(struct imv_loader *ldr);
 
+/* Trigger the next frame of the currently loaded image to be loaded and
+ * returned as soon as possible. */
 void imv_loader_load_next_frame(struct imv_loader *ldr);
+
+/* Tell the loader that dt time has passed. If the current image is animated,
+ * the loader will automatically load the next frame when it is due. */
 void imv_loader_time_passed(struct imv_loader *ldr, double dt);
 
 #endif
