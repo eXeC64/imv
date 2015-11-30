@@ -155,13 +155,17 @@ int main(int argc, char** argv)
   struct imv_navigator nav;
   imv_init_navigator(&nav);
 
-  parse_args(argc,argv);
+  /* parse any command line options given */
+  parse_args(argc, argv);
 
+  /* handle any image paths given as arguments */
   for(int i = optind; i < argc; ++i) {
+    /* special case: '-' is actually an option */
     if(!strcmp("-",argv[i])) {
       g_options.stdin = 1;
       continue;
     }
+    /* add the given path to the list to load */
     if(g_options.recursive) {
       imv_navigator_add_path_recursive(&nav, argv[i]);
     } else {
@@ -169,6 +173,7 @@ int main(int argc, char** argv)
     }
   }
 
+  /* if the user asked us to load paths from stdin, now is the time */
   if(g_options.stdin) {
     char buf[512];
     while(fgets(buf, sizeof(buf), stdin)) {
@@ -186,6 +191,7 @@ int main(int argc, char** argv)
     }
   }
 
+  /* if we weren't given any paths we have nothing to view. exit */
   if(!imv_navigator_get_current_path(&nav)) {
     fprintf(stderr, "No input files. Exiting.\n");
     exit(1);
@@ -200,11 +206,14 @@ int main(int argc, char** argv)
     imv_navigator_set_path(&nav, start_index);
   }
 
+  /* we've got something to display, so create an SDL window */
   if(SDL_Init(SDL_INIT_VIDEO) != 0) {
     fprintf(stderr, "SDL Failed to Init: %s\n", SDL_GetError());
     exit(1);
   }
 
+  /* width and height arbitrarily chosen. Perhaps there's a smarter way to
+   * set this */
   const int width = 1280;
   const int height = 720;
 
@@ -215,6 +224,7 @@ int main(int argc, char** argv)
         width, height,
         SDL_WINDOW_RESIZABLE);
 
+  /* we'll use SDL's built-in renderer, hardware accelerated if possible */
   SDL_Renderer *renderer =
     SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
@@ -225,6 +235,7 @@ int main(int argc, char** argv)
   /* construct a chequered background texture */
   SDL_Texture *chequered_tex = create_chequered(renderer);
 
+  /* set up the required fonts and surfaces for displaying the overlay */
   TTF_Init();
   TTF_Font *font = load_font(g_options.font);
   if(!font) {
@@ -233,6 +244,7 @@ int main(int argc, char** argv)
   SDL_Surface *overlay_surf = NULL;
   SDL_Texture *overlay_tex = NULL;
 
+  /* create our main classes on the stack*/
   struct imv_loader ldr;
   imv_init_loader(&ldr);
 
@@ -242,16 +254,19 @@ int main(int argc, char** argv)
   struct imv_viewport view;
   imv_init_viewport(&view, window);
 
-  /* Put us in fullscren by default if requested */
+  /* put us in fullscren mode to begin with if requested */
   if(g_options.fullscreen) {
     imv_viewport_toggle_fullscreen(&view);
   }
 
   double last_time = SDL_GetTicks() / 1000.0;
+
+  /* used to keep track of when the selected image has changed */
   int is_new_image = 1;
 
   int quit = 0;
   while(!quit) {
+    /* handle any input/window events sent by SDL */
     SDL_Event e;
     while(!quit && SDL_PollEvent(&e)) {
       switch(e.type) {
@@ -307,16 +322,19 @@ int main(int argc, char** argv)
       }
     }
 
+    /* if we're quitting, don't bother drawing any more images */
     if(quit) {
       break;
     }
 
+    /* check if an image failed to load, if so, remove it from our image list */
     char *err_path = imv_loader_get_error(&ldr);
     if(err_path) {
       imv_navigator_remove_path(&nav, err_path);
       free(err_path);
     }
 
+    /* if the user has changed image, start loading the new one */
     if(imv_navigator_has_changed(&nav)) {
       const char *current_path = imv_navigator_get_current_path(&nav);
       if(!current_path) {
@@ -333,11 +351,14 @@ int main(int argc, char** argv)
       is_new_image = 1;
     }
 
+    /* check if a new image is available to display */
     FIBITMAP *bmp = imv_loader_get_image(&ldr);
     if(bmp) {
       imv_texture_set_image(&tex, bmp);
       FreeImage_Unload(bmp);
 
+      /* this is a new image, not just a new frame, so update our window's
+       * title and the overlay */
       if(is_new_image) {
         is_new_image = 0;
         view.playing = 1;
@@ -348,6 +369,7 @@ int main(int argc, char** argv)
             tex.width, tex.height, current_path);
         imv_viewport_set_title(&view, title);
 
+        /* make sure to free any memory used by the old image */
         if(overlay_surf) {
           SDL_FreeSurface(overlay_surf);
           overlay_surf = NULL;
@@ -356,6 +378,8 @@ int main(int argc, char** argv)
           SDL_DestroyTexture(overlay_tex);
           overlay_tex = NULL;
         }
+
+        /* update the overlay */
         if(font) {
           snprintf(&title[0], sizeof(title), "[%i/%i] %s",
             nav.cur_path + 1, nav.num_paths, current_path);
@@ -364,15 +388,21 @@ int main(int argc, char** argv)
           overlay_tex = SDL_CreateTextureFromSurface(renderer, overlay_surf);
         }
 
+        /* reset the viewport to fit the picture in the window */
         imv_viewport_scale_to_window(&view, &tex);
+
+        /* or if they want images at their actual size, do that instead */
         if(g_options.actual) {
           imv_viewport_scale_to_actual(&view, &tex);
         }
       } else {
+        /* just a new frame, tell the viewport it need to redraw */
         imv_viewport_updated(&view, &tex);
       }
     }
 
+    /* if we're playing an animated gif, tell the loader how much time has
+     * passed */
     if(view.playing) {
       double cur_time = SDL_GetTicks() / 1000.0;
       double dt = cur_time - last_time;
@@ -380,8 +410,11 @@ int main(int argc, char** argv)
     }
     last_time = SDL_GetTicks() / 1000.0;
 
+    /* only redraw when the view has changed, i.e. zoom/pan/window resized */
     if(view.redraw) {
+      /* first we draw the background */
       if(g_options.solid_bg) {
+        /* solid background */
         SDL_SetRenderDrawColor(renderer,
             g_options.bg_r, g_options.bg_g, g_options.bg_b, 255);
         SDL_RenderClear(renderer);
@@ -391,6 +424,7 @@ int main(int argc, char** argv)
         SDL_GetWindowSize(window, &ww, &wh);
         int img_w, img_h;
         SDL_QueryTexture(chequered_tex, NULL, NULL, &img_w, &img_h);
+        /* tile the texture so it fills the window */
         for(int y = 0; y < wh; y += img_h) {
           for(int x = 0; x < ww; x += img_w) {
             SDL_Rect dst_rect = {x,y,img_w,img_h};
@@ -398,7 +432,11 @@ int main(int argc, char** argv)
           }
         }
       }
+
+      /* draw our actual texture */
       imv_texture_draw(&tex, view.x, view.y, view.scale);
+
+      /* if the overlay needs to be drawn, draw that too */
       if(g_options.overlay && font) {
         int ow, oh;
         SDL_QueryTexture(overlay_tex, NULL, NULL, &ow, &oh);
@@ -408,12 +446,19 @@ int main(int argc, char** argv)
         SDL_RenderFillRect(renderer, &or);
         SDL_RenderCopy(renderer, overlay_tex, NULL, &or);
       }
+
+      /* redraw complete, unset the flag */
       view.redraw = 0;
+
+      /* tell SDL to show the newly drawn frame */
       SDL_RenderPresent(renderer);
     }
+
+    /* sleep a little bit so we don't waste CPU time */
     SDL_Delay(10);
   }
 
+  /* clean up our resources now that we're exiting */
   imv_destroy_loader(&ldr);
   imv_destroy_texture(&tex);
   imv_destroy_navigator(&nav);
