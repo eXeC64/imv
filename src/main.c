@@ -223,10 +223,21 @@ int main(int argc, char** argv)
         SDL_WINDOWPOS_CENTERED,
         width, height,
         SDL_WINDOW_RESIZABLE);
+  if(!window) {
+    fprintf(stderr, "SDL Failed to create window: %s\n", SDL_GetError());
+    SDL_Quit();
+    exit(1);
+  }
 
   /* we'll use SDL's built-in renderer, hardware accelerated if possible */
   SDL_Renderer *renderer =
     SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+  if(!renderer) {
+    fprintf(stderr, "SDL Failed to create renderer: %s\n", SDL_GetError());
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    exit(1);
+  }
 
   /* use the appropriate resampling method */
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,
