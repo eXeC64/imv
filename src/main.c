@@ -230,8 +230,7 @@ int main(int argc, char** argv)
   }
 
   /* we'll use SDL's built-in renderer, hardware accelerated if possible */
-  SDL_Renderer *renderer =
-    SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+  SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
   if(!renderer) {
     fprintf(stderr, "SDL Failed to create renderer: %s\n", SDL_GetError());
     SDL_DestroyWindow(window);
