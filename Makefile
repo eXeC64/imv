@@ -1,4 +1,4 @@
-.PHONY: clean install uninstall
+.PHONY: clean check install uninstall
 
 prefix = /usr
 
@@ -10,6 +10,7 @@ BUILDDIR = build
 
 SOURCES = $(wildcard src/*.c)
 OBJECTS = $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
+TESTS = $(patsubst test/%.c,test_%,$(wildcard test/*.c))
 
 VERSION = "v1.1.0"
 
@@ -27,8 +28,16 @@ $(BUILDDIR)/%.o: src/%.c
 	@echo "COMPILING $@"
 	@$(CC) -c $(CFLAGS) -o $@ $<
 
+test_%: test/%.c src/%.c
+	@echo "BUILDING $@"
+	@$(CC) -o $@ -Isrc -W -Wall -std=gnu11 -lcmocka $^
+
+check: $(TESTS)
+	@echo "RUNNING TESTS"
+	@for t in "$(TESTS)"; do ./$$t; done
+
 clean:
-	@$(RM) $(TARGET) $(OBJECTS)
+	@$(RM) $(TARGET) $(OBJECTS) $(TESTS)
 
 install: $(TARGET)
 	install -D -m 0755 $(TARGET) $(DESTDIR)$(prefix)/bin/imv

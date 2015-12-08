@@ -51,6 +51,13 @@ Installation
     $ make
     # make install
 
+Tests
+-----
+
+`imv` has a work-in-progress test suite. The test suite requires `cmocka`.
+
+    $ make check
+
 Contact
 -------
 
