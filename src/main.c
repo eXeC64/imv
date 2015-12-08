@@ -153,7 +153,7 @@ int main(int argc, char** argv)
   }
 
   struct imv_navigator nav;
-  imv_init_navigator(&nav);
+  imv_navigator_init(&nav);
 
   /* parse any command line options given */
   parse_args(argc, argv);
@@ -166,11 +166,7 @@ int main(int argc, char** argv)
       continue;
     }
     /* add the given path to the list to load */
-    if(g_options.recursive) {
-      imv_navigator_add_path_recursive(&nav, argv[i]);
-    } else {
-      imv_navigator_add_path(&nav, argv[i]);
-    }
+    imv_navigator_add(&nav, argv[i], g_options.recursive);
   }
 
   /* if the user asked us to load paths from stdin, now is the time */
@@ -182,17 +178,13 @@ int main(int argc, char** argv)
         buf[--len] = 0;
       }
       if(len > 0) {
-        if(g_options.recursive) {
-          imv_navigator_add_path_recursive(&nav, buf);
-        } else {
-          imv_navigator_add_path(&nav, buf);
-        }
+        imv_navigator_add(&nav, buf, g_options.recursive);
       }
     }
   }
 
   /* if we weren't given any paths we have nothing to view. exit */
-  if(!imv_navigator_get_current_path(&nav)) {
+  if(!imv_navigator_selection(&nav)) {
     fprintf(stderr, "No input files. Exiting.\n");
     exit(1);
   }
@@ -203,7 +195,7 @@ int main(int argc, char** argv)
     if(start_index < 0) {
       start_index = strtol(g_options.start_at,NULL,10) - 1;
     }
-    imv_navigator_set_path(&nav, start_index);
+    imv_navigator_select_str(&nav, start_index);
   }
 
   /* we've got something to display, so create an SDL window */
@@ -285,11 +277,17 @@ int main(int argc, char** argv)
           break;
         case SDL_KEYDOWN:
           switch (e.key.keysym.sym) {
-            case SDLK_q:      quit = 1;                                break;
+            case SDLK_q:
+              quit = 1;
+              break;
             case SDLK_LEFTBRACKET:
-            case SDLK_LEFT:   imv_navigator_prev_path(&nav);           break;
+            case SDLK_LEFT:
+              imv_navigator_select_rel(&nav, -1);
+              break;
             case SDLK_RIGHTBRACKET:
-            case SDLK_RIGHT:  imv_navigator_next_path(&nav);           break;
+            case SDLK_RIGHT:
+              imv_navigator_select_rel(&nav, 1);
+              break;
             case SDLK_EQUALS:
             case SDLK_i:
             case SDLK_UP:
@@ -300,18 +298,42 @@ int main(int argc, char** argv)
             case SDLK_DOWN:
               imv_viewport_zoom(&view, &tex, IMV_ZOOM_KEYBOARD, -1);
               break;
-            case SDLK_a:     imv_viewport_scale_to_actual(&view, &tex);break;
-            case SDLK_r:     imv_viewport_scale_to_window(&view, &tex);break;
-            case SDLK_c:      imv_viewport_center(&view, &tex);        break;
-            case SDLK_j:      imv_viewport_move(&view, 0, -50);        break;
-            case SDLK_k:      imv_viewport_move(&view, 0, 50);         break;
-            case SDLK_h:      imv_viewport_move(&view, 50, 0);         break;
-            case SDLK_l:      imv_viewport_move(&view, -50, 0);        break;
-            case SDLK_x:      imv_navigator_remove_current_path(&nav); break;
-            case SDLK_f:      imv_viewport_toggle_fullscreen(&view);   break;
-            case SDLK_PERIOD: imv_loader_load_next_frame(&ldr);        break;
-            case SDLK_SPACE:  imv_viewport_toggle_playing(&view);     ;break;
-            case SDLK_p:    puts(imv_navigator_get_current_path(&nav));break;
+            case SDLK_a:
+              imv_viewport_scale_to_actual(&view, &tex);
+              break;
+            case SDLK_r:
+              imv_viewport_scale_to_window(&view, &tex);
+              break;
+            case SDLK_c:
+              imv_viewport_center(&view, &tex);
+              break;
+            case SDLK_j:
+              imv_viewport_move(&view, 0, -50);
+              break;
+            case SDLK_k:
+              imv_viewport_move(&view, 0, 50);
+              break;
+            case SDLK_h:
+              imv_viewport_move(&view, 50, 0);
+              break;
+            case SDLK_l:
+              imv_viewport_move(&view, -50, 0);
+              break;
+            case SDLK_x:
+              imv_navigator_remove(&nav, imv_navigator_selection(&nav));
+              break;
+            case SDLK_f:
+              imv_viewport_toggle_fullscreen(&view);
+              break;
+            case SDLK_PERIOD:
+              imv_loader_load_next_frame(&ldr);
+              break;
+            case SDLK_SPACE:
+              imv_viewport_toggle_playing(&view);
+              break;
+            case SDLK_p:
+              puts(imv_navigator_selection(&nav));
+              break;
             case SDLK_d:
               g_options.overlay = !g_options.overlay;
               imv_viewport_set_redraw(&view);
@@ -340,13 +362,13 @@ int main(int argc, char** argv)
     /* check if an image failed to load, if so, remove it from our image list */
     char *err_path = imv_loader_get_error(&ldr);
     if(err_path) {
-      imv_navigator_remove_path(&nav, err_path);
+      imv_navigator_remove(&nav, err_path);
       free(err_path);
     }
 
     /* if the user has changed image, start loading the new one */
-    if(imv_navigator_has_changed(&nav)) {
-      const char *current_path = imv_navigator_get_current_path(&nav);
+    if(imv_navigator_poll_changed(&nav)) {
+      const char *current_path = imv_navigator_selection(&nav);
       if(!current_path) {
         fprintf(stderr, "No input files left. Exiting.\n");
         exit(1);
@@ -372,7 +394,7 @@ int main(int argc, char** argv)
       if(is_new_image) {
         is_new_image = 0;
         view.playing = 1;
-        const char *current_path = imv_navigator_get_current_path(&nav);
+        const char *current_path = imv_navigator_selection(&nav);
         char title[256];
         snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s",
             nav.cur_path + 1, nav.num_paths,
@@ -471,7 +493,7 @@ int main(int argc, char** argv)
   /* clean up our resources now that we're exiting */
   imv_destroy_loader(&ldr);
   imv_destroy_texture(&tex);
-  imv_destroy_navigator(&nav);
+  imv_navigator_destroy(&nav);
   imv_destroy_viewport(&view);
 
   if(font) {

@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <string.h>
 #include <stdio.h>
 
-void imv_init_navigator(struct imv_navigator *nav)
+void imv_navigator_init(struct imv_navigator *nav)
 {
   nav->buf_size = 512;
   nav->paths = malloc(sizeof(char*) * nav->buf_size);
@@ -33,7 +33,7 @@ void imv_init_navigator(struct imv_navigator *nav)
   nav->changed = 0;
 }
 
-void imv_destroy_navigator(struct imv_navigator *nav)
+void imv_navigator_destroy(struct imv_navigator *nav)
 {
   if(nav->buf_size > 0) {
     free(nav->paths);
@@ -60,7 +60,8 @@ static void add_item(struct imv_navigator *nav, const char *path)
   }
 }
 
-void imv_navigator_add_path(struct imv_navigator *nav, const char *path)
+void imv_navigator_add(struct imv_navigator *nav, const char *path,
+                       int recursive)
 {
   char path_buf[512];
   struct stat path_info;
@@ -75,31 +76,11 @@ void imv_navigator_add_path(struct imv_navigator *nav, const char *path)
           continue;
         }
         snprintf(path_buf, sizeof(path_buf), "%s/%s", path, dir->d_name);
-        add_item(nav, path_buf);
-      }
-      closedir(d);
-    }
-  } else {
-   add_item(nav, path); 
-  }
-}
-
-void imv_navigator_add_path_recursive(struct imv_navigator *nav, const char *path)
-{
-  char path_buf[512];
-  struct stat path_info;
-  stat(path, &path_info);
-  if(S_ISDIR(path_info.st_mode)) {
-    DIR *d = opendir(path);
-    if(d) {
-      struct dirent *dir;
-      while((dir = readdir(d)) != NULL) {
-        if(strcmp(dir->d_name, "..") == 0 ||
-            strcmp(dir->d_name, ".") == 0) {
-          continue;
+        if(recursive) {
+          imv_navigator_add(nav, path_buf, recursive);
+        } else {
+          add_item(nav, path_buf);
         }
-        snprintf(path_buf, sizeof(path_buf), "%s/%s", path, dir->d_name);
-        imv_navigator_add_path_recursive(nav, path_buf);
       }
       closedir(d);
     }
@@ -108,7 +89,7 @@ void imv_navigator_add_path_recursive(struct imv_navigator *nav, const char *pat
   }
 }
 
-const char *imv_navigator_get_current_path(struct imv_navigator *nav)
+const char *imv_navigator_selection(struct imv_navigator *nav)
 {
   if(nav->num_paths == 0) {
     return NULL;
@@ -116,35 +97,32 @@ const char *imv_navigator_get_current_path(struct imv_navigator *nav)
   return nav->paths[nav->cur_path];
 }
 
-void imv_navigator_next_path(struct imv_navigator *nav)
+void imv_navigator_select_rel(struct imv_navigator *nav, int direction)
 {
   int prev_path = nav->cur_path;
   if(nav->num_paths == 0) {
     return;
   }
-  nav->cur_path += 1;
+
+  if(direction > 1) {
+    direction = 1;
+  } else if(direction < -1) {
+    direction = -1;
+  } else if(direction == 0) {
+    return;
+  }
+
+  nav->cur_path += direction;
   if(nav->cur_path == nav->num_paths) {
     nav->cur_path = 0;
-  }
-  nav->last_move_direction = 1;
-  nav->changed = prev_path != nav->cur_path;
-}
-
-void imv_navigator_prev_path(struct imv_navigator *nav)
-{
-  int prev_path = nav->cur_path;
-  if(nav->num_paths == 0) {
-    return;
-  }
-  nav->cur_path -= 1;
-  if(nav->cur_path < 0) {
+  } else if(nav->cur_path < 0) {
     nav->cur_path = nav->num_paths - 1;
   }
-  nav->last_move_direction = -1;
+  nav->last_move_direction = direction;
   nav->changed = prev_path != nav->cur_path;
 }
 
-void imv_navigator_remove_path(struct imv_navigator *nav, const char *path)
+void imv_navigator_remove(struct imv_navigator *nav, const char *path)
 {
   int removed = -1;
   for(int i = 0; i < nav->num_paths; ++i) {
@@ -169,7 +147,7 @@ void imv_navigator_remove_path(struct imv_navigator *nav, const char *path)
     /* We just removed the current path */
     if(nav->last_move_direction < 0) {
       /* Move left */
-      imv_navigator_prev_path(nav);
+      imv_navigator_select_rel(nav, -1);
     } else {
       /* Try to stay where we are, unless we ran out of room */
       if(nav->cur_path == nav->num_paths) {
@@ -180,32 +158,7 @@ void imv_navigator_remove_path(struct imv_navigator *nav, const char *path)
   nav->changed = 1;
 }
 
-void imv_navigator_remove_current_path(struct imv_navigator *nav)
-{
-  if(nav->num_paths == 0) {
-    return;
-  }
-
-  free(nav->paths[nav->cur_path]);
-  for(int i = nav->cur_path; i < nav->num_paths - 1; ++i) {
-    nav->paths[i] = nav->paths[i+1];
-  }
-  nav->num_paths -= 1;
-
-  if(nav->last_move_direction < 0) {
-    /* Move left */
-    imv_navigator_prev_path(nav);
-  } else {
-    /* Try to stay where we are, unless we ran out of room */
-    if(nav->cur_path == nav->num_paths) {
-      nav->cur_path = 0;
-    }
-  }
-
-  nav->changed = 1;
-}
-
-void imv_navigator_set_path(struct imv_navigator *nav, const int path)
+void imv_navigator_select_str(struct imv_navigator *nav, const int path)
 {
   if(path <= 0 || path >= nav->num_paths) {
     return;
@@ -236,7 +189,7 @@ int imv_navigator_find_path(struct imv_navigator *nav, const char *path)
   return -1;
 }
 
-int imv_navigator_has_changed(struct imv_navigator *nav)
+int imv_navigator_poll_changed(struct imv_navigator *nav)
 {
   if(nav->changed) {
     nav->changed = 0;
