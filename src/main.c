@@ -36,19 +36,20 @@ struct {
   int actual;
   int nearest_neighbour;
   int solid_bg;
+  unsigned int delay;
   unsigned char bg_r;
   unsigned char bg_g;
   unsigned char bg_b;
   int overlay;
   const char *start_at;
   const char *font;
-} g_options = {0,0,0,0,0,1,0,0,0,0,NULL,"FreeMono:24"};
+} g_options = {0,0,0,0,0,1,0,0,0,0,0,NULL,"FreeMono:24"};
 
 void print_usage(const char* name)
 {
   fprintf(stdout,
   "imv %s\n"
-  "Usage: %s [-rfaudh] [-n <NUM|PATH>] [-b BG] [-e FONT:SIZE] [-] [images...]\n"
+  "Usage: %s [-rfaudh] [-n <NUM|PATH>] [-b BG] [-e FONT:SIZE] [-t SECONDS] [-] [images...]\n"
   "\n"
   "Flags:\n"
   "   -: Read paths from stdin. One path per line.\n"
@@ -62,7 +63,8 @@ void print_usage(const char* name)
   "Options:\n"
   "  -n <NUM|PATH>: Start at picture number NUM, or with the path PATH.\n"
   "  -b BG: Set the background. Either 'checks' or a hex color value.\n"
-  "  -e FONT:SIZE: Set the font used for the overlay. Defaults to FreeMono:24"
+  "  -e FONT:SIZE: Set the font used for the overlay. Defaults to FreeMono:24\n"
+  "  -t SECONDS: Enable slideshow mode and set delay between images"
   "\n"
   "Mouse:\n"
   "   Click+Drag to Pan\n"
@@ -87,6 +89,8 @@ void print_usage(const char* name)
   "         ' ': Toggle gif playback\n"
   "         '.': Step a frame of gif playback\n"
   "         'p': Print current image path to stdout\n"
+  "         't': Increase slideshow delay by one second\n"
+  "         'T': Decrease slideshow delay by one second\n"
   "\n"
   "Legal:\n"
   "This program is free software; you can redistribute it and/or\n"
@@ -108,7 +112,7 @@ void parse_args(int argc, char** argv)
   const char* name = argv[0];
   char o;
 
-  while((o = getopt(argc, argv, "firaudhn:b:e:")) != -1) {
+  while((o = getopt(argc, argv, "firaudhn:b:e:t:")) != -1) {
     switch(o) {
       case 'f': g_options.fullscreen = 1;   break;
       case 'i':
@@ -137,6 +141,9 @@ void parse_args(int argc, char** argv)
         break;
       case 'e':
         g_options.font = optarg;
+        break;
+      case 't':
+        g_options.delay = (unsigned int)atoi(optarg);
         break;
       case '?':
         fprintf(stderr, "Unknown argument '%c'. Aborting.\n", optopt);
@@ -261,10 +268,16 @@ int main(int argc, char** argv)
     imv_viewport_toggle_fullscreen(&view);
   }
 
-  double last_time = SDL_GetTicks() / 1000.0;
+  /* help keeping track of time */
+  unsigned int last_time;
+  unsigned int current_time;
 
   /* used to keep track of when the selected image has changed */
   int is_new_image = 1;
+
+  /* used to calculate when to skip to the next image in slideshow mode */
+  unsigned int msecs_passed = 0;
+  unsigned int delay_seconds_passed = 0;
 
   int quit = 0;
   while(!quit) {
@@ -283,10 +296,14 @@ int main(int argc, char** argv)
             case SDLK_LEFTBRACKET:
             case SDLK_LEFT:
               imv_navigator_select_rel(&nav, -1);
+              /* reset slideshow delay */
+              delay_seconds_passed = 0;
               break;
             case SDLK_RIGHTBRACKET:
             case SDLK_RIGHT:
               imv_navigator_select_rel(&nav, 1);
+              /* reset slideshow delay */
+              delay_seconds_passed = 0;
               break;
             case SDLK_EQUALS:
             case SDLK_i:
@@ -337,6 +354,16 @@ int main(int argc, char** argv)
             case SDLK_d:
               g_options.overlay = !g_options.overlay;
               imv_viewport_set_redraw(&view);
+              break;
+            case SDLK_t:
+              if(e.key.keysym.mod & (KMOD_SHIFT|KMOD_CAPS)) {
+                if(g_options.delay >= 1) {
+                  g_options.delay--;
+                }
+              } else {
+                g_options.delay++;
+              }
+              view.redraw = 1;
               break;
           }
           break;
@@ -394,31 +421,6 @@ int main(int argc, char** argv)
       if(is_new_image) {
         is_new_image = 0;
         view.playing = 1;
-        const char *current_path = imv_navigator_selection(&nav);
-        char title[256];
-        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s",
-            nav.cur_path + 1, nav.num_paths,
-            tex.width, tex.height, current_path);
-        imv_viewport_set_title(&view, title);
-
-        /* make sure to free any memory used by the old image */
-        if(overlay_surf) {
-          SDL_FreeSurface(overlay_surf);
-          overlay_surf = NULL;
-        }
-        if(overlay_tex) {
-          SDL_DestroyTexture(overlay_tex);
-          overlay_tex = NULL;
-        }
-
-        /* update the overlay */
-        if(font) {
-          snprintf(&title[0], sizeof(title), "[%i/%i] %s",
-            nav.cur_path + 1, nav.num_paths, current_path);
-          SDL_Color w = {255,255,255,255};
-          overlay_surf = TTF_RenderUTF8_Blended(font, &title[0], w);
-          overlay_tex = SDL_CreateTextureFromSurface(renderer, overlay_surf);
-        }
 
         /* reset the viewport to fit the picture in the window */
         imv_viewport_scale_to_window(&view, &tex);
@@ -433,17 +435,75 @@ int main(int argc, char** argv)
       }
     }
 
+    current_time = SDL_GetTicks();
+
     /* if we're playing an animated gif, tell the loader how much time has
      * passed */
     if(view.playing) {
-      double cur_time = SDL_GetTicks() / 1000.0;
-      double dt = cur_time - last_time;
-      imv_loader_time_passed(&ldr, dt);
+      unsigned int dt = current_time - last_time;
+      imv_loader_time_passed(&ldr, dt / 1000.0);
     }
-    last_time = SDL_GetTicks() / 1000.0;
+
+    /* handle slideshow */
+    if (g_options.delay) {
+      unsigned int dt = current_time - last_time;
+
+      msecs_passed = msecs_passed + dt;
+      /* tick every second */
+      if(msecs_passed >= 1000) {
+        msecs_passed = 0;
+        delay_seconds_passed++;
+        view.redraw = 1;
+        if(delay_seconds_passed >= g_options.delay) {
+          imv_navigator_select_rel(&nav, 1);
+          delay_seconds_passed = 0;
+        }
+      }
+    }
+
+    last_time = current_time;
 
     /* only redraw when the view has changed, i.e. zoom/pan/window resized */
     if(view.redraw) {
+      /* make sure to free any memory used by the old image */
+      if(overlay_surf) {
+        SDL_FreeSurface(overlay_surf);
+        overlay_surf = NULL;
+      }
+      if(overlay_tex) {
+        SDL_DestroyTexture(overlay_tex);
+        overlay_tex = NULL;
+      }
+
+      /* update window title */
+      const char *current_path = imv_navigator_selection(&nav);
+      char title[256];
+      if(g_options.delay) {
+        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%i/%is] [%ix%i] %s",
+            nav.cur_path + 1, nav.num_paths, delay_seconds_passed + 1,
+            g_options.delay, tex.width, tex.height, current_path);
+      } else {
+        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s",
+            nav.cur_path + 1, nav.num_paths,
+            tex.width, tex.height, current_path);
+      }
+      imv_viewport_set_title(&view, title);
+
+      /* update the overlay */
+      if(font) {
+        if(g_options.delay) {
+          snprintf(&title[0], sizeof(title), "[%i/%i] [%i/%is] %s",
+              nav.cur_path + 1, nav.num_paths, delay_seconds_passed + 1,
+              g_options.delay, current_path);
+        } else {
+          snprintf(&title[0], sizeof(title), "[%i/%i] %s", nav.cur_path + 1,
+              nav.num_paths, current_path);
+        }
+        SDL_Color w = {255,255,255,255};
+        overlay_surf = TTF_RenderUTF8_Blended(font, &title[0], w);
+        overlay_tex = SDL_CreateTextureFromSurface(renderer, overlay_surf);
+      }
+
       /* first we draw the background */
       if(g_options.solid_bg) {
         /* solid background */

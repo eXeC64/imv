@@ -43,6 +43,10 @@ Set the background color. Either 'checks' or a hex color value.
 .BI "-e " FONT:SIZE
 Set the font used by the overlay. FONT can be any valid system font, such as
 FreeSans, FreeMono, etc. Defaults to FreeMono:24.
+.TP
+.BI "-t " SECONDS
+Set the slideshow delay in seconds. Setting this to zero disables slideshow
+mode, which is the default.
 .SH CONTROLS
 .sp
 imv can be controlled using the mouse or keyboard.
@@ -103,6 +107,13 @@ Step forward one frame (when playing gifs).
 .TP
 .B p
 Print current image path to stdout
+.TP
+.B t
+Increase slideshow delay by one second
+.TP
+.B T
+Decrease slideshow delay by one second. When delay is zero, slideshow mode is
+disabled.
 .SH LEGAL
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
