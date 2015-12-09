@@ -36,6 +36,7 @@ struct {
   int actual;
   int nearest_neighbour;
   int solid_bg;
+  int binary_stdin;
   unsigned int delay;
   unsigned char bg_r;
   unsigned char bg_g;
@@ -43,7 +44,7 @@ struct {
   int overlay;
   const char *start_at;
   const char *font;
-} g_options = {0,0,0,0,0,1,0,0,0,0,0,NULL,"FreeMono:24"};
+} g_options = {0,0,0,0,0,1,0,0,0,0,0,0,NULL,"FreeMono:24"};
 
 void print_usage(const char* name)
 {
@@ -112,7 +113,7 @@ void parse_args(int argc, char** argv)
   const char* name = argv[0];
   char o;
 
-  while((o = getopt(argc, argv, "firaudhn:b:e:t:")) != -1) {
+  while((o = getopt(argc, argv, "firaudhxn:b:e:t:")) != -1) {
     switch(o) {
       case 'f': g_options.fullscreen = 1;   break;
       case 'i':
@@ -145,6 +146,9 @@ void parse_args(int argc, char** argv)
       case 't':
         g_options.delay = (unsigned int)atoi(optarg);
         break;
+      case 'x':
+        g_options.binary_stdin = 1;
+        break;
       case '?':
         fprintf(stderr, "Unknown argument '%c'. Aborting.\n", optopt);
         exit(1);
@@ -154,6 +158,9 @@ void parse_args(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
+  char * stdin_buffer;
+  size_t stdin_buffer_size;
+
   if(argc < 2) {
     print_usage(argv[0]);
     exit(1);
@@ -164,6 +171,18 @@ int main(int argc, char** argv)
 
   /* parse any command line options given */
   parse_args(argc, argv);
+  /* if the user asked us to load both binary and paths from std in we should fail */
+  if(g_options.stdin && g_options.binary_stdin){
+    fprintf(stderr, "Binary stdin and read paths from stdin cannot" 
+            "be used together. Exiting.\n");
+    exit(1);
+  }
+
+  /* if user asked us to load binary image from stdin, now is the time */
+  if(g_options.binary_stdin){
+  imv_navigator_add(&nav, "stdin", 0);
+    stdin_buffer = load_img_stdin(&stdin_buffer_size);
+  }
 
   /* handle any image paths given as arguments */
   for(int i = optind; i < argc; ++i) {
@@ -255,7 +274,11 @@ int main(int argc, char** argv)
 
   /* create our main classes on the stack*/
   struct imv_loader ldr;
-  imv_init_loader(&ldr);
+  if(g_options.binary_stdin){
+    imv_init_loader(&ldr, stdin_buffer, stdin_buffer_size);
+  } else {
+    imv_init_loader(&ldr, NULL, 0);
+  }
 
   struct imv_texture tex;
   imv_init_texture(&tex, renderer);
