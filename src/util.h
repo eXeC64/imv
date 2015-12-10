@@ -31,4 +31,7 @@ int parse_hex_color(const char* str,
 /* Loads a font using SDL2_ttf given a spec in the format "name:size" */
 TTF_Font *load_font(const char *font_spec);
 
+void imv_printf(SDL_Renderer *renderer, TTF_Font *font, int x, int y,
+                SDL_Color *fg, SDL_Color *bg, const char *fmt, ...);
+
 #endif

@@ -42,9 +42,10 @@ struct {
   unsigned char bg_g;
   unsigned char bg_b;
   int overlay;
+  char *overlay_str;
   const char *start_at;
   const char *font;
-} g_options = {0,0,0,0,0,1,0,0,0,0,0,0,NULL,"FreeMono:24"};
+} g_options = {0,0,0,0,0,1,0,0,0,0,0,0,NULL,NULL,"FreeMono:24"};
 
 void print_usage(const char* name)
 {
@@ -253,8 +254,6 @@ int main(int argc, char** argv)
   if(!font) {
     fprintf(stderr, "Error loading font: %s\n", TTF_GetError());
   }
-  SDL_Surface *overlay_surf = NULL;
-  SDL_Texture *overlay_tex = NULL;
 
   /* create our main classes on the stack*/
   struct imv_loader ldr;
@@ -464,16 +463,6 @@ int main(int argc, char** argv)
 
     /* only redraw when something's changed */
     if(need_redraw) {
-      /* make sure to free any memory used by the old image */
-      if(overlay_surf) {
-        SDL_FreeSurface(overlay_surf);
-        overlay_surf = NULL;
-      }
-      if(overlay_tex) {
-        SDL_DestroyTexture(overlay_tex);
-        overlay_tex = NULL;
-      }
-
       /* update window title */
       const char *current_path = imv_navigator_selection(&nav);
       char title[256];
@@ -498,9 +487,10 @@ int main(int argc, char** argv)
           snprintf(&title[0], sizeof(title), "[%i/%i] %s", nav.cur_path + 1,
               nav.num_paths, current_path);
         }
-        SDL_Color w = {255,255,255,255};
-        overlay_surf = TTF_RenderUTF8_Blended(font, &title[0], w);
-        overlay_tex = SDL_CreateTextureFromSurface(renderer, overlay_surf);
+        if(g_options.overlay_str) {
+          free(g_options.overlay_str);
+        }
+        g_options.overlay_str = strdup(title);
       }
 
       /* first we draw the background */
@@ -529,13 +519,9 @@ int main(int argc, char** argv)
 
       /* if the overlay needs to be drawn, draw that too */
       if(g_options.overlay && font) {
-        int ow, oh;
-        SDL_QueryTexture(overlay_tex, NULL, NULL, &ow, &oh);
-        SDL_Rect or = {0,0,ow,oh};
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 160);
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        SDL_RenderFillRect(renderer, &or);
-        SDL_RenderCopy(renderer, overlay_tex, NULL, &or);
+        SDL_Color fg = {255,255,255,255};
+        SDL_Color bg = {0,0,0,160};
+        imv_printf(renderer, font, 0, 0, &fg, &bg, "%s", g_options.overlay_str);
       }
 
       /* redraw complete, unset the flag */
@@ -566,12 +552,6 @@ int main(int argc, char** argv)
     TTF_CloseFont(font);
   }
   TTF_Quit();
-  if(overlay_surf) {
-    SDL_FreeSurface(overlay_surf);
-  }
-  if(overlay_tex) {
-    SDL_DestroyTexture(overlay_tex);
-  }
   SDL_DestroyTexture(chequered_tex);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);

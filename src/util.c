@@ -126,3 +126,32 @@ int parse_hex_color(const char* str,
   *b = (parse_hex_digit(str[4]) << 4) + parse_hex_digit(str[5]);
   return 0;
 }
+
+void imv_printf(SDL_Renderer *renderer, TTF_Font *font, int x, int y,
+                SDL_Color *fg, SDL_Color *bg, const char *fmt, ...)
+{
+  char line[512];
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf(line, sizeof(line), fmt, args);
+
+  SDL_Surface *surf = TTF_RenderUTF8_Blended(font, &line[0], *fg);
+  SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, surf);
+
+  SDL_Rect tex_rect = {0,0,0,0};
+  SDL_QueryTexture(tex, NULL, NULL, &tex_rect.w, &tex_rect.h);
+  tex_rect.x = x;
+  tex_rect.y = y;
+
+  /* draw bg if wanted */
+  if(bg->a > 0) {
+    SDL_SetRenderDrawColor(renderer, bg->r, bg->g, bg->b, bg->a);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_RenderFillRect(renderer, &tex_rect);
+  }
+  SDL_RenderCopy(renderer, tex, NULL, &tex_rect);
+
+  SDL_DestroyTexture(tex);
+  SDL_FreeSurface(surf);
+  va_end(args);
+}
