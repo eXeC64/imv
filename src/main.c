@@ -36,6 +36,7 @@ struct {
   int actual;
   int nearest_neighbour;
   int solid_bg;
+  int list;
   unsigned int delay;
   unsigned char bg_r;
   unsigned char bg_g;
@@ -43,13 +44,13 @@ struct {
   int overlay;
   const char *start_at;
   const char *font;
-} g_options = {0,0,0,0,0,1,0,0,0,0,0,NULL,"FreeMono:24"};
+} g_options = {0,0,0,0,0,1,0,0,0,0,0,0,NULL,"FreeMono:24"};
 
 void print_usage(const char* name)
 {
   fprintf(stdout,
   "imv %s\n"
-  "Usage: %s [-rfaudh] [-n <NUM|PATH>] [-b BG] [-e FONT:SIZE] [-t SECONDS] [-] [images...]\n"
+  "Usage: %s [-rfaudlh] [-n <NUM|PATH>] [-b BG] [-e FONT:SIZE] [-t SECONDS] [-] [images...]\n"
   "\n"
   "Flags:\n"
   "   -: Read paths from stdin. One path per line.\n"
@@ -58,6 +59,7 @@ void print_usage(const char* name)
   "  -a: Default to images' actual size\n"
   "  -u: Use nearest neighbour resampling.\n"
   "  -d: Show overlay\n"
+  "  -l: List open files on exit.\n"
   "  -h: Print this help\n"
   "\n"
   "Options:\n"
@@ -112,7 +114,7 @@ void parse_args(int argc, char** argv)
   const char* name = argv[0];
   char o;
 
-  while((o = getopt(argc, argv, "firaudhn:b:e:t:")) != -1) {
+  while((o = getopt(argc, argv, "firaudhln:b:e:t:")) != -1) {
     switch(o) {
       case 'f': g_options.fullscreen = 1;   break;
       case 'i':
@@ -124,6 +126,7 @@ void parse_args(int argc, char** argv)
       case 'u': g_options.nearest_neighbour = 1;   break;
       case 'd': g_options.overlay = 1;             break;
       case 'h': print_usage(name); exit(0);        break;
+      case 'l': g_options.list = 1;                break;
       case 'n':
         g_options.start_at = optarg;
         break;
@@ -549,7 +552,14 @@ int main(int argc, char** argv)
     /* sleep a little bit so we don't waste CPU time */
     SDL_Delay(10);
   }
-
+  while(g_options.list) {
+    const char *path = imv_navigator_selection(&nav);
+    if(!path) {
+      break;
+    }
+    fprintf(stdout, "%s\n", path);
+    imv_navigator_remove(&nav, path);
+  }
   /* clean up our resources now that we're exiting */
   imv_destroy_loader(&ldr);
   imv_destroy_texture(&tex);
