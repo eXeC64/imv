@@ -275,8 +275,7 @@ int main(int argc, char** argv)
   unsigned int last_time;
   unsigned int current_time;
 
-  /* used to keep track of when the selected image has changed */
-  int is_new_image = 1;
+  /* do we need to redraw the window? */
   int need_redraw = 1;
 
   /* used to calculate when to skip to the next image in slideshow mode */
@@ -412,17 +411,16 @@ int main(int argc, char** argv)
 
       imv_loader_load_path(&ldr, current_path);
       view.playing = 1;
-      is_new_image = 1;
     }
 
     /* check if a new image is available to display */
-    FIBITMAP *bmp = imv_loader_get_image(&ldr);
-    if(bmp) {
+    FIBITMAP *bmp;
+    int is_new_image;
+    if(imv_loader_get_image(&ldr, &bmp, &is_new_image)) {
       imv_texture_set_image(&tex, bmp);
       FreeImage_Unload(bmp);
       need_redraw = 1;
       if(is_new_image) {
-        is_new_image = 0;
         if(g_options.actual) {
           imv_viewport_scale_to_actual(&view, &tex);
         } else {

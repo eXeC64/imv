@@ -29,6 +29,7 @@ struct imv_loader {
   pthread_t bg_thread;
   char *path;
   FIBITMAP *out_bmp;
+  int out_is_new_image;
   char *out_err;
   FIMULTIBITMAP *mbmp;
   FIBITMAP *bmp;
@@ -49,9 +50,12 @@ void imv_destroy_loader(struct imv_loader *img);
 /* Asynchronously load the given file */
 void imv_loader_load_path(struct imv_loader *ldr, const char *path);
 
-/* Returns image data if available. NULL if not. Caller is responsible for
- * cleaning up the data returned. Each image is only returned once. */
-FIBITMAP *imv_loader_get_image(struct imv_loader *ldr);
+/* Returns 1 if image data is available. 0 if not. Caller is responsible for
+ * cleaning up the data returned. Each image is only returned once.
+ * out_is_frame indicates whether the returned image is a new image, or just
+ * a new frame of an existing one. */
+int imv_loader_get_image(struct imv_loader *ldr, FIBITMAP **out_bmp,
+                         int *out_is_frame);
 
 /* If a file failed to loadd, return the path to that file. Otherwise returns
  * NULL. Only returns the path once. Caller is responsible for cleaning up the
