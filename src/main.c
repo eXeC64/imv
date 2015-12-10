@@ -295,6 +295,7 @@ int main(int argc, char** argv)
           quit = 1;
           break;
         case SDL_KEYDOWN:
+          SDL_ShowCursor(SDL_DISABLE);
           switch (e.key.keysym.sym) {
             case SDLK_q:
               quit = 1;
@@ -375,11 +376,13 @@ int main(int argc, char** argv)
           break;
         case SDL_MOUSEWHEEL:
           imv_viewport_zoom(&view, &tex, IMV_ZOOM_MOUSE, e.wheel.y);
+          SDL_ShowCursor(SDL_ENABLE);
           break;
         case SDL_MOUSEMOTION:
           if(e.motion.state & SDL_BUTTON_LMASK) {
             imv_viewport_move(&view, e.motion.xrel, e.motion.yrel);
           }
+          SDL_ShowCursor(SDL_ENABLE);
           break;
         case SDL_WINDOWEVENT:
           imv_viewport_update(&view, &tex);
