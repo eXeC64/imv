@@ -38,10 +38,12 @@ struct imv_loader {
   int next_frame;
   int num_frames;
   double frame_time;
+  char *stdin_buffer;
+  size_t stdin_buffer_size;
 };
 
 /* Initialises an instance of imv_loader */
-void imv_init_loader(struct imv_loader *img);
+void imv_init_loader(struct imv_loader *img, char* stdin_buffer, size_t stdin_buffer_size);
 
 /* Cleans up all resources owned by a imv_loader instance */
 void imv_destroy_loader(struct imv_loader *img);

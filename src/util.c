@@ -19,6 +19,28 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <fontconfig/fontconfig.h>
 
+char* load_img_stdin(size_t *lenout){
+  size_t cap = 512;
+    size_t len = 0;
+
+    char *buf = malloc(cap);
+    size_t n = 0;
+    do {
+      n = fread(&buf[len],1, cap-len, stdin);
+      len += n;
+      /* increase the size of our buffer if we run out of space */
+      if(len == cap) {
+        cap *= 2;
+        buf = realloc(buf, cap);
+      }
+    } while(n > 0);
+    
+    *lenout = len;
+
+  return buf;
+}
+
+
 TTF_Font *load_font(const char *font_spec)
 {
   int font_size;

@@ -21,6 +21,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 
+/* Read a binary image from stdin and return a buffer with the data */
+char *load_img_stdin();
+
 /* Creates a new SDL_Texture* containing a chequeboard texture */
 SDL_Texture *create_chequered(SDL_Renderer *renderer);
 

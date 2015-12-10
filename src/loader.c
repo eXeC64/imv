@@ -36,9 +36,11 @@ static int is_thread_cancelled()
   return sigismember(&sigmask, SIGUSR1);
 }
 
-void imv_init_loader(struct imv_loader *ldr)
+void imv_init_loader(struct imv_loader *ldr, char* stdin_buffer, size_t stdin_buffer_size)
 {
   memset(ldr, 0, sizeof(struct imv_loader));
+  ldr->stdin_buffer = stdin_buffer;
+  ldr->stdin_buffer_size = stdin_buffer_size;
   pthread_mutex_init(&ldr->lock, NULL);
   /* ignore this signal in case we accidentally receive it */
   block_usr1_signal();
@@ -157,8 +159,30 @@ static void *imv_loader_bg_new_img(void *data)
   pthread_mutex_lock(&ldr->lock);
   char *path = strdup(ldr->path);
   pthread_mutex_unlock(&ldr->lock);
+  FREE_IMAGE_FORMAT fmt = NULL;
+  FIBITMAP *bmp = NULL;
 
-  FREE_IMAGE_FORMAT fmt = FreeImage_GetFileType(path, 0);
+  int load_from_memory = 0;
+  if(ldr->stdin_buffer != NULL && strcmp(path, "stdin") == 0){
+    load_from_memory = 1;
+  }
+
+  if(load_from_memory == 1){
+  FIMEMORY *imgdata = FreeImage_OpenMemory((BYTE*)ldr->stdin_buffer, 
+          ldr->stdin_buffer_size);
+    fmt = FreeImage_GetFileTypeFromMemory(imgdata, 0);
+    if(fmt != FIF_UNKNOWN) {
+      /* load from the file memory */
+      bmp = FreeImage_LoadFromMemory(fmt, imgdata, 0);
+    } else {
+      imv_loader_error_occurred(ldr);
+      return 0;
+    }
+  }
+  else
+  {
+      fmt = FreeImage_GetFileType(path, 0);
+  }
 
   if(fmt == FIF_UNKNOWN) {
     imv_loader_error_occurred(ldr);
@@ -168,11 +192,16 @@ static void *imv_loader_bg_new_img(void *data)
 
   int num_frames = 1;
   FIMULTIBITMAP *mbmp = NULL;
-  FIBITMAP *bmp = NULL;
   int width, height;
   int raw_frame_time = 100; /* default to 100 */
 
   if(fmt == FIF_GIF) {
+    if(load_from_memory == 1){
+      imv_loader_error_occurred(ldr);
+      fprintf(stderr, "Loading of gifs via stdin is not supported.\n");
+      return 0;
+    }
+
     mbmp = FreeImage_OpenMultiBitmap(FIF_GIF, path,
       /* don't create file */ 0,
       /* read only */ 1,
@@ -198,17 +227,20 @@ static void *imv_loader_bg_new_img(void *data)
       raw_frame_time = *(int*)FreeImage_GetTagValue(tag);
     }
     FreeImage_UnlockPage(mbmp, frame, 0);
-
   } else {
     /* Future TODO: If we load image line-by-line we could stop loading large
      * ones before wasting much more time/memory on them. */
-    FIBITMAP *image = FreeImage_Load(fmt, path, 0);
-    free(path);
-    if(!image) {
-      imv_loader_error_occurred(ldr);
-      return 0;
+    FIBITMAP *image = NULL;
+    if(load_from_memory != 1){
+      image = FreeImage_Load(fmt, path, 0);
+      free(path);
+      if(!image) {
+        imv_loader_error_occurred(ldr);
+        return 0;
+      }
+    } else {
+      image = bmp;
     }
-
     /* Check for cancellation before we convert pixel format */
     if(is_thread_cancelled()) {
       FreeImage_Unload(image);
