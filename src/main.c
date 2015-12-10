@@ -28,6 +28,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "navigator.h"
 #include "viewport.h"
 #include "util.h"
+#include "reload.h"
 
 struct {
   int fullscreen;
@@ -265,6 +266,9 @@ int main(int argc, char** argv)
   struct imv_viewport view;
   imv_init_viewport(&view, window);
 
+  struct imv_reload reload;
+  imv_init_reload(&reload);
+
   /* put us in fullscren mode to begin with if requested */
   if(g_options.fullscreen) {
     imv_viewport_toggle_fullscreen(&view);
@@ -396,7 +400,7 @@ int main(int argc, char** argv)
     }
 
     /* if the user has changed image, start loading the new one */
-    if(imv_navigator_poll_changed(&nav)) {
+    if(imv_navigator_poll_changed(&nav) || imv_reload_changed(&reload)) {
       const char *current_path = imv_navigator_selection(&nav);
       if(!current_path) {
         fprintf(stderr, "No input files left. Exiting.\n");
@@ -409,6 +413,7 @@ int main(int argc, char** argv)
       imv_viewport_set_title(&view, title);
 
       imv_loader_load_path(&ldr, current_path);
+      imv_reload_watch(&reload, current_path);
       view.playing = 1;
     }
 
@@ -547,6 +552,7 @@ int main(int argc, char** argv)
   imv_destroy_texture(&tex);
   imv_navigator_destroy(&nav);
   imv_destroy_viewport(&view);
+  imv_destroy_reload(&reload);
 
   if(font) {
     TTF_CloseFont(font);
