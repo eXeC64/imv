@@ -173,6 +173,6 @@ void imv_viewport_updated(struct imv_viewport *view, struct imv_texture *tex)
     return;
   }
 
-  imv_viewport_scale_to_window(view, tex);
   imv_viewport_center(view, tex);
+  imv_viewport_scale_to_window(view, tex);
 }
