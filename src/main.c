@@ -247,7 +247,10 @@ int main(int argc, char** argv)
     g_options.nearest_neighbour ? "0" : "1");
 
   /* construct a chequered background texture */
-  SDL_Texture *chequered_tex = create_chequered(renderer);
+  SDL_Texture *chequered_tex = NULL;
+  if(!g_options.solid_bg) {
+    chequered_tex = create_chequered(renderer);
+  }
 
   /* set up the required fonts and surfaces for displaying the overlay */
   TTF_Init();
@@ -561,7 +564,9 @@ int main(int argc, char** argv)
     TTF_CloseFont(font);
   }
   TTF_Quit();
-  SDL_DestroyTexture(chequered_tex);
+  if(chequered_tex) {
+    SDL_DestroyTexture(chequered_tex);
+  }
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();
