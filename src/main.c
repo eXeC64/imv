@@ -277,6 +277,7 @@ int main(int argc, char** argv)
 
   /* used to keep track of when the selected image has changed */
   int is_new_image = 1;
+  int need_redraw = 1;
 
   /* used to calculate when to skip to the next image in slideshow mode */
   unsigned int msecs_passed = 0;
@@ -356,7 +357,7 @@ int main(int argc, char** argv)
               break;
             case SDLK_d:
               g_options.overlay = !g_options.overlay;
-              imv_viewport_set_redraw(&view);
+              need_redraw = 1;
               break;
             case SDLK_t:
               if(e.key.keysym.mod & (KMOD_SHIFT|KMOD_CAPS)) {
@@ -366,7 +367,7 @@ int main(int argc, char** argv)
               } else {
                 g_options.delay++;
               }
-              view.redraw = 1;
+              need_redraw = 1;
               break;
           }
           break;
@@ -379,7 +380,7 @@ int main(int argc, char** argv)
           }
           break;
         case SDL_WINDOWEVENT:
-          imv_viewport_updated(&view, &tex);
+          imv_viewport_update(&view, &tex);
           break;
       }
     }
@@ -410,6 +411,7 @@ int main(int argc, char** argv)
       imv_viewport_set_title(&view, title);
 
       imv_loader_load_path(&ldr, current_path);
+      view.playing = 1;
       is_new_image = 1;
     }
 
@@ -418,23 +420,14 @@ int main(int argc, char** argv)
     if(bmp) {
       imv_texture_set_image(&tex, bmp);
       FreeImage_Unload(bmp);
-
-      /* this is a new image, not just a new frame, so update our window's
-       * title and the overlay */
+      need_redraw = 1;
       if(is_new_image) {
         is_new_image = 0;
-        view.playing = 1;
-
-        /* reset the viewport to fit the picture in the window */
-        imv_viewport_scale_to_window(&view, &tex);
-
-        /* or if they want images at their actual size, do that instead */
         if(g_options.actual) {
           imv_viewport_scale_to_actual(&view, &tex);
+        } else {
+          imv_viewport_scale_to_window(&view, &tex);
         }
-      } else {
-        /* just a new frame, tell the viewport it need to redraw */
-        imv_viewport_updated(&view, &tex);
       }
     }
 
@@ -456,7 +449,7 @@ int main(int argc, char** argv)
       if(msecs_passed >= 1000) {
         msecs_passed = 0;
         delay_seconds_passed++;
-        view.redraw = 1;
+        need_redraw = 1;
         if(delay_seconds_passed >= g_options.delay) {
           imv_navigator_select_rel(&nav, 1);
           delay_seconds_passed = 0;
@@ -466,8 +459,13 @@ int main(int argc, char** argv)
 
     last_time = current_time;
 
-    /* only redraw when the view has changed, i.e. zoom/pan/window resized */
-    if(view.redraw) {
+    /* check if the viewport needs a redraw */
+    if(imv_viewport_needs_redraw(&view)) {
+      need_redraw = 1;
+    }
+
+    /* only redraw when something's changed */
+    if(need_redraw) {
       /* make sure to free any memory used by the old image */
       if(overlay_surf) {
         SDL_FreeSurface(overlay_surf);
@@ -543,7 +541,7 @@ int main(int argc, char** argv)
       }
 
       /* redraw complete, unset the flag */
-      view.redraw = 0;
+      need_redraw = 0;
 
       /* tell SDL to show the newly drawn frame */
       SDL_RenderPresent(renderer);

@@ -166,7 +166,7 @@ void imv_viewport_set_title(struct imv_viewport *view, char* title)
   SDL_SetWindowTitle(view->window, title);
 }
 
-void imv_viewport_updated(struct imv_viewport *view, struct imv_texture *tex)
+void imv_viewport_update(struct imv_viewport *view, struct imv_texture *tex)
 {
   view->redraw = 1;
   if(view->locked) {
@@ -175,4 +175,14 @@ void imv_viewport_updated(struct imv_viewport *view, struct imv_texture *tex)
 
   imv_viewport_center(view, tex);
   imv_viewport_scale_to_window(view, tex);
+}
+
+int imv_viewport_needs_redraw(struct imv_viewport *view)
+{
+  int redraw = 0;
+  if(view->redraw) {
+    redraw = 1;
+    view->redraw = 0;
+  }
+  return redraw;
 }

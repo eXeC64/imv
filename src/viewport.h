@@ -79,6 +79,9 @@ void imv_viewport_set_redraw(struct imv_viewport *view);
 void imv_viewport_set_title(struct imv_viewport *view, char *title);
 
 /* Tell the viewport the window or image has changed */
-void imv_viewport_updated(struct imv_viewport *view, struct imv_texture *tex);
+void imv_viewport_update(struct imv_viewport *view, struct imv_texture *tex);
+
+/* Poll whether we need to redraw */
+int imv_viewport_needs_redraw(struct imv_viewport *view);
 
 #endif
