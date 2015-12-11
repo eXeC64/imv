@@ -31,8 +31,10 @@ Usage
     find . "*.png" | shuf | imv -
 
 ### Image picker
-imv can be used to select images in a pipeline by using the 'p' hotkey to print
-the current image's path to stdout.
+imv can be used to select images in a pipeline by using the `p` hotkey to print
+the current image's path to stdout. The `-l` flag can also be used to tell imv
+to list the remaining paths on exit for a "open set of images, close unwanted
+ones with `x`, then quit imv to pass the remaining images through" workflow.
 
 #### Picking a wallpaper
     custom-set-wallpaper-script "$(find ./wallpaper -type f -name '*.jpg' | imv - | tail -n1)"
@@ -42,6 +44,17 @@ the current image's path to stdout.
 
 #### Choosing pictures to email
     find ./holiday_pics -type f -name '*.jpg' | imv - | xargs cp -t ~/outbox
+
+### Slideshow
+
+imv can be used to display slideshows. You can set the number of seconds to
+show each image for with the `-t` option at start up, or you can configure it
+at runtime using the `t` and `T` hotkeys to increase and decrease the image
+display time, respectively.
+
+To cycle through a folder of pictures, showing each one for 10 seconds:
+
+    imv -t 10 ~/Pictures/London
 
 Installation
 ------------
