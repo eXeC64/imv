@@ -1,6 +1,18 @@
 imv Changelog
 =============
 
+v1.2.0 - 2015-12-11
+
+* Added a text overlay (-d to enable, 'd' to toggle)
+  - Font used is configurable with -e option
+* Added slideshow support (-t option)
+* Added -l option to list all open images on exit
+* Automatically reload images if they change on disk
+* Moved image loading into background thread to improve UI responsiveness
+* Auto hide the mouse when appropriate
+* Added support for upper and lower case hex in the -b option.
+* Fixed a couple of crashes
+
 v1.1.0 - 2015-11-14
 -------------------
 
