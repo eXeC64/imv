@@ -18,7 +18,7 @@ CFLAGS += -DIMV_VERSION=\"$(VERSION)\"
 
 $(TARGET): $(OBJECTS)
 	@echo "LINKING $@"
-	@$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	@$(CC) -o $@ $^ $(LDLIBS) $(LDFLAGS)
 
 debug: CFLAGS += -DDEBUG -g -pg
 debug: $(TARGET)
