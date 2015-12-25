@@ -46,7 +46,7 @@ struct {
   char *overlay_str;
   const char *start_at;
   const char *font;
-} g_options = {0,0,0,0,0,1,0,0,0,0,0,0,NULL,NULL,"FreeMono:24"};
+} g_options = {0,0,0,0,0,1,0,0,0,0,0,0,NULL,NULL,"Monospace:24"};
 
 void print_usage(const char* name)
 {
