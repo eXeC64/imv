@@ -32,7 +32,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 struct {
   int fullscreen;
-  int stdin;
+  int sin;
   int recursive;
   int actual;
   int nearest_neighbour;
@@ -120,7 +120,7 @@ void parse_args(int argc, char** argv)
     switch(o) {
       case 'f': g_options.fullscreen = 1;   break;
       case 'i':
-        g_options.stdin = 1;
+        g_options.sin = 1;
         fprintf(stderr, "Warning: '-i' is deprecated. Just use '-' instead.\n");
         break;
       case 'r': g_options.recursive = 1;           break;
@@ -174,7 +174,7 @@ int main(int argc, char** argv)
   for(int i = optind; i < argc; ++i) {
     /* special case: '-' is actually an option */
     if(!strcmp("-",argv[i])) {
-      g_options.stdin = 1;
+      g_options.sin = 1;
       continue;
     }
     /* add the given path to the list to load */
@@ -182,7 +182,7 @@ int main(int argc, char** argv)
   }
 
   /* if the user asked us to load paths from stdin, now is the time */
-  if(g_options.stdin) {
+  if(g_options.sin) {
     char buf[512];
     while(fgets(buf, sizeof(buf), stdin)) {
       size_t len = strlen(buf);
