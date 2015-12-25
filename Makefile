@@ -1,6 +1,6 @@
 .PHONY: clean check install uninstall
 
-prefix = /usr
+PREFIX ?= /usr
 
 CFLAGS = -W -Wall -Wpedantic -std=gnu11 `sdl2-config --cflags`
 LDFLAGS = `sdl2-config --libs` -lfreeimage -lSDL2_ttf -lfontconfig -lpthread
@@ -40,11 +40,11 @@ clean:
 	@$(RM) $(TARGET) $(OBJECTS) $(TESTS)
 
 install: $(TARGET)
-	install -D -m 0755 $(TARGET) $(DESTDIR)$(prefix)/bin/imv
-	install -D -m 0644 doc/imv.1 $(DESTDIR)$(prefix)/share/man/man1/imv.1
-	install -D -m 0644 files/imv.desktop $(DESTDIR)$(prefix)/share/applications/imv.desktop
+	install -D -m 0755 $(TARGET) $(DESTDIR)$(PREFIX)/bin/imv
+	install -D -m 0644 doc/imv.1 $(DESTDIR)$(PREFIX)/share/man/man1/imv.1
+	install -D -m 0644 files/imv.desktop $(DESTDIR)$(PREFIX)/share/applications/imv.desktop
 
 uninstall:
-	$(RM) $(DESTDIR)$(prefix)/bin/imv
-	$(RM) $(DESTDIR)$(prefix)/share/man/man1/imv.1
-	$(RM) $(DESTDIR)$(prefix)/share/applications/imv.desktop
+	$(RM) $(DESTDIR)$(PREFIX)/bin/imv
+	$(RM) $(DESTDIR)$(PREFIX)/share/man/man1/imv.1
+	$(RM) $(DESTDIR)$(PREFIX)/share/applications/imv.desktop
