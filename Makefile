@@ -1,6 +1,9 @@
 .PHONY: clean check install uninstall
 
 PREFIX ?= /usr
+BINPREFIX ?= $(PREFIX)/bin
+MANPREFIX ?= $(PREFIX)/share/man
+DATAPREFIX ?= $(PREFIX)/share
 
 CFLAGS ?= -W -Wall -Wpedantic
 CFLAGS += -std=gnu11 $(shell sdl2-config --cflags)
@@ -41,9 +44,9 @@ clean:
 	@$(RM) $(TARGET) $(OBJECTS) $(TESTS)
 
 install: $(TARGET)
-	install -D -m 0755 $(TARGET) $(DESTDIR)$(PREFIX)/bin/imv
-	install -D -m 0644 doc/imv.1 $(DESTDIR)$(PREFIX)/share/man/man1/imv.1
-	install -D -m 0644 files/imv.desktop $(DESTDIR)$(PREFIX)/share/applications/imv.desktop
+	install -D -m 0755 $(TARGET) $(DESTDIR)$(BINPREFIX)/imv
+	install -D -m 0644 doc/imv.1 $(DESTDIR)$(MANPREFIX)/man1/imv.1
+	install -D -m 0644 files/imv.desktop $(DESTDIR)$(DATAPREFIX)/applications/imv.desktop
 
 uninstall:
 	$(RM) $(DESTDIR)$(PREFIX)/bin/imv
