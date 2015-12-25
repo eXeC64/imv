@@ -5,6 +5,8 @@ BINPREFIX ?= $(PREFIX)/bin
 MANPREFIX ?= $(PREFIX)/share/man
 DATAPREFIX ?= $(PREFIX)/share
 
+V ?=
+
 CFLAGS ?= -W -Wall -Wpedantic
 CFLAGS += -std=gnu11 $(shell sdl2-config --cflags)
 LDFLAGS += $(shell sdl2-config --libs) -lfreeimage -lSDL2_ttf -lfontconfig -lpthread
@@ -22,26 +24,26 @@ CFLAGS += -DIMV_VERSION=\"$(VERSION)\"
 
 $(TARGET): $(OBJECTS)
 	@echo "LINKING $@"
-	@$(CC) -o $@ $^ $(LDLIBS) $(LDFLAGS)
+	$(V:%=@)$(CC) -o $@ $^ $(LDLIBS) $(LDFLAGS)
 
 debug: CFLAGS += -DDEBUG -g -pg
 debug: $(TARGET)
 
 $(BUILDDIR)/%.o: src/%.c
-	@mkdir -p $(BUILDDIR)
+	$(V:%=@)mkdir -p $(BUILDDIR)
 	@echo "COMPILING $@"
-	@$(CC) -c $(CFLAGS) -o $@ $<
+	$(V:%=@)$(CC) -c $(CFLAGS) -o $@ $<
 
 test_%: test/%.c src/%.c
 	@echo "BUILDING $@"
-	@$(CC) -o $@ -Isrc -W -Wall -std=gnu11 -lcmocka $^
+	$(V:%=@)$(CC) -o $@ -Isrc -W -Wall -std=gnu11 -lcmocka $^
 
 check: $(TESTS)
 	@echo "RUNNING TESTS"
-	@for t in "$(TESTS)"; do ./$$t; done
+	$(V:%=@)for t in "$(TESTS)"; do ./$$t; done
 
 clean:
-	@$(RM) $(TARGET) $(OBJECTS) $(TESTS)
+	$(V:%=@)$(RM) $(TARGET) $(OBJECTS) $(TESTS)
 
 install: $(TARGET)
 	install -D -m 0755 $(TARGET) $(DESTDIR)$(BINPREFIX)/imv
