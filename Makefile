@@ -3,8 +3,8 @@
 PREFIX ?= /usr
 
 CFLAGS ?= -W -Wall -Wpedantic
-CFLAGS += -std=gnu11 `sdl2-config --cflags`
-LDFLAGS += `sdl2-config --libs` -lfreeimage -lSDL2_ttf -lfontconfig -lpthread
+CFLAGS += -std=gnu11 $(shell sdl2-config --cflags)
+LDFLAGS += $(shell sdl2-config --libs) -lfreeimage -lSDL2_ttf -lfontconfig -lpthread
 
 TARGET = imv
 BUILDDIR = build
