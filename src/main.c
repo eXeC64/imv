@@ -67,7 +67,7 @@ void print_usage(const char* name)
   "Options:\n"
   "  -n <NUM|PATH>: Start at picture number NUM, or with the path PATH.\n"
   "  -b BG: Set the background. Either 'checks' or a hex color value.\n"
-  "  -e FONT:SIZE: Set the font used for the overlay. Defaults to FreeMono:24\n"
+  "  -e FONT:SIZE: Set the font used for the overlay. Defaults to Monospace:24\n"
   "  -t SECONDS: Enable slideshow mode and set delay between images"
   "\n"
   "Mouse:\n"
