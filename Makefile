@@ -53,6 +53,6 @@ install: $(TARGET)
 	install -D -m 0644 files/imv.desktop $(DESTDIR)$(DATAPREFIX)/applications/imv.desktop
 
 uninstall:
-	$(RM) $(DESTDIR)$(PREFIX)/bin/imv
-	$(RM) $(DESTDIR)$(PREFIX)/share/man/man1/imv.1
-	$(RM) $(DESTDIR)$(PREFIX)/share/applications/imv.desktop
+	$(RM) $(DESTDIR)$(BINPREFIX)/imv
+	$(RM) $(DESTDIR)$(MANPREFIX)/man1/imv.1
+	$(RM) $(DESTDIR)$(DATAPREFIX)/applications/imv.desktop
