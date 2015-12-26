@@ -13,12 +13,12 @@ CFLAGS ?= -W -Wall -Wpedantic
 CFLAGS += -std=gnu11 $(shell sdl2-config --cflags)
 LDFLAGS += $(shell sdl2-config --libs) -lfreeimage -lSDL2_ttf -lfontconfig -lpthread
 
-TARGET = $(BUILDDIR)/imv
 BUILDDIR ?= build
+TARGET := $(BUILDDIR)/imv
 
-SOURCES = $(wildcard src/*.c)
-OBJECTS = $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
-TESTS = $(patsubst test/%.c,$(BUILDDIR)/test_%,$(wildcard test/*.c))
+SOURCES := $(wildcard src/*.c)
+OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
+TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(wildcard test/*.c))
 
 VERSION = "v1.2.0"
 
