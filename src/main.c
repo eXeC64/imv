@@ -46,7 +46,23 @@ struct {
   char *overlay_str;
   const char *start_at;
   const char *font;
-} g_options = {0,0,0,0,0,1,0,0,0,0,0,0,NULL,NULL,"Monospace:24"};
+} g_options = {
+  .fullscreen = 0,
+  .sin = 0,
+  .recursive = 0,
+  .actual = 0,
+  .nearest_neighbour = 0,
+  .solid_bg = 1,
+  .list = 0,
+  .delay = 0,
+  .bg_r = 0,
+  .bg_g = 0,
+  .bg_b = 0,
+  .overlay = 0,
+  .overlay_str = NULL,
+  .start_at = NULL,
+  .font = "Monospace:24",
+};
 
 void print_usage(const char* name)
 {
