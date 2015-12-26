@@ -64,6 +64,17 @@ Installation
     $ make
     # make install
 
+Macro `PREFIX` controls installation prefix.  If more control over installation
+paths is required, macros `BINPREFIX`, `MANPREFIX` and `DATAPREFIX` are
+available.  Eg. to install `imv` to home directory, run:
+
+    $ BINPREFIX=~/bin PREFIX=~/.local make install
+
+In case something goes wrong during installation process you may use verbose
+mode to inspect commands issued by make:
+
+    $ V=1 make
+
 Tests
 -----
 
