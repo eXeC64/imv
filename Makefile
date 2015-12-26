@@ -1,4 +1,4 @@
-.PHONY: clean check install uninstall
+.PHONY: imv obj clean check install uninstall
 
 PREFIX ?= /usr
 BINPREFIX ?= $(PREFIX)/bin
@@ -13,39 +13,45 @@ CFLAGS ?= -W -Wall -Wpedantic
 CFLAGS += -std=gnu11 $(shell sdl2-config --cflags)
 LDFLAGS += $(shell sdl2-config --libs) -lfreeimage -lSDL2_ttf -lfontconfig -lpthread
 
-TARGET = imv
-BUILDDIR = build
+BUILDDIR ?= build
+TARGET := $(BUILDDIR)/imv
 
-SOURCES = $(wildcard src/*.c)
-OBJECTS = $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
-TESTS = $(patsubst test/%.c,test_%,$(wildcard test/*.c))
+SOURCES := $(wildcard src/*.c)
+OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
+TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(wildcard test/*.c))
 
 VERSION = "v1.2.0"
 
 CFLAGS += -DIMV_VERSION=\"$(VERSION)\"
 
-$(TARGET): $(OBJECTS)
+imv: $(TARGET)
+
+$(TARGET): obj
 	@echo "LINKING $@"
-	$(MUTE)$(CC) -o $@ $^ $(LDLIBS) $(LDFLAGS)
+	$(MUTE)$(CC) -o $@ $(OBJECTS) $(LDLIBS) $(LDFLAGS)
 
 debug: CFLAGS += -DDEBUG -g -pg
 debug: $(TARGET)
 
-$(BUILDDIR)/%.o: src/%.c
+obj: $(BUILDDIR) $(OBJECTS)
+
+$(BUILDDIR):
 	$(MUTE)mkdir -p $(BUILDDIR)
+
+$(BUILDDIR)/%.o: src/%.c
 	@echo "COMPILING $@"
 	$(MUTE)$(CC) -c $(CFLAGS) -o $@ $<
 
-test_%: test/%.c src/%.c
+$(BUILDDIR)/test_%: test/%.c src/%.c
 	@echo "BUILDING $@"
-	$(MUTE)$(CC) -o $@ -Isrc -W -Wall -std=gnu11 -lcmocka $^
+	$(MUTE)$(CC) -o $@ -Isrc -W -Wall $(CFLAGS) $(LDFLAGS) -std=gnu11 -lcmocka $^
 
-check: $(TESTS)
+check: $(BUILDDIR) $(TESTS)
 	@echo "RUNNING TESTS"
-	$(MUTE)for t in "$(TESTS)"; do ./$$t; done
+	$(MUTE)for t in "$(TESTS)"; do $$t; done
 
 clean:
-	$(MUTE)$(RM) $(TARGET) $(OBJECTS) $(TESTS)
+	$(MUTE)$(RM) -Rf $(BUILDDIR)
 
 install: $(TARGET)
 	install -D -m 0755 $(TARGET) $(DESTDIR)$(BINPREFIX)/imv
@@ -53,6 +59,6 @@ install: $(TARGET)
 	install -D -m 0644 files/imv.desktop $(DESTDIR)$(DATAPREFIX)/applications/imv.desktop
 
 uninstall:
-	$(RM) $(DESTDIR)$(PREFIX)/bin/imv
-	$(RM) $(DESTDIR)$(PREFIX)/share/man/man1/imv.1
-	$(RM) $(DESTDIR)$(PREFIX)/share/applications/imv.desktop
+	$(RM) $(DESTDIR)$(BINPREFIX)/imv
+	$(RM) $(DESTDIR)$(MANPREFIX)/man1/imv.1
+	$(RM) $(DESTDIR)$(DATAPREFIX)/applications/imv.desktop
