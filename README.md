@@ -21,11 +21,8 @@ Usage
 ### Opening images via stdin
     find . "*.png" | imv -
 
-### Autoscale images to fit the window
-    imv -s *.gif
-
-### Open an image fullscreen (and scale to fit screen)
-    imv -fs image.jpeg
+### Open an image fullscreen
+    imv -f image.jpeg
 
 ### Viewing images in a random order
     find . "*.png" | shuf | imv -
