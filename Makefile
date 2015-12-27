@@ -1,4 +1,4 @@
-.PHONY: imv obj clean check install uninstall
+.PHONY: imv clean check install uninstall
 
 PREFIX ?= /usr
 BINPREFIX ?= $(PREFIX)/bin
@@ -26,14 +26,14 @@ CFLAGS += -DIMV_VERSION=\"$(VERSION)\"
 
 imv: $(TARGET)
 
-$(TARGET): obj
+$(TARGET): $(OBJECTS)
 	@echo "LINKING $@"
-	$(MUTE)$(CC) -o $@ $(OBJECTS) $(LDLIBS) $(LDFLAGS)
+	$(MUTE)$(CC) -o $@ $^ $(LDLIBS) $(LDFLAGS)
 
 debug: CFLAGS += -DDEBUG -g -pg
 debug: $(TARGET)
 
-obj: $(BUILDDIR) $(OBJECTS)
+$(OBJECTS): | $(BUILDDIR)
 
 $(BUILDDIR):
 	$(MUTE)mkdir -p $(BUILDDIR)
