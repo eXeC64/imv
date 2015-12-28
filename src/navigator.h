@@ -1,6 +1,8 @@
 #ifndef IMV_NAVIGATOR_H
 #define IMV_NAVIGATOR_H
 
+#include <time.h>
+
 /* Copyright (c) 2015 Harry Jeffery
 
 This program is free software; you can redistribute it and/or
@@ -23,6 +25,7 @@ struct imv_navigator {
   int buf_size;
   int cur_path;
   char **paths;
+  time_t *mtimes;
   int last_move_direction;
   int changed;
 };
@@ -57,7 +60,8 @@ void imv_navigator_select_str(struct imv_navigator *nav, const int path);
 /* Return the index of the path given. Returns -1 if not found. */
 int imv_navigator_find_path(struct imv_navigator *nav, const char *path);
 
-/* Returns 1 if the currently selected path has changed since last called */
+/* Returns 1 if either the currently selected path or underlying file has
+ * changed since last called */
 int imv_navigator_poll_changed(struct imv_navigator *nav);
 
 #endif
