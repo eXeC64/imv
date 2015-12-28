@@ -9,7 +9,7 @@ ifeq ($(V),)
 MUTE :=	@
 endif
 
-CFLAGS ?= -W -Wall -Wpedantic
+CFLAGS ?= -W -Wall -Wpedantic -Wmissing-prototypes
 CFLAGS += -std=gnu11 $(shell sdl2-config --cflags)
 LDFLAGS += $(shell sdl2-config --libs) -lfreeimage -lSDL2_ttf -lfontconfig -lpthread
 
