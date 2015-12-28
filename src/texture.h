@@ -1,7 +1,7 @@
 #ifndef IMV_TEXTURE_H
 #define IMV_TEXTURE_H
 
-/* Copyright (c) 2015 Harry Jeffery
+/* Copyright (c) 2015 imv authors
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
