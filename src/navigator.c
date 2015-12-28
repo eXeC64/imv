@@ -46,12 +46,15 @@ void imv_navigator_destroy(struct imv_navigator *nav)
 static void add_item(struct imv_navigator *nav, const char *path)
 {
   if(nav->buf_size == nav->num_paths) {
-    int new_buf_size = nav->buf_size * 2;
-    char **new_paths = malloc(sizeof(char*) * new_buf_size);
-    memcpy(new_paths, nav->paths, sizeof(char*) * nav->buf_size);
-    free(nav->paths);
+    char **new_paths;
+    nav->buf_size *= 2;
+    new_paths = realloc(nav->paths, sizeof(char*) * nav->buf_size);
+    if (new_paths == NULL) {
+      perror("add_item");
+      free(nav->paths);
+      exit(1);
+    }
     nav->paths = new_paths;
-    nav->buf_size = new_buf_size;
   }
   nav->paths[nav->num_paths] = strdup(path);
   nav->num_paths += 1;
