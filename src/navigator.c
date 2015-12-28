@@ -27,7 +27,16 @@ void imv_navigator_init(struct imv_navigator *nav)
 {
   nav->buf_size = 512;
   nav->paths = malloc(sizeof(char*) * nav->buf_size);
+  if (nav->paths == NULL) {
+    perror("imv_navigator_init");
+    exit(1);
+  }
   nav->mtimes = malloc(sizeof(time_t) * nav->buf_size);
+  if (nav->paths == NULL) {
+    perror("imv_navigator_init");
+    free(nav->paths);
+    exit(1);
+  }
   nav->num_paths = 0;
   nav->cur_path = 0;
   nav->last_move_direction = 1;
