@@ -140,7 +140,7 @@ void imv_loader_time_passed(struct imv_loader *ldr, double dt)
   }
 }
 
-void imv_loader_error_occurred(struct imv_loader *ldr)
+static void imv_loader_error_occurred(struct imv_loader *ldr)
 {
   pthread_mutex_lock(&ldr->lock);
   if(ldr->out_err) {

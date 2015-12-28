@@ -63,7 +63,7 @@ struct {
   .font = "Monospace:24",
 };
 
-void print_usage(const char* name)
+static void print_usage(const char* name)
 {
   fprintf(stdout,
   "imv %s\n"
@@ -123,7 +123,7 @@ void print_usage(const char* name)
   , IMV_VERSION, name);
 }
 
-void parse_args(int argc, char** argv)
+static void parse_args(int argc, char** argv)
 {
   /* Do not print getopt errors */
   opterr = 0;
