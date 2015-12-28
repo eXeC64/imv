@@ -27,6 +27,16 @@ void imv_navigator_init(struct imv_navigator *nav)
 {
   nav->buf_size = 512;
   nav->paths = malloc(sizeof(char*) * nav->buf_size);
+  if (nav->paths == NULL) {
+    perror("imv_navigator_init");
+    exit(1);
+  }
+  nav->mtimes = malloc(sizeof(time_t) * nav->buf_size);
+  if (nav->paths == NULL) {
+    perror("imv_navigator_init");
+    free(nav->paths);
+    exit(1);
+  }
   nav->num_paths = 0;
   nav->cur_path = 0;
   nav->last_move_direction = 1;
@@ -38,22 +48,33 @@ void imv_navigator_destroy(struct imv_navigator *nav)
   if(nav->buf_size > 0) {
     free(nav->paths);
     nav->paths = NULL;
+    free(nav->mtimes);
+    nav->mtimes = NULL;
     nav->buf_size = 0;
   }
   nav->num_paths = 0;
 }
 
-static void add_item(struct imv_navigator *nav, const char *path)
+static void add_item(struct imv_navigator *nav, const char *path,
+                     time_t mtime)
 {
   if(nav->buf_size == nav->num_paths) {
-    int new_buf_size = nav->buf_size * 2;
-    char **new_paths = malloc(sizeof(char*) * new_buf_size);
-    memcpy(new_paths, nav->paths, sizeof(char*) * nav->buf_size);
-    free(nav->paths);
+    char **new_paths;
+    time_t *new_mtimes;
+    nav->buf_size *= 2;
+    new_paths = realloc(nav->paths, sizeof(char*) * nav->buf_size);
+    new_mtimes = realloc(nav->mtimes, sizeof(time_t) * nav->buf_size);
+    if (new_paths == NULL || new_mtimes == NULL) {
+      perror("add_item");
+      free(nav->paths);
+      free(nav->mtimes);
+      exit(1);
+    }
     nav->paths = new_paths;
-    nav->buf_size = new_buf_size;
+    nav->mtimes = new_mtimes;
   }
   nav->paths[nav->num_paths] = strdup(path);
+  nav->mtimes[nav->num_paths] = mtime;
   nav->num_paths += 1;
   if(nav->num_paths == 1) {
     nav->changed = 1;
@@ -79,13 +100,13 @@ void imv_navigator_add(struct imv_navigator *nav, const char *path,
         if(recursive) {
           imv_navigator_add(nav, path_buf, recursive);
         } else {
-          add_item(nav, path_buf);
+          add_item(nav, path_buf, path_info.st_mtim.tv_sec);
         }
       }
       closedir(d);
     }
   } else {
-   add_item(nav, path); 
+   add_item(nav, path, path_info.st_mtim.tv_sec); 
   }
 }
 
@@ -195,6 +216,13 @@ int imv_navigator_poll_changed(struct imv_navigator *nav)
     nav->changed = 0;
     return 1;
   } else {
+    struct stat file_info;
+    if (stat(nav->paths[nav->cur_path], &file_info) == -1)
+      return 0;
+    if (nav->mtimes[nav->cur_path] != file_info.st_mtim.tv_sec) {
+      nav->mtimes[nav->cur_path] = file_info.st_mtim.tv_sec;
+      return 1;
+    }
     return 0;
   }
 }
