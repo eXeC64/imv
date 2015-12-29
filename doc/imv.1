@@ -1,131 +1,125 @@
-.TH IMV 1 "" "" "multimedia"
-.SH NAME
-imv \- image viewer
-.SH SYNOPSIS
-.nf
-\fBimv\fP [-rfaudlh] [-n <NUM|PATH>] [-b COLOR] [-e FONT:SIZE] [-t SECONDS] [images...]
-.fi
-.sp
-.SH DESCRIPTION
-.sp
-\fBimv\fP is a X11/Wayland image viewer aimed at users of tiling window managers.
+.Dd $Mdocdate: December 30 2015$
+.Dt IMV 1
+.Os
+.Sh NAME
+.Nm imv
+.Nd view images
+.Sh SYNOPSIS
+.Nm
+.Op Fl adfhlru
+.Op Fl b Ar color
+.Op Fl e Ar font:size
+.Op Fl n Ar position
+.Op Fl t Ar seconds
+.Op Ar
+.Sh DESCRIPTION
+.Nm
+is an image viewer for
+.Xr X 7
+and Wayland, aimed at users of tiling window managers.
 It supports a wide variety of image file formats, including animated gif files.
-.SH FLAGS
-.TP
-.B -
-Read paths from stdin. One path per line.
-.TP
-.B -r
-Recursively search input paths for files.
-.TP
-.B -f
-Start in full screen mode
-.TP
-.B -a
+.Nm
+reloads current image if it detects changes to the file.
+.Pp
+When run with argument
+.Ar - ,
+.Nm
+reads the list of images from standard input.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl a
 Default to showing images at actual size.
-.TP
-.B -u
-Use nearest neighbour resampling. Recommended for pixel art.
-.TP
-.B -d
-Show overlay.
-.TP
-.B -l
+.It Fl b Ar color
+Set the background color.
+Either
+.Ar checks
+or a hex color value.
+Defaults to
+.Ar #000000 .
+.It Fl e Ar font:size
+Set the font used by the overlay.
+.Ar font
+can be any valid system font, such as FreeSans, FreeMono, etc.
+Defaults to
+.Ar Monospace:24 ,
+which is default monospace font, as configured in
+.Xr fonts.conf 5 .
+.It Fl d
+Show textual overlay.
+.It Fl f
+Start in full screen mode.
+.It Fl h
+Print help message.
+.It Fl l
 List open files on exit.
-.TP
-.B -h
-Print help.
-.SH OPTIONS
-.TP
-.BI "-n " <NUM|PATH>
-Start at image number NUM, or the image with the path PATH.
-.TP
-.BI "-b " BG
-Set the background color. Either 'checks' or a hex color value. Defaults to '#000000'.
-.TP
-.BI "-e " FONT:SIZE
-Set the font used by the overlay. FONT can be any valid system font, such as
-FreeSans, FreeMono, etc.  Defaults to "Monospace:24", which is default monospace font, as configured in
-.BR fonts.conf (5).
-.TP
-.BI "-t " SECONDS
-Set the slideshow delay in seconds. Setting this to zero disables slideshow
-mode, which is the default.
-.SH CONTROLS
-.sp
-imv can be controlled using the mouse or keyboard.
-.TP
-.B Drag + Left Mouse Button
-Pan.
-.TP
-.B MouseWheel
+.It Fl n Ar position
+Start at specific position in image list.
+.Ar position
+may be expressed as a number or as a path of an image.
+.It Fl r
+Recursively search input paths for files.
+.It Fl t Ar seconds 
+Set the slideshow delay in seconds.
+Setting this to zero disables slideshow mode, which is the default.
+.It Fl u
+Use nearest neighbour resampling. Recommended for pixel art.
+.El
+.Sh CONTROLS
+.Bl -tag -width Ds
+.It Aq Cm left mouse button
+Pan in drag direction.
+.It Aq Cm mouse wheel
 Zoom in and out.
-.TP
-.B q
+.It Cm q
 Quit.
-.TP
-.B LEFT and [
+.It Ao Cm left Ac | Cm \&[
 Change to previous image.
-.TP
-.B RIGHT and ]
+.It Ao Cm right Ac | Cm \&]
 Change to next image.
-.TP
-.B i and \&+ and UP
+.It Cm i | Cm + | Aq Cm up
 Zoom in.
-.TP
-.B o and \- and DOWN
+.It Cm o | Cm - | Aq Cm down
 Zoom out.
-.TP
-.B r
-Reset view.
-.TP
-.B a
+.It Cm r
+Reset view
+.It Cm a
 View image at actual size.
-.TP
-.B c
+.It Cm c
 Center image in window.
-.TP
-.B h
+.It Cm h
 Pan left.
-.TP
-.B j
+.It Cm j
 Pan down.
-.TP
-.B k
+.It Cm k
 Pan up.
-.TP
-.B l
+.It Cm l
 Pan right.
-.TP
-.B x
+.It Cm x
 Close current image.
-.TP
-.B f
+.It Cm f
 Toggle fullscreen.
-.TP
-.B SPACE
-Pause gif playback (pressing again unpauses).
-.TP
-.B \&.
+.It Cm SPACE
+Toggle gif playback.
+.It Cm .
 Step forward one frame (when playing gifs).
-.TP
-.B p
+.It Cm p
 Print current image path to stdout
-.TP
-.B t
+.It Cm t
 Increase slideshow delay by one second
-.TP
-.B T
-Decrease slideshow delay by one second. When delay is zero, slideshow mode is
-disabled.
-.SH LEGAL
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-.LP
+.It Cm T
+Decrease slideshow delay by one second.
+When delay is zero, slideshow mode is disabled.
+.Sh LEGAL
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 2 of the License, or (at your option) any later
+version.
+.Pp
 This software uses the FreeImage open source image library.
-See http://freeimage.sourceforge.net for details.
+See
+.Lk http://freeimage.sourceforge.net
+for details.
 FreeImage is used under the GNU GPLv2.
-.SH AUTHOR
-Harry Jeffery
+.Sh AUTHOR
+.An Harry Jeffery
