@@ -17,6 +17,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <stdio.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <FreeImage.h>
@@ -310,6 +311,9 @@ int main(int argc, char** argv)
   unsigned int last_time;
   unsigned int current_time;
 
+  /* keep file change polling rate under control */
+  static uint8_t poll_countdown = UINT8_MAX;
+
   /* do we need to redraw the window? */
   int need_redraw = 1;
 
@@ -434,7 +438,7 @@ int main(int argc, char** argv)
     }
 
     /* if the user has changed image, start loading the new one */
-    if(imv_navigator_poll_changed(&nav)) {
+    if(imv_navigator_poll_changed(&nav, poll_countdown--)) {
       const char *current_path = imv_navigator_selection(&nav);
       if(!current_path) {
         fprintf(stderr, "No input files left. Exiting.\n");
@@ -476,7 +480,7 @@ int main(int argc, char** argv)
     }
 
     /* handle slideshow */
-    if (g_options.delay) {
+    if(g_options.delay) {
       unsigned int dt = current_time - last_time;
 
       delay_mseconds_passed += dt;
@@ -559,6 +563,9 @@ int main(int argc, char** argv)
 
       /* redraw complete, unset the flag */
       need_redraw = 0;
+
+      /* reset poll countdown timer */
+      poll_countdown = UINT8_MAX;
 
       /* tell SDL to show the newly drawn frame */
       SDL_RenderPresent(renderer);
