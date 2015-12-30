@@ -1,4 +1,4 @@
-.Dd $Mdocdate: December 30 2015$
+.Dd December 30, 2015
 .Dt IMV 1
 .Os
 .Sh NAME
@@ -19,10 +19,10 @@ is an image viewer for
 and Wayland, aimed at users of tiling window managers.
 It supports a wide variety of image file formats, including animated gif files.
 .Nm
-reloads current image if it detects changes to the file.
+reloads the current image if it detects changes to the file.
 .Pp
 When run with argument
-.Ar - ,
+.Sq - ,
 .Nm
 reads the list of images from standard input.
 .Pp
@@ -43,7 +43,7 @@ Set the font used by the overlay.
 can be any valid system font, such as FreeSans, FreeMono, etc.
 Defaults to
 .Ar Monospace:24 ,
-which is default monospace font, as configured in
+which is the default monospace font, as configured in
 .Xr fonts.conf 5 .
 .It Fl d
 Show textual overlay.
@@ -68,7 +68,7 @@ Use nearest neighbour resampling. Recommended for pixel art.
 .Sh CONTROLS
 .Bl -tag -width Ds
 .It Aq Cm left mouse button
-Pan in drag direction.
+Pan relative to mouse motion.
 .It Aq Cm mouse wheel
 Zoom in and out.
 .It Cm q
