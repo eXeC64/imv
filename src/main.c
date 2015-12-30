@@ -37,7 +37,7 @@ struct {
   int nearest_neighbour;
   int solid_bg;
   int list;
-  unsigned int delay;
+  unsigned long delay;
   unsigned char bg_r;
   unsigned char bg_g;
   unsigned char bg_b;
@@ -129,7 +129,7 @@ static void parse_args(int argc, char** argv)
   opterr = 0;
 
   const char* name = argv[0];
-  char o;
+  char *argp, o;
 
   while((o = getopt(argc, argv, "firaudhln:b:e:t:")) != -1) {
     switch(o) {
@@ -163,7 +163,24 @@ static void parse_args(int argc, char** argv)
         g_options.font = optarg;
         break;
       case 't':
-        g_options.delay = (unsigned int)atoi(optarg);
+        g_options.delay = strtoul(optarg, &argp, 10);
+        g_options.delay *= 1000;
+        if (*argp == '.') {
+          char *ep;
+          long delay = strtoul(++argp, &ep, 10);
+          for (int i = 3 - (ep - argp); i; i--) {
+            delay *= 10;
+          }
+          if (delay < 1000) {
+            g_options.delay += delay;
+          } else {
+            g_options.delay = ULONG_MAX;
+          }
+        }
+        if (g_options.delay == ULONG_MAX) {
+          fprintf(stderr, "Wrong slideshow delay '%s'. Aborting.\n", optarg);
+          exit(1);
+        }
         break;
       case '?':
         fprintf(stderr, "Unknown argument '%c'. Aborting.\n", optopt);
@@ -297,8 +314,7 @@ int main(int argc, char** argv)
   int need_redraw = 1;
 
   /* used to calculate when to skip to the next image in slideshow mode */
-  unsigned int msecs_passed = 0;
-  unsigned int delay_seconds_passed = 0;
+  unsigned long delay_mseconds_passed = 0;
 
   int quit = 0;
   while(!quit) {
@@ -319,13 +335,13 @@ int main(int argc, char** argv)
             case SDLK_LEFT:
               imv_navigator_select_rel(&nav, -1);
               /* reset slideshow delay */
-              delay_seconds_passed = 0;
+              delay_mseconds_passed = 0;
               break;
             case SDLK_RIGHTBRACKET:
             case SDLK_RIGHT:
               imv_navigator_select_rel(&nav, 1);
               /* reset slideshow delay */
-              delay_seconds_passed = 0;
+              delay_mseconds_passed = 0;
               break;
             case SDLK_EQUALS:
             case SDLK_i:
@@ -463,16 +479,11 @@ int main(int argc, char** argv)
     if (g_options.delay) {
       unsigned int dt = current_time - last_time;
 
-      msecs_passed = msecs_passed + dt;
-      /* tick every second */
-      if(msecs_passed >= 1000) {
-        msecs_passed = 0;
-        delay_seconds_passed++;
-        need_redraw = 1;
-        if(delay_seconds_passed >= g_options.delay) {
-          imv_navigator_select_rel(&nav, 1);
-          delay_seconds_passed = 0;
-        }
+      delay_mseconds_passed += dt;
+      need_redraw = 1;
+      if(delay_mseconds_passed >= g_options.delay) {
+        imv_navigator_select_rel(&nav, 1);
+        delay_mseconds_passed = 0;
       }
     }
 
@@ -488,10 +499,10 @@ int main(int argc, char** argv)
       /* update window title */
       const char *current_path = imv_navigator_selection(&nav);
       char title[256];
-      if(g_options.delay) {
-        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%i/%is] [%ix%i] %s",
-            nav.cur_path + 1, nav.num_paths, delay_seconds_passed + 1,
-            g_options.delay, tex.width, tex.height, current_path);
+      if(g_options.delay > 1000) {
+        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%lu/%lus] [%ix%i] %s",
+            nav.cur_path + 1, nav.num_paths, delay_mseconds_passed / 1000 + 1,
+            g_options.delay / 1000, tex.width, tex.height, current_path);
       } else {
         snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s",
             nav.cur_path + 1, nav.num_paths,
@@ -501,10 +512,10 @@ int main(int argc, char** argv)
 
       /* update the overlay */
       if(font) {
-        if(g_options.delay) {
-          snprintf(&title[0], sizeof(title), "[%i/%i] [%i/%is] %s",
-              nav.cur_path + 1, nav.num_paths, delay_seconds_passed + 1,
-              g_options.delay, current_path);
+        if(g_options.delay > 1000) {
+          snprintf(&title[0], sizeof(title), "[%i/%i] [%lu/%lus] %s",
+              nav.cur_path + 1, nav.num_paths, delay_mseconds_passed / 1000 + 1,
+              g_options.delay / 1000, current_path);
         } else {
           snprintf(&title[0], sizeof(title), "[%i/%i] %s", nav.cur_path + 1,
               nav.num_paths, current_path);
