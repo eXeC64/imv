@@ -210,19 +210,22 @@ int imv_navigator_find_path(struct imv_navigator *nav, const char *path)
   return -1;
 }
 
-int imv_navigator_poll_changed(struct imv_navigator *nav)
+int imv_navigator_poll_changed(struct imv_navigator *nav, const int nopoll)
 {
   if(nav->changed) {
     nav->changed = 0;
     return 1;
-  } else {
+  }
+  
+  if(!nopoll) {
     struct stat file_info;
-    if (stat(nav->paths[nav->cur_path], &file_info) == -1)
+    if(stat(nav->paths[nav->cur_path], &file_info) == -1) {
       return 0;
-    if (nav->mtimes[nav->cur_path] != file_info.st_mtim.tv_sec) {
+    }
+    if(nav->mtimes[nav->cur_path] != file_info.st_mtim.tv_sec) {
       nav->mtimes[nav->cur_path] = file_info.st_mtim.tv_sec;
       return 1;
     }
-    return 0;
   }
+  return 0;
 }

@@ -62,6 +62,6 @@ int imv_navigator_find_path(struct imv_navigator *nav, const char *path);
 
 /* Returns 1 if either the currently selected path or underlying file has
  * changed since last called */
-int imv_navigator_poll_changed(struct imv_navigator *nav);
+int imv_navigator_poll_changed(struct imv_navigator *nav, const int nopoll);
 
 #endif
