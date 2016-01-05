@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/czarkoff/imv.svg?branch=master)](https://travis-ci.org/czarkoff/imv)
 imv - X11/Wayland Image Viewer
 ==============================
 

@@ -1,0 +1,25 @@
+sudo: required
+dist: trusty
+
+language: c
+
+compiler:
+  - clang
+  - gcc
+
+env:
+  - V=yes
+
+script:
+  - make
+# - make check
+
+notifications:
+  email: false
+
+addons:
+  apt:
+    packages:
+      - libfreeimage-dev
+      - libsdl2-ttf-dev
+#     - libcmocka-dev
