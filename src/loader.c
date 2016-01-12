@@ -17,6 +17,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "loader.h"
 #include "texture.h"
+#include <limits.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <signal.h>
@@ -67,7 +68,8 @@ void imv_destroy_loader(struct imv_loader *ldr)
   }
 }
 
-void imv_loader_load_path(struct imv_loader *ldr, const char *path)
+void imv_loader_load(struct imv_loader *ldr, const char *path,
+                     const void *buffer, const size_t buffer_size)
 {
   /* cancel existing thread if already running */
   if(ldr->bg_thread) {
@@ -80,6 +82,12 @@ void imv_loader_load_path(struct imv_loader *ldr, const char *path)
     free(ldr->path);
   }
   ldr->path = strdup(path);
+  if (strncmp(path, "-", 2) == 0) {
+    ldr->buffer = (BYTE *)buffer;
+    ldr->buffer_size = buffer_size;
+  } else if (ldr->fi_buffer != NULL) {
+    FreeImage_CloseMemory(ldr->fi_buffer);
+  }
   pthread_create(&ldr->bg_thread, NULL, &bg_new_img, ldr);
   pthread_mutex_unlock(&ldr->lock);
 }
@@ -149,16 +157,31 @@ static void *bg_new_img(void *data)
   block_usr1_signal();
 
   struct imv_loader *ldr = data;
+  char path[PATH_MAX] = "-";
 
   pthread_mutex_lock(&ldr->lock);
-  char *path = strdup(ldr->path);
+  int from_stdin = !strncmp(path, ldr->path, 2);
+  if(!from_stdin) {
+    (void)snprintf(path, PATH_MAX, "%s", ldr->path);
+  }
   pthread_mutex_unlock(&ldr->lock);
 
-  FREE_IMAGE_FORMAT fmt = FreeImage_GetFileType(path, 0);
-
+  FREE_IMAGE_FORMAT fmt;
+  if (from_stdin) {
+    pthread_mutex_lock(&ldr->lock);
+    ldr->fi_buffer = FreeImage_OpenMemory(ldr->buffer, ldr->buffer_size);
+    fmt = FreeImage_GetFileTypeFromMemory(ldr->fi_buffer, 0);
+    pthread_mutex_unlock(&ldr->lock);
+  } else {
+    fmt = FreeImage_GetFileType(path, 0);
+  }
   if(fmt == FIF_UNKNOWN) {
+    if (from_stdin) {
+      pthread_mutex_lock(&ldr->lock);
+      FreeImage_CloseMemory(ldr->fi_buffer);
+      pthread_mutex_unlock(&ldr->lock);
+    }
     error_occurred(ldr);
-    free(path);
     return NULL;
   }
 
@@ -169,12 +192,18 @@ static void *bg_new_img(void *data)
   int raw_frame_time = 100; /* default to 100 */
 
   if(fmt == FIF_GIF) {
-    mbmp = FreeImage_OpenMultiBitmap(FIF_GIF, path,
+    if(from_stdin) {
+      pthread_mutex_lock(&ldr->lock);
+      mbmp = FreeImage_LoadMultiBitmapFromMemory(FIF_GIF, ldr->fi_buffer,
+          GIF_LOAD256);
+      pthread_mutex_unlock(&ldr->lock);
+    } else {
+      mbmp = FreeImage_OpenMultiBitmap(FIF_GIF, path,
       /* don't create file */ 0,
       /* read only */ 1,
       /* keep in memory */ 1,
       /* flags */ GIF_LOAD256);
-    free(path);
+    }
     if(!mbmp) {
       error_occurred(ldr);
       return NULL;
@@ -198,10 +227,20 @@ static void *bg_new_img(void *data)
   } else {
     /* Future TODO: If we load image line-by-line we could stop loading large
      * ones before wasting much more time/memory on them. */
-    FIBITMAP *image = FreeImage_Load(fmt, path, 0);
-    free(path);
+    FIBITMAP *image;
+    if(from_stdin) {
+      pthread_mutex_lock(&ldr->lock);
+      image = FreeImage_LoadFromMemory(fmt, ldr->fi_buffer, 0);
+      pthread_mutex_unlock(&ldr->lock);
+    } else {
+      image = FreeImage_Load(fmt, path, 0);
+    }
     if(!image) {
       error_occurred(ldr);
+      pthread_mutex_lock(&ldr->lock);
+      FreeImage_CloseMemory(ldr->fi_buffer);
+      ldr->fi_buffer = NULL;
+      pthread_mutex_unlock(&ldr->lock);
       return NULL;
     }
 

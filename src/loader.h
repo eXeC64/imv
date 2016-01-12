@@ -28,6 +28,9 @@ struct imv_loader {
   pthread_mutex_t lock;
   pthread_t bg_thread;
   char *path;
+  BYTE *buffer;
+  size_t buffer_size;
+  FIMEMORY *fi_buffer;
   FIBITMAP *out_bmp;
   int out_is_new_image;
   char *out_err;
@@ -48,7 +51,8 @@ void imv_init_loader(struct imv_loader *img);
 void imv_destroy_loader(struct imv_loader *img);
 
 /* Asynchronously load the given file */
-void imv_loader_load_path(struct imv_loader *ldr, const char *path);
+void imv_loader_load(struct imv_loader *ldr, const char *path,
+                     const void *buffer, const size_t buffer_size);
 
 /* Returns 1 if image data is available. 0 if not. Caller is responsible for
  * cleaning up the data returned. Each image is only returned once.

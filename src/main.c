@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <FreeImage.h>
 #include <getopt.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include "loader.h"
 #include "texture.h"
@@ -33,7 +34,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 struct {
   int fullscreen;
-  int sin;
+  int stdin_list;
   int recursive;
   int actual;
   int nearest_neighbour;
@@ -49,7 +50,7 @@ struct {
   const char *font;
 } g_options = {
   .fullscreen = 0,
-  .sin = 0,
+  .stdin_list = 0,
   .recursive = 0,
   .actual = 0,
   .nearest_neighbour = 0,
@@ -72,7 +73,7 @@ static void print_usage(const char* name)
   "Usage: %s [-rfaudlh] [-n <NUM|PATH>] [-b BG] [-e FONT:SIZE] [-t SECONDS] [-] [images...]\n"
   "\n"
   "Flags:\n"
-  "   -: Read paths from stdin. One path per line.\n"
+  "   -: Read image from stdin. One path per line.\n"
   "  -r: Recursively search input paths.\n"
   "  -f: Start in fullscreen mode\n"
   "  -a: Default to images' actual size\n"
@@ -137,8 +138,8 @@ static void parse_args(int argc, char** argv)
     switch(o) {
       case 'f': g_options.fullscreen = 1;   break;
       case 'i':
-        g_options.sin = 1;
-        fprintf(stderr, "Warning: '-i' is deprecated. Just use '-' instead.\n");
+        g_options.stdin_list = 1;
+        fprintf(stderr, "Warning: '-i' is deprecated. No flag is needed.\n");
         break;
       case 'r': g_options.recursive = 1;           break;
       case 'a': g_options.actual = 1;              break;
@@ -193,30 +194,22 @@ static void parse_args(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
-  if(argc < 2) {
-    print_usage(argv[0]);
-    exit(1);
-  }
-
   struct imv_navigator nav;
   imv_navigator_init(&nav);
 
   /* parse any command line options given */
   parse_args(argc, argv);
 
-  /* handle any image paths given as arguments */
-  for(int i = optind; i < argc; ++i) {
-    /* special case: '-' is actually an option */
-    if(!strcmp("-",argv[i])) {
-      g_options.sin = 1;
-      continue;
-    }
-    /* add the given path to the list to load */
-    imv_navigator_add(&nav, argv[i], g_options.recursive);
+  argc -= optind;
+  argv += optind;
+
+  /* if no names are given, expect them on stdin */
+  if(argc == 0) {
+    g_options.stdin_list = 1;
   }
 
   /* if the user asked us to load paths from stdin, now is the time */
-  if(g_options.sin) {
+  if(g_options.stdin_list) {
     char buf[PATH_MAX];
     while(fgets(buf, sizeof(buf), stdin)) {
       size_t len = strlen(buf);
@@ -227,6 +220,30 @@ int main(int argc, char** argv)
         imv_navigator_add(&nav, buf, g_options.recursive);
       }
     }
+  }
+
+  void *stdin_buffer = NULL;
+  size_t stdin_buffer_size = 0;
+  int stdin_error = 0;
+
+  /* handle any image paths given as arguments */
+  for(int i = 0; i < argc; ++i) {
+    /* special case: '-' is actually an option */
+    if(!strcmp("-",argv[i])) {
+      if (stdin_buffer) {
+        fprintf(stderr, "Can't read from stdin twice\n");
+        exit(1);
+      }
+      stdin_buffer_size = read_from_stdin(&stdin_buffer);
+      if (stdin_buffer_size == 0) {
+        perror(NULL);
+        continue; /* we can't recover from the freed buffer, just ignore it */
+      }
+      stdin_error = errno;
+      errno = 0; /* clear errno */
+    }
+    /* add the given path to the list to load */
+    imv_navigator_add(&nav, argv[i], g_options.recursive);
   }
 
   /* if we weren't given any paths we have nothing to view. exit */
@@ -435,6 +452,15 @@ int main(int argc, char** argv)
     char *err_path = imv_loader_get_error(&ldr);
     if(err_path) {
       imv_navigator_remove(&nav, err_path);
+      if (strncmp(err_path, "-", 2) == 0) {
+        free(stdin_buffer);
+        stdin_buffer_size = 0;
+        if (stdin_error != 0) {
+          errno = stdin_error;
+          perror("Failed to load image from standard input");
+          errno = 0;
+        }
+      }
       free(err_path);
     }
 
@@ -451,7 +477,7 @@ int main(int argc, char** argv)
           nav.cur_path + 1, nav.num_paths, current_path);
       imv_viewport_set_title(&view, title);
 
-      imv_loader_load_path(&ldr, current_path);
+      imv_loader_load(&ldr, current_path, stdin_buffer, stdin_buffer_size);
       view.playing = 1;
     }
 

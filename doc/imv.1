@@ -21,12 +21,8 @@ It supports a wide variety of image file formats, including animated gif files.
 .Nm
 reloads the current image if it detects changes to the file.
 .Pp
-When run with argument
-.Sq - ,
 .Nm
-reads the list of images from standard input.
-.Pp
-The options are as follows:
+accepts following flags:
 .Bl -tag -width Ds
 .It Fl a
 Default to showing images at actual size.
@@ -66,6 +62,17 @@ Setting this to zero disables slideshow mode, which is the default.
 .It Fl u
 Use nearest neighbour resampling. Recommended for pixel art.
 .El
+.Ss Reading from standard input
+When run with argument
+.Sq - ,
+.Nm
+reads image from standard input.
+Argument
+.Sq -
+may occur among other arguments, but only once.
+.Pp
+If no arguments supplied, reads list of files from standard input.
+.Pp
 .Sh CONTROLS
 .Bl -tag -width Ds
 .It Aq Cm left mouse button
@@ -111,6 +118,13 @@ Increase slideshow delay by one second
 .It Cm T
 Decrease slideshow delay by one second.
 When delay is zero, slideshow mode is disabled.
+.Sh EXAMPLES
+Load all files from directory
+.Pa dir :
+.Pp
+.Dl $ ls dir | imv
+or
+.Dl $ ls dir | xargs imv
 .Sh LEGAL
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
