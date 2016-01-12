@@ -61,8 +61,8 @@ void imv_destroy_loader(struct imv_loader *ldr)
   }
 }
 
-static void *imv_loader_bg_new_img(void *data);
-static void *imv_loader_bg_next_frame(void *data);
+static void *bg_new_img(void *data);
+static void *bg_next_frame(void *data);
 
 void imv_loader_load_path(struct imv_loader *ldr, const char *path)
 {
@@ -77,7 +77,7 @@ void imv_loader_load_path(struct imv_loader *ldr, const char *path)
     free(ldr->path);
   }
   ldr->path = strdup(path);
-  pthread_create(&ldr->bg_thread, NULL, &imv_loader_bg_new_img, ldr);
+  pthread_create(&ldr->bg_thread, NULL, &bg_new_img, ldr);
   pthread_mutex_unlock(&ldr->lock);
 }
 
@@ -120,7 +120,7 @@ void imv_loader_load_next_frame(struct imv_loader *ldr)
   }
 
   /* kick off a new thread */
-  pthread_create(&ldr->bg_thread, NULL, &imv_loader_bg_next_frame, ldr);
+  pthread_create(&ldr->bg_thread, NULL, &bg_next_frame, ldr);
 }
 
 void imv_loader_time_passed(struct imv_loader *ldr, double dt)
@@ -140,7 +140,7 @@ void imv_loader_time_passed(struct imv_loader *ldr, double dt)
   }
 }
 
-static void imv_loader_error_occurred(struct imv_loader *ldr)
+static void error_occurred(struct imv_loader *ldr)
 {
   pthread_mutex_lock(&ldr->lock);
   if(ldr->out_err) {
@@ -150,7 +150,7 @@ static void imv_loader_error_occurred(struct imv_loader *ldr)
   pthread_mutex_unlock(&ldr->lock);
 }
 
-static void *imv_loader_bg_new_img(void *data)
+static void *bg_new_img(void *data)
 {
   /* so we can poll for it */
   block_usr1_signal();
@@ -164,7 +164,7 @@ static void *imv_loader_bg_new_img(void *data)
   FREE_IMAGE_FORMAT fmt = FreeImage_GetFileType(path, 0);
 
   if(fmt == FIF_UNKNOWN) {
-    imv_loader_error_occurred(ldr);
+    error_occurred(ldr);
     free(path);
     return NULL;
   }
@@ -183,7 +183,7 @@ static void *imv_loader_bg_new_img(void *data)
       /* flags */ GIF_LOAD256);
     free(path);
     if(!mbmp) {
-      imv_loader_error_occurred(ldr);
+      error_occurred(ldr);
       return NULL;
     }
 
@@ -208,7 +208,7 @@ static void *imv_loader_bg_new_img(void *data)
     FIBITMAP *image = FreeImage_Load(fmt, path, 0);
     free(path);
     if(!image) {
-      imv_loader_error_occurred(ldr);
+      error_occurred(ldr);
       return NULL;
     }
 
@@ -265,7 +265,7 @@ static void *imv_loader_bg_new_img(void *data)
   return NULL;
 }
 
-static void *imv_loader_bg_next_frame(void *data)
+static void *bg_next_frame(void *data)
 {
   struct imv_loader *ldr = data;
 
