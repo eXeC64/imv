@@ -143,16 +143,6 @@ void imv_loader_time_passed(struct imv_loader *ldr, double dt)
   }
 }
 
-static void error_occurred(struct imv_loader *ldr)
-{
-  pthread_mutex_lock(&ldr->lock);
-  if(ldr->out_err) {
-    free(ldr->out_err);
-  }
-  ldr->out_err = strdup(ldr->path);
-  pthread_mutex_unlock(&ldr->lock);
-}
-
 static void *bg_new_img(void *data)
 {
   /* so we can poll for it */
@@ -375,4 +365,14 @@ static void *bg_next_frame(void *data)
 
   pthread_mutex_unlock(&ldr->lock);
   return NULL;
+}
+
+static void error_occurred(struct imv_loader *ldr)
+{
+  pthread_mutex_lock(&ldr->lock);
+  if(ldr->out_err) {
+    free(ldr->out_err);
+  }
+  ldr->out_err = strdup(ldr->path);
+  pthread_mutex_unlock(&ldr->lock);
 }
