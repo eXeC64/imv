@@ -166,7 +166,7 @@ static void *imv_loader_bg_new_img(void *data)
   if(fmt == FIF_UNKNOWN) {
     imv_loader_error_occurred(ldr);
     free(path);
-    return 0;
+    return NULL;
   }
 
   int num_frames = 1;
@@ -184,7 +184,7 @@ static void *imv_loader_bg_new_img(void *data)
     free(path);
     if(!mbmp) {
       imv_loader_error_occurred(ldr);
-      return 0;
+      return NULL;
     }
 
     num_frames = FreeImage_GetPageCount(mbmp);
@@ -209,13 +209,13 @@ static void *imv_loader_bg_new_img(void *data)
     free(path);
     if(!image) {
       imv_loader_error_occurred(ldr);
-      return 0;
+      return NULL;
     }
 
     /* Check for cancellation before we convert pixel format */
     if(is_thread_cancelled()) {
       FreeImage_Unload(image);
-      return 0;
+      return NULL;
     }
 
     width = FreeImage_GetWidth(bmp);
@@ -236,7 +236,7 @@ static void *imv_loader_bg_new_img(void *data)
       FreeImage_Unload(bmp);
     }
     pthread_mutex_unlock(&ldr->lock);
-    return 0;
+    return NULL;
   }
 
   if(ldr->mbmp) {
@@ -262,7 +262,7 @@ static void *imv_loader_bg_new_img(void *data)
   ldr->frame_time = (double)raw_frame_time * 0.0001;
 
   pthread_mutex_unlock(&ldr->lock);
-  return 0;
+  return NULL;
 }
 
 static void *imv_loader_bg_next_frame(void *data)
@@ -273,7 +273,7 @@ static void *imv_loader_bg_next_frame(void *data)
   int num_frames = ldr->num_frames;
   if(num_frames < 2) {
     pthread_mutex_unlock(&ldr->lock);
-    return 0;
+    return NULL;
   }
 
   FITAG *tag = NULL;
@@ -371,5 +371,5 @@ static void *imv_loader_bg_next_frame(void *data)
   ldr->out_is_new_image = 0;
 
   pthread_mutex_unlock(&ldr->lock);
-  return 0;
+  return NULL;
 }
