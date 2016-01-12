@@ -217,7 +217,7 @@ int main(int argc, char** argv)
 
   /* if the user asked us to load paths from stdin, now is the time */
   if(g_options.sin) {
-    char buf[512];
+    char buf[PATH_MAX];
     while(fgets(buf, sizeof(buf), stdin)) {
       size_t len = strlen(buf);
       if(buf[len-1] == '\n') {
