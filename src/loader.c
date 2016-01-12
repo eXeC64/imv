@@ -21,6 +21,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <pthread.h>
 #include <signal.h>
 
+static void block_usr1_signal(void);
+static int is_thread_cancelled(void);
+static void *bg_new_img(void *data);
+static void *bg_next_frame(void *data);
+static void error_occurred(struct imv_loader *ldr);
+
 static void block_usr1_signal(void)
 {
   sigset_t sigmask;
@@ -60,9 +66,6 @@ void imv_destroy_loader(struct imv_loader *ldr)
     free(ldr->path);
   }
 }
-
-static void *bg_new_img(void *data);
-static void *bg_next_frame(void *data);
 
 void imv_loader_load_path(struct imv_loader *ldr, const char *path)
 {
