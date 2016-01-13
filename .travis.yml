@@ -1,0 +1,25 @@
+sudo: required
+dist: trusty
+
+language: c
+
+compiler:
+  - clang
+  - gcc
+
+env:
+  - V=yes CFLAGS="-W -Wall -Wextra -Wpedantic -Wpointer-arith -Wuninitialized -Wstrict-prototypes -Wmissing-prototypes -Wunused -Wsign-compare -Wshadow -Werror"
+
+script:
+  - make
+# - make check
+
+notifications:
+  email: false
+
+addons:
+  apt:
+    packages:
+      - libfreeimage-dev
+      - libsdl2-ttf-dev
+#     - libcmocka-dev
