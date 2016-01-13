@@ -21,7 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <pthread.h>
 #include <signal.h>
 
-static void block_usr1_signal()
+static void block_usr1_signal(void)
 {
   sigset_t sigmask;
   sigemptyset(&sigmask);
@@ -29,7 +29,7 @@ static void block_usr1_signal()
   sigprocmask(SIG_SETMASK, &sigmask, NULL);
 }
 
-static int is_thread_cancelled()
+static int is_thread_cancelled(void)
 {
   sigset_t sigmask;
   sigpending(&sigmask);
