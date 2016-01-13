@@ -455,15 +455,23 @@ int main(int argc, char** argv)
       view.playing = 1;
     }
 
+    /* get window height and width */
+    int ww, wh;
+    SDL_GetWindowSize(window, &ww, &wh);
+
     /* check if a new image is available to display */
     FIBITMAP *bmp;
-    int is_new_image;
+    int is_new_image, iw, ih;
     if(imv_loader_get_image(&ldr, &bmp, &is_new_image)) {
       imv_texture_set_image(&tex, bmp);
+      if(!g_options.actual) {
+        iw = FreeImage_GetWidth(bmp);
+        ih = FreeImage_GetWidth(bmp);
+      }
       FreeImage_Unload(bmp);
       need_redraw = 1;
       if(is_new_image) {
-        if(g_options.actual) {
+        if(g_options.actual || (ww > iw && wh > ih)) {
           imv_viewport_scale_to_actual(&view, &tex);
         } else {
           imv_viewport_scale_to_window(&view, &tex);
@@ -539,8 +547,6 @@ int main(int argc, char** argv)
         SDL_RenderClear(renderer);
       } else {
         /* chequered background */
-        int ww, wh;
-        SDL_GetWindowSize(window, &ww, &wh);
         int img_w, img_h;
         SDL_QueryTexture(chequered_tex, NULL, NULL, &img_w, &img_h);
         /* tile the texture so it fills the window */
