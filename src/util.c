@@ -16,8 +16,35 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include "util.h"
-
+#include <unistd.h>
+#include <stddef.h>
+#include <errno.h>
 #include <fontconfig/fontconfig.h>
+
+size_t read_from_stdin(void **buffer) {
+  size_t len = 0;
+  ssize_t r;
+  size_t step = 1024; /* Arbitrary value of 1 KiB */
+  void *p;
+
+  errno = 0; /* clear errno */
+
+  for(*buffer = NULL; (*buffer = realloc((p = *buffer), len + step));
+      len += (size_t)r) {
+    if((r = read(STDIN_FILENO, (uint8_t *)*buffer + len, step)) <= 0) {
+      break;
+    }
+  }
+
+  /* realloc(3) leaves old buffer allocated in case of error */
+  if(*buffer == NULL && p != NULL) {
+    int save = errno;
+    free(p);
+    errno = save;
+    len = 0;
+  }
+  return len;
+}
 
 TTF_Font *load_font(const char *font_spec)
 {

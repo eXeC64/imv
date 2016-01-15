@@ -17,6 +17,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "navigator.h"
 
+#include <limits.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #include <stdlib.h>
@@ -84,7 +85,7 @@ static void add_item(struct imv_navigator *nav, const char *path,
 void imv_navigator_add(struct imv_navigator *nav, const char *path,
                        int recursive)
 {
-  char path_buf[512];
+  char path_buf[PATH_MAX];
   struct stat path_info;
   stat(path, &path_info);
   if(S_ISDIR(path_info.st_mode)) {

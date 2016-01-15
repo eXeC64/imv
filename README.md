@@ -20,13 +20,16 @@ Usage
     imv image1.png another_image.jpeg yet_another.TIFF
 
 ### Opening images via stdin
-    find . "*.png" | imv -
+    find . "*.png" | imv
 
 ### Open an image fullscreen
     imv -f image.jpeg
 
 ### Viewing images in a random order
-    find . "*.png" | shuf | imv -
+    find . "*.png" | shuf | imv
+
+### Viewing images from stdin
+    curl http://somesi.te/img.png | imv -
 
 ### Image picker
 imv can be used to select images in a pipeline by using the `p` hotkey to print
@@ -35,13 +38,13 @@ to list the remaining paths on exit for a "open set of images, close unwanted
 ones with `x`, then quit imv to pass the remaining images through" workflow.
 
 #### Picking a wallpaper
-    custom-set-wallpaper-script "$(find ./wallpaper -type f -name '*.jpg' | imv - | tail -n1)"
+    custom-set-wallpaper-script "$(find ./wallpaper -type f -name '*.jpg' | imv | tail -n1)"
 
 #### Deleting unwanted images
-    find -type f -name '*.jpg' | imv - | xargs rm -v
+    find -type f -name '*.jpg' | imv | xargs rm -v
 
 #### Choosing pictures to email
-    find ./holiday_pics -type f -name '*.jpg' | imv - | xargs cp -t ~/outbox
+    find ./holiday_pics -type f -name '*.jpg' | imv | xargs cp -t ~/outbox
 
 ### Slideshow
 
