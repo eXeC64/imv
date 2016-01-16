@@ -66,53 +66,11 @@ struct {
   .font = "Monospace:24",
 };
 
-static void print_usage(const char* name)
+static void print_usage(void)
 {
   fprintf(stdout,
   "imv %s\n"
-  "Usage: %s [-rfaudlh] [-n <NUM|PATH>] [-b BG] [-e FONT:SIZE] [-t SECONDS] [-] [images...]\n"
-  "\n"
-  "Flags:\n"
-  "   -: Read image from stdin. One path per line.\n"
-  "  -r: Recursively search input paths.\n"
-  "  -f: Start in fullscreen mode\n"
-  "  -a: Default to images' actual size\n"
-  "  -u: Use nearest neighbour resampling.\n"
-  "  -d: Show overlay\n"
-  "  -l: List open files on exit.\n"
-  "  -h: Print this help\n"
-  "\n"
-  "Options:\n"
-  "  -n <NUM|PATH>: Start at picture number NUM, or with the path PATH.\n"
-  "  -b BG: Set the background. Either 'checks' or a hex color value.\n"
-  "  -e FONT:SIZE: Set the font used for the overlay. Defaults to Monospace:24\n"
-  "  -t SECONDS: Enable slideshow mode and set delay between images"
-  "\n"
-  "Mouse:\n"
-  "   Click+Drag to Pan\n"
-  "   MouseWheel to Zoom\n"
-  "\n"
-  "Hotkeys:\n"
-  "         'q': Quit\n"
-  "  '[',LArrow: Previous image\n"
-  "  ']',RArrow: Next image\n"
-  "     'i','+': Zoom in\n"
-  "     'o','=': Zoom out\n"
-  "         'h': Pan left\n"
-  "         'j': Pan down\n"
-  "         'k': Pan up\n"
-  "         'l': Pan right\n"
-  "         'r': Reset view\n"
-  "         'a': Show image actual size\n"
-  "         'c': Center view\n"
-  "         'x': Close current image\n"
-  "         'f': Toggle fullscreen\n"
-  "         'd': Toggle overlay\n"
-  "         ' ': Toggle gif playback\n"
-  "         '.': Step a frame of gif playback\n"
-  "         'p': Print current image path to stdout\n"
-  "         't': Increase slideshow delay by one second\n"
-  "         'T': Decrease slideshow delay by one second\n"
+  "See manual for usage information.\n"
   "\n"
   "Legal:\n"
   "This program is free software; you can redistribute it and/or\n"
@@ -123,7 +81,7 @@ static void print_usage(const char* name)
   "This software uses the FreeImage open source image library.\n"
   "See http://freeimage.sourceforge.net for details.\n"
   "FreeImage is used under the GNU GPLv2.\n"
-  , IMV_VERSION, name);
+  , IMV_VERSION);
 }
 
 static void parse_args(int argc, char** argv)
@@ -131,7 +89,6 @@ static void parse_args(int argc, char** argv)
   /* Do not print getopt errors */
   opterr = 0;
 
-  const char* name = argv[0];
   char *argp, o;
 
   while((o = getopt(argc, argv, "firaudhln:b:e:t:")) != -1) {
@@ -145,7 +102,7 @@ static void parse_args(int argc, char** argv)
       case 'a': g_options.actual = 1;              break;
       case 'u': g_options.nearest_neighbour = 1;   break;
       case 'd': g_options.overlay = 1;             break;
-      case 'h': print_usage(name); exit(0);        break;
+      case 'h': print_usage(); exit(0);            break;
       case 'l': g_options.list = 1;                break;
       case 'n':
         g_options.start_at = optarg;
