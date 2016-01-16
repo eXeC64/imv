@@ -167,6 +167,7 @@ int main(int argc, char** argv)
 
   /* if the user asked us to load paths from stdin, now is the time */
   if(g_options.stdin_list) {
+    fprintf(stderr, "Reading paths from stdin...\n");
     char buf[PATH_MAX];
     while(fgets(buf, sizeof(buf), stdin)) {
       size_t len = strlen(buf);
