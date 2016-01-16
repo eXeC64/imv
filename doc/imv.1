@@ -6,7 +6,7 @@
 .Nd view images
 .Sh SYNOPSIS
 .Nm
-.Op Fl adfhlru
+.Op Fl adfhlrSsu
 .Op Fl b Ar color
 .Op Fl e Ar font:size
 .Op Fl n Ar position
@@ -25,7 +25,8 @@ reloads the current image if it detects changes to the file.
 accepts following flags:
 .Bl -tag -width Ds
 .It Fl a
-Default to showing images at actual size.
+.Dq actual size
+mode: show images at actual size.
 .It Fl b Ar color
 Set the background color.
 Either
@@ -55,12 +56,21 @@ Start at specific position in image list.
 may be expressed as a number or as a path of an image.
 .It Fl r
 Recursively search input paths for files.
+.It Fl S
+.Dq perfect fit 
+mode: upscale or downscale image to fit window.
+This is the default.
+.It Fl s
+.Dq best fit
+mode: downscale image to fit window.
+Images that are smaller then window are shown in actual size.
 .It Fl t Ar seconds 
 Set the slideshow delay in seconds.
 Fractional numbers are accepted.
 Setting this to zero disables slideshow mode, which is the default.
 .It Fl u
-Use nearest neighbour resampling. Recommended for pixel art.
+Use nearest neighbour resampling.
+Recommended for pixel art.
 .El
 .Ss Reading from standard input
 When run with argument
@@ -113,6 +123,17 @@ Toggle gif playback.
 Step forward one frame (when playing gifs).
 .It Cm p
 Print current image path to stdout
+.It Cm s
+Switch scaling mode.
+Available modes are:
+.Dq actual size
+.Pq don't scale images ,
+.Dq best fit
+.Pq downscale images to fit window, but don't scale smaller images ,
+.Dq perfect fit
+.Pq upscale or downscale images to fit window
+.Pq default ,
+in this order.
 .It Cm t
 Increase slideshow delay by one second
 .It Cm T

@@ -32,11 +32,23 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "viewport.h"
 #include "util.h"
 
+enum scaling_mode {
+  NONE,
+  DOWN,
+  FULL
+};
+
+static char *scaling_label[] = {
+  "actual size",
+  "best fit",
+  "perfect fit"
+};
+
 struct {
   int fullscreen;
   int stdin_list;
   int recursive;
-  int actual;
+  int scaling;
   int nearest_neighbour;
   int solid_bg;
   int list;
@@ -52,7 +64,7 @@ struct {
   .fullscreen = 0,
   .stdin_list = 0,
   .recursive = 0,
-  .actual = 0,
+  .scaling = FULL,
   .nearest_neighbour = 0,
   .solid_bg = 1,
   .list = 0,
@@ -91,7 +103,7 @@ static void parse_args(int argc, char** argv)
 
   char *argp, o;
 
-  while((o = getopt(argc, argv, "firaudhln:b:e:t:")) != -1) {
+  while((o = getopt(argc, argv, "firasSudhln:b:e:t:")) != -1) {
     switch(o) {
       case 'f': g_options.fullscreen = 1;   break;
       case 'i':
@@ -99,7 +111,9 @@ static void parse_args(int argc, char** argv)
         fprintf(stderr, "Warning: '-i' is deprecated. No flag is needed.\n");
         break;
       case 'r': g_options.recursive = 1;           break;
-      case 'a': g_options.actual = 1;              break;
+      case 'a': g_options.scaling = NONE;          break;
+      case 's': g_options.scaling = DOWN;          break;
+      case 'S': g_options.scaling = FULL;          break;
       case 'u': g_options.nearest_neighbour = 1;   break;
       case 'd': g_options.overlay = 1;             break;
       case 'h': print_usage(); exit(0);            break;
@@ -292,9 +306,13 @@ int main(int argc, char** argv)
 
   /* do we need to redraw the window? */
   int need_redraw = 1;
+  int need_rescale = 0;
 
   /* used to calculate when to skip to the next image in slideshow mode */
-  unsigned long delay_mseconds_passed = 0;
+  unsigned long delay_msec = 0;
+
+  /* initialize variables holding image dimentions */
+  int iw = 0, ih = 0;
 
   int quit = 0;
   while(!quit) {
@@ -315,13 +333,13 @@ int main(int argc, char** argv)
             case SDLK_LEFT:
               imv_navigator_select_rel(&nav, -1);
               /* reset slideshow delay */
-              delay_mseconds_passed = 0;
+              delay_msec = 0;
               break;
             case SDLK_RIGHTBRACKET:
             case SDLK_RIGHT:
               imv_navigator_select_rel(&nav, 1);
               /* reset slideshow delay */
-              delay_mseconds_passed = 0;
+              delay_msec = 0;
               break;
             case SDLK_EQUALS:
             case SDLK_i:
@@ -333,11 +351,17 @@ int main(int argc, char** argv)
             case SDLK_DOWN:
               imv_viewport_zoom(&view, &tex, IMV_ZOOM_KEYBOARD, -1);
               break;
+            case SDLK_s:
+              if((g_options.scaling += 1) > FULL) {
+                g_options.scaling = NONE;
+              }
+	      /* FALLTHROUGH */
+            case SDLK_r:
+              need_rescale = 1;
+              need_redraw = 1;
+              break;
             case SDLK_a:
               imv_viewport_scale_to_actual(&view, &tex);
-              break;
-            case SDLK_r:
-              imv_viewport_scale_to_window(&view, &tex);
               break;
             case SDLK_c:
               imv_viewport_center(&view, &tex);
@@ -431,27 +455,38 @@ int main(int argc, char** argv)
       }
 
       char title[256];
-      snprintf(&title[0], sizeof(title), "imv - [%i/%i] [LOADING] %s",
-          nav.cur_path + 1, nav.num_paths, current_path);
+      snprintf(&title[0], sizeof(title), "imv - [%i/%i] [LOADING] %s [%s]",
+          nav.cur_path + 1, nav.num_paths, current_path,
+	  scaling_label[g_options.scaling]);
       imv_viewport_set_title(&view, title);
 
       imv_loader_load(&ldr, current_path, stdin_buffer, stdin_buffer_size);
       view.playing = 1;
     }
 
+    /* get window height and width */
+    int ww, wh;
+    SDL_GetWindowSize(window, &ww, &wh);
+
     /* check if a new image is available to display */
     FIBITMAP *bmp;
     int is_new_image;
     if(imv_loader_get_image(&ldr, &bmp, &is_new_image)) {
       imv_texture_set_image(&tex, bmp);
+      iw = FreeImage_GetWidth(bmp);
+      ih = FreeImage_GetWidth(bmp);
       FreeImage_Unload(bmp);
       need_redraw = 1;
-      if(is_new_image) {
-        if(g_options.actual) {
-          imv_viewport_scale_to_actual(&view, &tex);
-        } else {
-          imv_viewport_scale_to_window(&view, &tex);
-        }
+      need_rescale += is_new_image;
+    }
+
+    if(need_rescale) {
+      need_rescale = 0;
+      if(g_options.scaling == NONE ||
+          (g_options.scaling == DOWN && ww > iw && wh > ih)) {
+        imv_viewport_scale_to_actual(&view, &tex);
+      } else {
+        imv_viewport_scale_to_window(&view, &tex);
       }
     }
 
@@ -468,11 +503,11 @@ int main(int argc, char** argv)
     if(g_options.delay) {
       unsigned int dt = current_time - last_time;
 
-      delay_mseconds_passed += dt;
+      delay_msec += dt;
       need_redraw = 1;
-      if(delay_mseconds_passed >= g_options.delay) {
+      if(delay_msec >= g_options.delay) {
         imv_navigator_select_rel(&nav, 1);
-        delay_mseconds_passed = 0;
+        delay_msec = 0;
       }
     }
 
@@ -489,25 +524,28 @@ int main(int argc, char** argv)
       const char *current_path = imv_navigator_selection(&nav);
       char title[256];
       if(g_options.delay > 1000) {
-        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%lu/%lus] [%ix%i] %s",
-            nav.cur_path + 1, nav.num_paths, delay_mseconds_passed / 1000 + 1,
-            g_options.delay / 1000, tex.width, tex.height, current_path);
+        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%lu/%lus] [%ix%i] "
+            "%s [%s]", nav.cur_path + 1, nav.num_paths, delay_msec / 1000 + 1,
+            g_options.delay / 1000, tex.width, tex.height, current_path,
+	    scaling_label[g_options.scaling]);
       } else {
-        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s",
-            nav.cur_path + 1, nav.num_paths,
-            tex.width, tex.height, current_path);
+        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s [%s]",
+            nav.cur_path + 1, nav.num_paths, tex.width, tex.height,
+            current_path, scaling_label[g_options.scaling]);
       }
       imv_viewport_set_title(&view, title);
 
       /* update the overlay */
       if(font) {
         if(g_options.delay > 1000) {
-          snprintf(&title[0], sizeof(title), "[%i/%i] [%lu/%lus] %s",
-              nav.cur_path + 1, nav.num_paths, delay_mseconds_passed / 1000 + 1,
-              g_options.delay / 1000, current_path);
+          snprintf(&title[0], sizeof(title), "[%i/%i] [%lu/%lus] %s [%s]",
+              nav.cur_path + 1, nav.num_paths, delay_msec / 1000 + 1,
+              g_options.delay / 1000, current_path,
+	      scaling_label[g_options.scaling]);
         } else {
-          snprintf(&title[0], sizeof(title), "[%i/%i] %s", nav.cur_path + 1,
-              nav.num_paths, current_path);
+          snprintf(&title[0], sizeof(title), "[%i/%i] %s [%s]",
+              nav.cur_path + 1, nav.num_paths, current_path,
+	      scaling_label[g_options.scaling]);
         }
         if(g_options.overlay_str) {
           free(g_options.overlay_str);
@@ -523,8 +561,6 @@ int main(int argc, char** argv)
         SDL_RenderClear(renderer);
       } else {
         /* chequered background */
-        int ww, wh;
-        SDL_GetWindowSize(window, &ww, &wh);
         int img_w, img_h;
         SDL_QueryTexture(chequered_tex, NULL, NULL, &img_w, &img_h);
         /* tile the texture so it fills the window */
