@@ -46,13 +46,20 @@ void imv_navigator_init(struct imv_navigator *nav)
 
 void imv_navigator_destroy(struct imv_navigator *nav)
 {
-  if(nav->buf_size > 0) {
+  if(nav->paths) {
+    for(int i = 0; i < nav->num_paths; ++i) {
+      free(nav->paths[i]);
+    }
     free(nav->paths);
     nav->paths = NULL;
+  }
+
+  if(nav->mtimes) {
     free(nav->mtimes);
     nav->mtimes = NULL;
-    nav->buf_size = 0;
   }
+
+  nav->buf_size = 0;
   nav->num_paths = 0;
 }
 
