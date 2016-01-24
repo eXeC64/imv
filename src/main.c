@@ -399,11 +399,11 @@ int main(int argc, char** argv)
               break;
             case SDLK_t:
               if(e.key.keysym.mod & (KMOD_SHIFT|KMOD_CAPS)) {
-                if(g_options.delay >= 1) {
-                  g_options.delay--;
+                if(g_options.delay >= 1000) {
+                  g_options.delay -= 1000;
                 }
               } else {
-                g_options.delay++;
+                g_options.delay += 1000;
               }
               need_redraw = 1;
               break;
@@ -523,7 +523,7 @@ int main(int argc, char** argv)
       /* update window title */
       const char *current_path = imv_navigator_selection(&nav);
       char title[256];
-      if(g_options.delay > 1000) {
+      if(g_options.delay >= 1000) {
         snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%lu/%lus] [%ix%i] "
             "%s [%s]", nav.cur_path + 1, nav.num_paths, delay_msec / 1000 + 1,
             g_options.delay / 1000, tex.width, tex.height, current_path,
@@ -537,7 +537,7 @@ int main(int argc, char** argv)
 
       /* update the overlay */
       if(font) {
-        if(g_options.delay > 1000) {
+        if(g_options.delay >= 1000) {
           snprintf(&title[0], sizeof(title), "[%i/%i] [%lu/%lus] %s [%s]",
               nav.cur_path + 1, nav.num_paths, delay_msec / 1000 + 1,
               g_options.delay / 1000, current_path,
