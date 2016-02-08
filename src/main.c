@@ -355,7 +355,7 @@ int main(int argc, char** argv)
               if((g_options.scaling += 1) > FULL) {
                 g_options.scaling = NONE;
               }
-	      /* FALLTHROUGH */
+            /* FALLTHROUGH */
             case SDLK_r:
               need_rescale = 1;
               need_redraw = 1;
@@ -457,7 +457,7 @@ int main(int argc, char** argv)
       char title[256];
       snprintf(&title[0], sizeof(title), "imv - [%i/%i] [LOADING] %s [%s]",
           nav.cur_path + 1, nav.num_paths, current_path,
-	  scaling_label[g_options.scaling]);
+          scaling_label[g_options.scaling]);
       imv_viewport_set_title(&view, title);
 
       imv_loader_load(&ldr, current_path, stdin_buffer, stdin_buffer_size);
@@ -527,7 +527,7 @@ int main(int argc, char** argv)
         snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%lu/%lus] [%ix%i] "
             "%s [%s]", nav.cur_path + 1, nav.num_paths, delay_msec / 1000 + 1,
             g_options.delay / 1000, tex.width, tex.height, current_path,
-	    scaling_label[g_options.scaling]);
+            scaling_label[g_options.scaling]);
       } else {
         snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s [%s]",
             nav.cur_path + 1, nav.num_paths, tex.width, tex.height,
@@ -541,11 +541,11 @@ int main(int argc, char** argv)
           snprintf(&title[0], sizeof(title), "[%i/%i] [%lu/%lus] %s [%s]",
               nav.cur_path + 1, nav.num_paths, delay_msec / 1000 + 1,
               g_options.delay / 1000, current_path,
-	      scaling_label[g_options.scaling]);
+              scaling_label[g_options.scaling]);
         } else {
           snprintf(&title[0], sizeof(title), "[%i/%i] %s [%s]",
               nav.cur_path + 1, nav.num_paths, current_path,
-	      scaling_label[g_options.scaling]);
+              scaling_label[g_options.scaling]);
         }
         if(g_options.overlay_str) {
           free(g_options.overlay_str);
