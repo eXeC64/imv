@@ -360,12 +360,7 @@ static void *bg_next_frame(void *data)
   }
 
   switch(disposal_method) {
-    case 0: /* nothing specified, just use the raw frame */
-      if(ldr->bmp) {
-        FreeImage_Unload(ldr->bmp);
-      }
-      ldr->bmp = frame32;
-      break;
+    case 0: /* nothing specified, fall through to compositing */
     case 1: /* composite over previous frame */
       if(ldr->bmp && ldr->cur_frame > 0) {
         FIBITMAP *bg_frame = FreeImage_ConvertTo24Bits(ldr->bmp);
