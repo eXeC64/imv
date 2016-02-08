@@ -1,7 +1,30 @@
 imv Changelog
 =============
 
+v2.0.0 - 2016-02-08
+-------------------
+
+BREAKING CHANGE:
+* When no arguments given, read paths from stdin
+* When '-' given as an argument, read file data from stdin
+
+
+* Use 'Monospace' as default font
+* Fixed some types of animated gifs that did not display correctly
+* Added third scaling mode: 'best fit' where images will be scaled down to fit,
+  but *not* scaled up to fill the window
+* Trimmed output of '-h', making the manpage the single source of truth
+* Improvements to documentation
+* Improved portability across platforms
+* Allow non-integral slideshow times
+* Improved test coverage
+* Various improvements to the build
+  - `uninstall` target added to Makefile
+  - `V` option added to Makefile
+  - Respect `PREFIX`, `CFLAGS`, and `LDFLAGS`
+
 v1.2.0 - 2015-12-11
+-------------------
 
 * Added a text overlay (-d to enable, 'd' to toggle)
   - Font used is configurable with -e option

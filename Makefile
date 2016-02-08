@@ -20,7 +20,7 @@ SOURCES := $(wildcard src/*.c)
 OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
 TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(wildcard test/*.c))
 
-VERSION = "v1.2.0"
+VERSION = "v2.0.0"
 
 CFLAGS += -DIMV_VERSION=\"$(VERSION)\"
 
