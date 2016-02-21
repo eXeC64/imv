@@ -49,7 +49,7 @@ $(BUILDDIR)/test_%: test/%.c src/%.c
 
 check: $(BUILDDIR) $(TESTS)
 	@echo "RUNNING TESTS"
-	$(MUTE)for t in "$(TESTS)"; do $$t; done
+	$(MUTE)for t in $(TESTS); do $$t; done
 
 clean:
 	$(MUTE)$(RM) -Rf $(BUILDDIR)
