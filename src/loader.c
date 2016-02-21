@@ -227,13 +227,15 @@ static void *bg_new_img(void *data)
   } else {
     /* Future TODO: If we load image line-by-line we could stop loading large
      * ones before wasting much more time/memory on them. */
+
+    int flags = (fmt == FIF_JPEG) ? JPEG_EXIFROTATE : 0;
     FIBITMAP *image;
     if(from_stdin) {
       pthread_mutex_lock(&ldr->lock);
-      image = FreeImage_LoadFromMemory(fmt, ldr->fi_buffer, 0);
+      image = FreeImage_LoadFromMemory(fmt, ldr->fi_buffer, flags);
       pthread_mutex_unlock(&ldr->lock);
     } else {
-      image = FreeImage_Load(fmt, path, 0);
+      image = FreeImage_Load(fmt, path, flags);
     }
     if(!image) {
       error_occurred(ldr);
