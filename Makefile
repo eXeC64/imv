@@ -19,6 +19,7 @@ TARGET := $(BUILDDIR)/imv
 SOURCES := $(wildcard src/*.c)
 OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
 TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(wildcard test/*.c))
+TFLAGS ?= -g ${CFLAGS}
 
 VERSION = "v2.0.0"
 
@@ -44,11 +45,11 @@ $(BUILDDIR)/%.o: src/%.c
 
 $(BUILDDIR)/test_%: test/%.c src/%.c
 	@echo "BUILDING $@"
-	$(MUTE)$(CC) -o $@ -Isrc -W -Wall $(CFLAGS) $(LDFLAGS) -std=gnu11 -lcmocka $^
+	$(MUTE)$(CC) -o $@ -Isrc $(TFLAGS) $(LDFLAGS) -std=gnu11 -lcmocka $^
 
 check: $(BUILDDIR) $(TESTS)
 	@echo "RUNNING TESTS"
-	$(MUTE)for t in "$(TESTS)"; do $$t; done
+	$(MUTE)for t in $(TESTS); do $$t; done
 
 clean:
 	$(MUTE)$(RM) -Rf $(BUILDDIR)
