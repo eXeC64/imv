@@ -45,7 +45,7 @@ $(BUILDDIR)/%.o: src/%.c
 
 $(BUILDDIR)/test_%: test/%.c src/%.c
 	@echo "BUILDING $@"
-	$(MUTE)$(CC) -o $@ -Isrc -g $(TFLAGS) $(LDFLAGS) -std=gnu11 -lcmocka $^
+	$(MUTE)$(CC) -o $@ -Isrc $(TFLAGS) $(LDFLAGS) -std=gnu11 -lcmocka $^
 
 check: $(BUILDDIR) $(TESTS)
 	@echo "RUNNING TESTS"
