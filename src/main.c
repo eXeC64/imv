@@ -19,11 +19,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <stdio.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <FreeImage.h>
 #include <getopt.h>
 #include <ctype.h>
+#include <poll.h>
 #include <errno.h>
 
 #include "loader.h"
@@ -179,19 +181,31 @@ int main(int argc, char** argv)
     g_options.stdin_list = 1;
   }
 
-  /* if the user asked us to load paths from stdin, now is the time */
+  /* if the user asked to load paths from stdin, set up poll(2)ing and read
+     the first path */
+  struct pollfd rfds[1];
   if(g_options.stdin_list) {
-    fprintf(stderr, "Reading paths from stdin...\n");
+    rfds[0].fd = STDIN_FILENO;
+    rfds[0].events = POLLIN;
+    fprintf(stderr, "Reading paths from stdin...");
+
     char buf[PATH_MAX];
-    while(fgets(buf, sizeof(buf), stdin)) {
+    char *stdin_ok;
+    while((stdin_ok = fgets(buf, sizeof(buf), stdin)) != NULL) {
       size_t len = strlen(buf);
       if(buf[len-1] == '\n') {
         buf[--len] = 0;
       }
       if(len > 0) {
         imv_navigator_add(&nav, buf, g_options.recursive);
+        break;
       }
     }
+    if(!stdin_ok) {
+      fprintf(stderr, " no input!\n");
+      return -1;
+    }
+    fprintf(stderr, "\n");
   }
 
   void *stdin_buffer = NULL;
@@ -450,6 +464,9 @@ int main(int argc, char** argv)
     if(imv_navigator_poll_changed(&nav, poll_countdown--)) {
       const char *current_path = imv_navigator_selection(&nav);
       if(!current_path) {
+        if(g_options.stdin_list) {
+          continue;
+        }
         fprintf(stderr, "No input files left. Exiting.\n");
         exit(1);
       }
@@ -593,7 +610,35 @@ int main(int argc, char** argv)
     }
 
     /* sleep a little bit so we don't waste CPU time */
-    SDL_Delay(10);
+    if(g_options.stdin_list) {
+      if(poll(rfds, 1, 10) != 1 || rfds[0].revents & (POLLERR|POLLNVAL)) {
+        fprintf(stderr, "error polling stdin");
+        return 1;
+      }
+      if(rfds[0].revents & (POLLIN|POLLHUP)) {
+        char buf[PATH_MAX];
+        if(fgets(buf, sizeof(buf), stdin) == NULL && ferror(stdin)) {
+          clearerr(stdin);
+          continue;
+        }
+	if(feof(stdin)) {
+	  g_options.stdin_list = 0;
+	  fprintf(stderr, "done with stdin\n");
+	  continue;
+	}
+
+        size_t len = strlen(buf);
+        if(buf[len-1] == '\n') {
+          buf[--len] = 0;
+        }
+        if(len > 0) {
+          imv_navigator_add(&nav, buf, g_options.recursive);
+          need_redraw = 1;
+        }
+      }
+    } else {
+      SDL_Delay(10);
+    }
   }
   while(g_options.list) {
     const char *path = imv_navigator_selection(&nav);

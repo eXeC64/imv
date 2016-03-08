@@ -46,6 +46,9 @@ ones with `x`, then quit imv to pass the remaining images through" workflow.
 #### Choosing pictures to email
     find ./holiday_pics -type f -name '*.jpg' | imv | xargs cp -t ~/outbox
 
+#### Viewing images from the web
+    curl -Osw '%{filename_effective}\n' 'http://www.example.com/[1-10].jpg' | imv
+
 ### Slideshow
 
 imv can be used to display slideshows. You can set the number of seconds to
