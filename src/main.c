@@ -55,6 +55,7 @@ struct {
   int solid_bg;
   int list;
   unsigned long delay;
+  int cycle;
   unsigned char bg_r;
   unsigned char bg_g;
   unsigned char bg_b;
@@ -71,6 +72,7 @@ struct {
   .solid_bg = 1,
   .list = 0,
   .delay = 0,
+  .cycle = 1,
   .bg_r = 0,
   .bg_g = 0,
   .bg_b = 0,
@@ -105,7 +107,7 @@ static void parse_args(int argc, char** argv)
 
   char *argp, o;
 
-  while((o = getopt(argc, argv, "firasSudhln:b:e:t:")) != -1) {
+  while((o = getopt(argc, argv, "firasSudxhln:b:e:t:")) != -1) {
     switch(o) {
       case 'f': g_options.fullscreen = 1;   break;
       case 'i':
@@ -118,6 +120,7 @@ static void parse_args(int argc, char** argv)
       case 'S': g_options.scaling = FULL;          break;
       case 'u': g_options.nearest_neighbour = 1;   break;
       case 'd': g_options.overlay = 1;             break;
+      case 'x': g_options.cycle = 0;               break;
       case 'h': print_usage(); exit(0);            break;
       case 'l': g_options.list = 1;                break;
       case 'n':
@@ -345,13 +348,17 @@ int main(int argc, char** argv)
               break;
             case SDLK_LEFTBRACKET:
             case SDLK_LEFT:
-              imv_navigator_select_rel(&nav, -1);
+              if(!imv_navigator_select_rel(&nav, -1, g_options.cycle)) {
+                quit = 1;
+              }
               /* reset slideshow delay */
               delay_msec = 0;
               break;
             case SDLK_RIGHTBRACKET:
             case SDLK_RIGHT:
-              imv_navigator_select_rel(&nav, 1);
+              if(!imv_navigator_select_rel(&nav, 1, g_options.cycle)) {
+                quit = 1;
+              }
               /* reset slideshow delay */
               delay_msec = 0;
               break;
@@ -523,7 +530,9 @@ int main(int argc, char** argv)
       delay_msec += dt;
       need_redraw = 1;
       if(delay_msec >= g_options.delay) {
-        imv_navigator_select_rel(&nav, 1);
+        if(!imv_navigator_select_rel(&nav, 1, g_options.cycle)) {
+          quit = 1;
+        }
         delay_msec = 0;
       }
     }

@@ -6,7 +6,7 @@
 .Nd view images
 .Sh SYNOPSIS
 .Nm
-.Op Fl adfhlrSsu
+.Op Fl adfhlrSsux
 .Op Fl b Ar color
 .Op Fl e Ar font:size
 .Op Fl n Ar position
@@ -71,6 +71,8 @@ Setting this to zero disables slideshow mode, which is the default.
 .It Fl u
 Use nearest neighbour resampling.
 Recommended for pixel art.
+.It Fl x
+Exit when reaching end of file list.
 .El
 .Ss Reading from standard input
 When run with argument

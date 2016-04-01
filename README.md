@@ -60,6 +60,9 @@ To cycle through a folder of pictures, showing each one for 10 seconds:
 
     imv -t 10 ~/Pictures/London
 
+The `-x` switch can be used to exit imv after the last picture instead of
+cycling through the list.
+
 Installation
 ------------
 
