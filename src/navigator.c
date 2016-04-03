@@ -126,11 +126,12 @@ const char *imv_navigator_selection(struct imv_navigator *nav)
   return nav->paths[nav->cur_path];
 }
 
-void imv_navigator_select_rel(struct imv_navigator *nav, int direction)
+int imv_navigator_select_rel(struct imv_navigator *nav, int direction,
+                             const int cycle)
 {
   int prev_path = nav->cur_path;
   if(nav->num_paths == 0) {
-    return;
+    return 0;
   }
 
   if(direction > 1) {
@@ -138,17 +139,26 @@ void imv_navigator_select_rel(struct imv_navigator *nav, int direction)
   } else if(direction < -1) {
     direction = -1;
   } else if(direction == 0) {
-    return;
+    return 0;
   }
 
   nav->cur_path += direction;
   if(nav->cur_path == nav->num_paths) {
+    /* end of list reached */
+    if(!cycle) {
+      return 0;
+    }
     nav->cur_path = 0;
   } else if(nav->cur_path < 0) {
+    /* going backwards at the beginning of the list */
+    if(!cycle) {
+      return 0;
+    }
     nav->cur_path = nav->num_paths - 1;
   }
   nav->last_move_direction = direction;
   nav->changed = prev_path != nav->cur_path;
+  return 1;
 }
 
 void imv_navigator_remove(struct imv_navigator *nav, const char *path)
@@ -175,8 +185,9 @@ void imv_navigator_remove(struct imv_navigator *nav, const char *path)
   if(nav->cur_path == removed) {
     /* We just removed the current path */
     if(nav->last_move_direction < 0) {
-      /* Move left */
-      imv_navigator_select_rel(nav, -1);
+      /* Move left
+       * the cycle parameter does not matter here */
+      imv_navigator_select_rel(nav, -1, 0);
     } else {
       /* Try to stay where we are, unless we ran out of room */
       if(nav->cur_path == nav->num_paths) {

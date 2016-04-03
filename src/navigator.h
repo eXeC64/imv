@@ -47,8 +47,11 @@ void imv_navigator_add(struct imv_navigator *nav, const char *path,
  * guaranteed to be valid until the next call to an imv_navigator method. */
 const char *imv_navigator_selection(struct imv_navigator *nav);
 
-/* Change the currently selected path. dir = -1 for previous, 1 for next */
-void imv_navigator_select_rel(struct imv_navigator *nav, int dir);
+/* Change the currently selected path. dir = -1 for previous, 1 for next
+ * cycle = 1 to go to the beginning of the file list if end is reached
+ * cycle = 0 to return error instead
+ * Returns 1 on success, 0 otherwise */
+int imv_navigator_select_rel(struct imv_navigator *nav, int dir, int cycle);
 
 /* Removes the given path. The current selection is updated if necessary,
  * based on the last direction the selection moved. */
