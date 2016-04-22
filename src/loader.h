@@ -61,7 +61,7 @@ void imv_loader_load(struct imv_loader *ldr, const char *path,
 int imv_loader_get_image(struct imv_loader *ldr, FIBITMAP **out_bmp,
                          int *out_is_frame);
 
-/* If a file failed to loadd, return the path to that file. Otherwise returns
+/* If a file failed to load, return the path to that file. Otherwise returns
  * NULL. Only returns the path once. Caller is responsible for cleaning up the
  * string returned. */
 char *imv_loader_get_error(struct imv_loader *ldr);
