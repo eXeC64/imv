@@ -363,6 +363,7 @@ int main(int argc, char** argv)
               delay_msec = 0;
               break;
             case SDLK_EQUALS:
+            case SDLK_PLUS:
             case SDLK_i:
             case SDLK_UP:
               imv_viewport_zoom(&view, &tex, IMV_ZOOM_KEYBOARD, 1);
