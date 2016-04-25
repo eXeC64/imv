@@ -21,9 +21,12 @@ OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
 TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(wildcard test/*.c))
 TFLAGS ?= -g ${CFLAGS}
 
-VERSION = "v2.0.0"
+VERSION := $(shell git describe --abbrev=8 --dirty --always --tags 2> /dev/null)
+ifeq ($(VERSION),)
+VERSION := 2.0.0
+endif
 
-CFLAGS += -DIMV_VERSION=\"$(VERSION)\"
+CFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
 
 imv: $(TARGET)
 
