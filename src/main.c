@@ -374,19 +374,27 @@ int main(int argc, char** argv)
               imv_viewport_zoom(&view, &tex, IMV_ZOOM_KEYBOARD, -1);
               break;
             case SDLK_s:
-              if((g_options.scaling += 1) > FULL) {
-                g_options.scaling = NONE;
+              if(!e.key.repeat) {
+                if((g_options.scaling += 1) > FULL) {
+                  g_options.scaling = NONE;
+                }
               }
             /* FALLTHROUGH */
             case SDLK_r:
-              need_rescale = 1;
-              need_redraw = 1;
+              if(!e.key.repeat) {
+                need_rescale = 1;
+                need_redraw = 1;
+              }
               break;
             case SDLK_a:
-              imv_viewport_scale_to_actual(&view, &tex);
+              if(!e.key.repeat) {
+                imv_viewport_scale_to_actual(&view, &tex);
+              }
               break;
             case SDLK_c:
-              imv_viewport_center(&view, &tex);
+              if(!e.key.repeat) {
+                imv_viewport_center(&view, &tex);
+              }
               break;
             case SDLK_j:
               imv_viewport_move(&view, 0, -50);
@@ -401,23 +409,33 @@ int main(int argc, char** argv)
               imv_viewport_move(&view, -50, 0);
               break;
             case SDLK_x:
-              imv_navigator_remove(&nav, imv_navigator_selection(&nav));
+              if(!e.key.repeat) {
+                imv_navigator_remove(&nav, imv_navigator_selection(&nav));
+              }
               break;
             case SDLK_f:
-              imv_viewport_toggle_fullscreen(&view);
+              if(!e.key.repeat) {
+                imv_viewport_toggle_fullscreen(&view);
+              }
               break;
             case SDLK_PERIOD:
               imv_loader_load_next_frame(&ldr);
               break;
             case SDLK_SPACE:
-              imv_viewport_toggle_playing(&view);
+              if(!e.key.repeat) {
+		imv_viewport_toggle_playing(&view);
+              }
               break;
             case SDLK_p:
-              puts(imv_navigator_selection(&nav));
+              if(!e.key.repeat) {
+                puts(imv_navigator_selection(&nav));
+              }
               break;
             case SDLK_d:
-              g_options.overlay = !g_options.overlay;
-              need_redraw = 1;
+              if(!e.key.repeat) {
+                g_options.overlay = !g_options.overlay;
+                need_redraw = 1;
+              }
               break;
             case SDLK_t:
               if(e.key.keysym.mod & (KMOD_SHIFT|KMOD_CAPS)) {
