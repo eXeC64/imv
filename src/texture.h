@@ -49,3 +49,6 @@ int imv_texture_set_image(struct imv_texture *tex, FIBITMAP *image);
 void imv_texture_draw(struct imv_texture *tex, int x, int y, double scale);
 
 #endif
+
+
+/* vim:set ts=2 sts=2 sw=2 et: */

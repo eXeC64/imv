@@ -38,3 +38,6 @@ void imv_printf(SDL_Renderer *renderer, TTF_Font *font, int x, int y,
                 SDL_Color *fg, SDL_Color *bg, const char *fmt, ...);
 
 #endif
+
+
+/* vim:set ts=2 sts=2 sw=2 et: */

@@ -75,3 +75,6 @@ void imv_loader_load_next_frame(struct imv_loader *ldr);
 void imv_loader_time_passed(struct imv_loader *ldr, double dt);
 
 #endif
+
+
+/* vim:set ts=2 sts=2 sw=2 et: */

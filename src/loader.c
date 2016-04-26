@@ -412,3 +412,6 @@ static void error_occurred(struct imv_loader *ldr)
   ldr->out_err = strdup(ldr->path);
   pthread_mutex_unlock(&ldr->lock);
 }
+
+
+/* vim:set ts=2 sts=2 sw=2 et: */

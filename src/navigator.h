@@ -68,3 +68,6 @@ int imv_navigator_find_path(struct imv_navigator *nav, const char *path);
 int imv_navigator_poll_changed(struct imv_navigator *nav, const int nopoll);
 
 #endif
+
+
+/* vim:set ts=2 sts=2 sw=2 et: */

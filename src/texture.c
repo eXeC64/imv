@@ -141,3 +141,6 @@ void imv_texture_draw(struct imv_texture *tex, int bx, int by, double scale)
     offset_y += tex->chunk_height * scale;
   }
 }
+
+
+/* vim:set ts=2 sts=2 sw=2 et: */

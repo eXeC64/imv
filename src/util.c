@@ -182,3 +182,6 @@ void imv_printf(SDL_Renderer *renderer, TTF_Font *font, int x, int y,
   SDL_FreeSurface(surf);
   va_end(args);
 }
+
+
+/* vim:set ts=2 sts=2 sw=2 et: */
