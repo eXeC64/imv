@@ -102,6 +102,7 @@ int imv_loader_get_image(struct imv_loader *ldr, FIBITMAP **out_bmp,
     *out_bmp = ldr->out_bmp;
     ldr->out_bmp = NULL;
     *out_is_new_image = ldr->out_is_new_image;
+    ldr->out_is_new_image = 0;
     ret = 1;
   }
 
@@ -397,7 +398,6 @@ static void *bg_next_frame(void *data)
     FreeImage_Unload(ldr->out_bmp);
   }
   ldr->out_bmp = FreeImage_Clone(ldr->bmp);
-  ldr->out_is_new_image = 0;
 
   pthread_mutex_unlock(&ldr->lock);
   return NULL;
