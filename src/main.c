@@ -423,7 +423,7 @@ int main(int argc, char** argv)
               break;
             case SDLK_SPACE:
               if(!e.key.repeat) {
-		imv_viewport_toggle_playing(&view);
+                imv_viewport_toggle_playing(&view);
               }
               break;
             case SDLK_p:
