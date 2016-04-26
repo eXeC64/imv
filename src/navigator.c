@@ -146,12 +146,16 @@ int imv_navigator_select_rel(struct imv_navigator *nav, int direction,
   if(nav->cur_path == nav->num_paths) {
     /* end of list reached */
     if(!cycle) {
+      /* undo move */
+      nav->cur_path -= direction;
       return 0;
     }
     nav->cur_path = 0;
   } else if(nav->cur_path < 0) {
     /* going backwards at the beginning of the list */
     if(!cycle) {
+      /* undo move */
+      nav->cur_path -= direction;
       return 0;
     }
     nav->cur_path = nav->num_paths - 1;
