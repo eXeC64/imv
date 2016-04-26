@@ -42,6 +42,7 @@ void imv_navigator_init(struct imv_navigator *nav)
   nav->cur_path = 0;
   nav->last_move_direction = 1;
   nav->changed = 0;
+  nav->wrapped = 0;
 }
 
 void imv_navigator_destroy(struct imv_navigator *nav)
@@ -126,12 +127,11 @@ const char *imv_navigator_selection(struct imv_navigator *nav)
   return nav->paths[nav->cur_path];
 }
 
-int imv_navigator_select_rel(struct imv_navigator *nav, int direction,
-                             const int cycle)
+void imv_navigator_select_rel(struct imv_navigator *nav, int direction)
 {
   int prev_path = nav->cur_path;
   if(nav->num_paths == 0) {
-    return 0;
+    return;
   }
 
   if(direction > 1) {
@@ -139,30 +139,22 @@ int imv_navigator_select_rel(struct imv_navigator *nav, int direction,
   } else if(direction < -1) {
     direction = -1;
   } else if(direction == 0) {
-    return 0;
+    return;
   }
 
   nav->cur_path += direction;
   if(nav->cur_path == nav->num_paths) {
-    /* end of list reached */
-    if(!cycle) {
-      /* undo move */
-      nav->cur_path -= direction;
-      return 0;
-    }
+    /* Wrap after the end of the list */
     nav->cur_path = 0;
+    nav->wrapped = 1;
   } else if(nav->cur_path < 0) {
-    /* going backwards at the beginning of the list */
-    if(!cycle) {
-      /* undo move */
-      nav->cur_path -= direction;
-      return 0;
-    }
+    /* Wrap before the start of the list */
     nav->cur_path = nav->num_paths - 1;
+    nav->wrapped = 1;
   }
   nav->last_move_direction = direction;
   nav->changed = prev_path != nav->cur_path;
-  return 1;
+  return;
 }
 
 void imv_navigator_remove(struct imv_navigator *nav, const char *path)
@@ -189,13 +181,13 @@ void imv_navigator_remove(struct imv_navigator *nav, const char *path)
   if(nav->cur_path == removed) {
     /* We just removed the current path */
     if(nav->last_move_direction < 0) {
-      /* Move left
-       * the cycle parameter does not matter here */
-      imv_navigator_select_rel(nav, -1, 0);
+      /* Move left */
+      imv_navigator_select_rel(nav, -1);
     } else {
       /* Try to stay where we are, unless we ran out of room */
       if(nav->cur_path == nav->num_paths) {
         nav->cur_path = 0;
+        nav->wrapped = 1;
       }
     }
   }
@@ -251,6 +243,11 @@ int imv_navigator_poll_changed(struct imv_navigator *nav, const int nopoll)
     }
   }
   return 0;
+}
+
+int imv_navigator_wrapped(struct imv_navigator *nav)
+{
+  return nav->wrapped;
 }
 
 

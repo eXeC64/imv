@@ -12,48 +12,61 @@
 #define FILENAME1 "example.file.1"
 #define FILENAME2 "example.file.2"
 #define FILENAME3 "example.file.3"
+#define FILENAME4 "example.file.4"
+#define FILENAME5 "example.file.5"
+#define FILENAME6 "example.file.6"
 
-static void test_navigator_add(void **state)
+static void test_navigator_add_remove(void **state)
 {
   (void)state;
   struct imv_navigator nav;
   imv_navigator_init(&nav);
 
+  /* Check poll_changed */
   assert_false(imv_navigator_poll_changed(&nav, 0));
-  imv_navigator_add(&nav, FILENAME1, 0);
-  assert_true(imv_navigator_poll_changed(&nav, 0));
-  assert_string_equal(imv_navigator_selection(&nav), FILENAME1);
-
-  imv_navigator_destroy(&nav);
-}
-
-static void test_navigator_remove(void **state)
-{
-  (void)state;
-  struct imv_navigator nav;
-  imv_navigator_init(&nav);
 
   /* Add 3 paths */
   imv_navigator_add(&nav, FILENAME1, 0);
   imv_navigator_add(&nav, FILENAME2, 0);
   imv_navigator_add(&nav, FILENAME3, 0);
-  assert_int_equal(nav.num_paths, 3);
+  imv_navigator_add(&nav, FILENAME4, 0);
+  imv_navigator_add(&nav, FILENAME5, 0);
+  imv_navigator_add(&nav, FILENAME6, 0);
+  assert_int_equal(nav.num_paths, 6);
 
+  /* Check poll_changed */
+  assert_true(imv_navigator_poll_changed(&nav, 0));
+
+  /* Make sure current selection  is #1 */
   assert_string_equal(imv_navigator_selection(&nav), FILENAME1);
-  assert_true(imv_navigator_select_rel(&nav, 1, 0));
+
+  /* Move right and remove current file (#2); should get to #3 */
+  imv_navigator_select_rel(&nav, 1);
   assert_string_equal(imv_navigator_selection(&nav), FILENAME2);
   imv_navigator_remove(&nav, FILENAME2);
-  assert_int_equal(nav.num_paths, 2);
+  assert_int_equal(nav.num_paths, 5);
   assert_string_equal(imv_navigator_selection(&nav), FILENAME3);
-  assert_false(imv_navigator_select_rel(&nav, 1, 0));
 
-  assert_string_equal(imv_navigator_selection(&nav), FILENAME3);
-  imv_navigator_remove(&nav, FILENAME3);
-  assert_int_equal(nav.num_paths, 1);
+  /* Move left and remove current file (#1); should get to #6 */
+  imv_navigator_select_rel(&nav, -1);
   assert_string_equal(imv_navigator_selection(&nav), FILENAME1);
   imv_navigator_remove(&nav, FILENAME1);
-  assert_int_equal(nav.num_paths, 0);
-  assert_false(imv_navigator_selection(&nav));
+  assert_string_equal(imv_navigator_selection(&nav), FILENAME6);
+
+  /* Move left, right, remove current file (#6); should get to #3 */
+  imv_navigator_select_rel(&nav, -1);
+  imv_navigator_select_rel(&nav, 1);
+  assert_string_equal(imv_navigator_selection(&nav), FILENAME6);
+  imv_navigator_remove(&nav, FILENAME6);
+  assert_string_equal(imv_navigator_selection(&nav), FILENAME3);
+
+  /* Remove #4; should not move */
+  imv_navigator_remove(&nav, FILENAME4);
+  assert_string_equal(imv_navigator_selection(&nav), FILENAME3);
+
+  /* Verify that #4 is removed by moving left; should get to #5 */
+  imv_navigator_select_rel(&nav, 1);
+  assert_string_equal(imv_navigator_selection(&nav), FILENAME5);
 
   imv_navigator_destroy(&nav);
 }
@@ -100,8 +113,7 @@ static void test_navigator_file_changed(void **state)
 int main(void)
 {
   const struct CMUnitTest tests[] = {
-    cmocka_unit_test(test_navigator_add),
-    cmocka_unit_test(test_navigator_remove),
+    cmocka_unit_test(test_navigator_add_remove),
     cmocka_unit_test(test_navigator_file_changed),
   };
 

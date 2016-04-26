@@ -28,6 +28,7 @@ struct imv_navigator {
   time_t *mtimes;
   int last_move_direction;
   int changed;
+  int wrapped;
 };
 
 /* Initialises an instance of imv_navigator */
@@ -47,11 +48,8 @@ void imv_navigator_add(struct imv_navigator *nav, const char *path,
  * guaranteed to be valid until the next call to an imv_navigator method. */
 const char *imv_navigator_selection(struct imv_navigator *nav);
 
-/* Change the currently selected path. dir = -1 for previous, 1 for next
- * cycle = 1 to go to the beginning of the file list if end is reached
- * cycle = 0 to return error instead
- * Returns 1 on success, 0 otherwise */
-int imv_navigator_select_rel(struct imv_navigator *nav, int dir, int cycle);
+/* Change the currently selected path. dir = -1 for previous, 1 for next. */
+void imv_navigator_select_rel(struct imv_navigator *nav, int dir);
 
 /* Removes the given path. The current selection is updated if necessary,
  * based on the last direction the selection moved. */
@@ -66,6 +64,9 @@ int imv_navigator_find_path(struct imv_navigator *nav, const char *path);
 /* Returns 1 if either the currently selected path or underlying file has
  * changed since last called */
 int imv_navigator_poll_changed(struct imv_navigator *nav, const int nopoll);
+
+/* Check whether navigator wrapped around paths list */
+int imv_navigator_wrapped(struct imv_navigator *nav);
 
 #endif
 

@@ -348,17 +348,13 @@ int main(int argc, char** argv)
               break;
             case SDLK_LEFTBRACKET:
             case SDLK_LEFT:
-              if(!imv_navigator_select_rel(&nav, -1, g_options.cycle)) {
-                quit = 1;
-              }
+              imv_navigator_select_rel(&nav, -1);
               /* reset slideshow delay */
               delay_msec = 0;
               break;
             case SDLK_RIGHTBRACKET:
             case SDLK_RIGHT:
-              if(!imv_navigator_select_rel(&nav, 1, g_options.cycle)) {
-                quit = 1;
-              }
+              imv_navigator_select_rel(&nav, 1);
               /* reset slideshow delay */
               delay_msec = 0;
               break;
@@ -486,6 +482,11 @@ int main(int argc, char** argv)
       free(err_path);
     }
 
+    /* Check if navigator wrapped around paths lists */
+    if(!g_options.cycle && imv_navigator_wrapped(&nav)) {
+      break;
+    }
+
     /* if the user has changed image, start loading the new one */
     if(imv_navigator_poll_changed(&nav, poll_countdown--)) {
       const char *current_path = imv_navigator_selection(&nav);
@@ -549,9 +550,7 @@ int main(int argc, char** argv)
       delay_msec += dt;
       need_redraw = 1;
       if(delay_msec >= g_options.delay) {
-        if(!imv_navigator_select_rel(&nav, 1, g_options.cycle)) {
-          quit = 1;
-        }
+        imv_navigator_select_rel(&nav, 1);
         delay_msec = 0;
       }
     }
