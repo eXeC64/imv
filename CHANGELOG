@@ -1,6 +1,17 @@
 imv Changelog
 =============
 
+v2.1.0 - 2016-04-27
+-------------------
+
+* Add `-x` option to quit imv when end of files reached
+* Honour EXIF rotation information in JPGs
+* Read file list from stdin continuously
+* Fix fullscreen bug with i3
+* Fix bug where gifs would sometimes not auto-scale when opened
+* Add commit hash to version string of non-release builds
+* Fix bug where '+' did not work on foriegn keyboard layouts
+
 v2.0.0 - 2016-02-08
 -------------------
 

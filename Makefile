@@ -23,7 +23,7 @@ TFLAGS ?= -g ${CFLAGS}
 
 VERSION := $(shell git describe --abbrev=8 --dirty --always --tags 2> /dev/null)
 ifeq ($(VERSION),)
-VERSION := 2.0.0
+VERSION := v2.1.0
 endif
 
 CFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
