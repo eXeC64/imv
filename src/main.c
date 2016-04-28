@@ -313,7 +313,7 @@ int main(int argc, char** argv)
   }
 
   /* help keeping track of time */
-  unsigned int last_time;
+  unsigned int last_time = SDL_GetTicks();
   unsigned int current_time;
 
   /* keep file change polling rate under control */
