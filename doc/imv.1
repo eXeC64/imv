@@ -6,7 +6,7 @@
 .Nd view images
 .Sh SYNOPSIS
 .Nm
-.Op Fl adfhlrSsux
+.Op Fl 1adfhlrSsux
 .Op Fl b Ar color
 .Op Fl e Ar font:size
 .Op Fl n Ar position
@@ -24,6 +24,10 @@ reloads the current image if it detects changes to the file.
 .Nm
 accepts following flags:
 .Bl -tag -width Ds
+.It Fl 1
+Play animations only once.
+Pauses animation at last frame.
+If user resumes playback, animation would pause again at its last frame.
 .It Fl a
 .Dq actual size
 mode: show images at actual size.

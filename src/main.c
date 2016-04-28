@@ -34,7 +34,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "viewport.h"
 #include "util.h"
 
-enum scaling_mode {
+enum scaling_modes {
   NONE,
   DOWN,
   FULL
@@ -55,6 +55,7 @@ struct {
   int solid_bg;
   int list;
   unsigned long delay;
+  int play_once;
   int cycle;
   unsigned char bg_r;
   unsigned char bg_g;
@@ -71,6 +72,7 @@ struct {
   .solid_bg = 1,
   .list = 0,
   .delay = 0,
+  .play_once = 0,
   .cycle = 1,
   .bg_r = 0,
   .bg_g = 0,
@@ -105,9 +107,10 @@ static void parse_args(int argc, char** argv)
 
   char *argp, o;
 
-  while((o = getopt(argc, argv, "firasSudxhln:b:e:t:")) != -1) {
+  while((o = getopt(argc, argv, "1firasSudxhln:b:e:t:")) != -1) {
     switch(o) {
-      case 'f': g_options.fullscreen = 1;   break;
+      case '1': g_options.play_once = 1;           break;
+      case 'f': g_options.fullscreen = 1;          break;
       case 'i':
         g_options.stdin_list = 1;
         fprintf(stderr, "Warning: '-i' is deprecated. No flag is needed.\n");
@@ -523,6 +526,9 @@ int main(int argc, char** argv)
       need_redraw = 1;
       if(frame_number == 0) {
         need_rescale = 1;
+      }
+      if(g_options.play_once && frame_number == num_frames - 1) {
+        imv_viewport_toggle_playing(&view);
       }
     }
 
