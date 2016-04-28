@@ -326,6 +326,9 @@ int main(int argc, char** argv)
   int need_redraw = 1;
   int need_rescale = 0;
 
+  /* keep track of animation repetition */
+  int repeated = 0;
+
   /* keep title buffer around for reuse */
   char title[256];
 
@@ -502,6 +505,8 @@ int main(int argc, char** argv)
         exit(1);
       }
 
+      repeated = 0;
+
       snprintf(title, sizeof(title), "imv - [%i/%i] [LOADING] %s [%s]",
           nav.cur_path + 1, nav.num_paths, current_path,
           scaling_label[g_options.scaling]);
@@ -519,6 +524,11 @@ int main(int argc, char** argv)
     FIBITMAP *bmp;
     int frame_number, num_frames;
     if(imv_loader_get_image(&ldr, &bmp, &frame_number, &num_frames)) {
+      if(g_options.delay && g_options.play_once && frame_number == 0 &&
+          repeated) {
+        imv_navigator_select_rel(&nav, 1);
+        continue;
+      }
       imv_texture_set_image(&tex, bmp);
       iw = FreeImage_GetWidth(bmp);
       ih = FreeImage_GetWidth(bmp);
@@ -527,8 +537,11 @@ int main(int argc, char** argv)
       if(frame_number == 0) {
         need_rescale = 1;
       }
-      if(g_options.play_once && frame_number == num_frames - 1) {
-        imv_viewport_toggle_playing(&view);
+      if(frame_number == num_frames - 1) {
+        repeated = 1;
+        } if(g_options.play_once) {
+          imv_viewport_toggle_playing(&view);
+        }
       }
     }
 
@@ -552,12 +565,12 @@ int main(int argc, char** argv)
     }
 
     /* handle slideshow */
-    if(g_options.delay) {
+    if(g_options.delay && !(g_options.play_once && num_frames > 1)) {
       unsigned int dt = current_time - last_time;
 
       delay_msec += dt;
       need_redraw = 1;
-      if(delay_msec >= g_options.delay) {
+      if(delay_msec >= g_options.delay && repeated) {
         imv_navigator_select_rel(&nav, 1);
         delay_msec = 0;
       }
