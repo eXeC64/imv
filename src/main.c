@@ -316,7 +316,7 @@ int main(int argc, char** argv)
   }
 
   /* help keeping track of time */
-  unsigned int last_time;
+  unsigned int last_time = SDL_GetTicks();
   unsigned int current_time;
 
   /* keep file change polling rate under control */
@@ -525,7 +525,7 @@ int main(int argc, char** argv)
     int frame_number, num_frames;
     if(imv_loader_get_image(&ldr, &bmp, &frame_number, &num_frames)) {
       if(g_options.delay && g_options.play_once && frame_number == 0 &&
-          repeated) {
+          num_frames > 1 && repeated) {
         imv_navigator_select_rel(&nav, 1);
         continue;
       }
@@ -539,7 +539,7 @@ int main(int argc, char** argv)
       }
       if(frame_number == num_frames - 1) {
         repeated = 1;
-        } if(g_options.play_once) {
+        if(g_options.play_once && !g_options.delay) {
           imv_viewport_toggle_playing(&view);
         }
       }
@@ -565,7 +565,7 @@ int main(int argc, char** argv)
     }
 
     /* handle slideshow */
-    if(g_options.delay && !(g_options.play_once && num_frames > 1)) {
+    if(g_options.delay) {
       unsigned int dt = current_time - last_time;
 
       delay_msec += dt;
@@ -593,7 +593,8 @@ int main(int argc, char** argv)
       if(num_frames > 1) {
         snprintf(title, sizeof(title), "%s [%i/%i]", title, frame_number + 1,
             num_frames);
-      } else if(g_options.delay >= 1000) {
+      }
+      if(g_options.delay >= 1000) {
         snprintf(title, sizeof(title), "%s [%lu/%lus]", title,
             delay_msec / 1000 + 1, g_options.delay / 1000);
       }
