@@ -60,7 +60,6 @@ struct {
   unsigned char bg_g;
   unsigned char bg_b;
   int overlay;
-  char *overlay_str;
   const char *start_at;
   const char *font;
 } g_options = {
@@ -77,7 +76,6 @@ struct {
   .bg_g = 0,
   .bg_b = 0,
   .overlay = 0,
-  .overlay_str = NULL,
   .start_at = NULL,
   .font = "Monospace:24",
 };
@@ -325,6 +323,9 @@ int main(int argc, char** argv)
   int need_redraw = 1;
   int need_rescale = 0;
 
+  /* keep title buffer around for reuse */
+  char title[256];
+
   /* used to calculate when to skip to the next image in slideshow mode */
   unsigned long delay_msec = 0;
 
@@ -498,8 +499,7 @@ int main(int argc, char** argv)
         exit(1);
       }
 
-      char title[256];
-      snprintf(&title[0], sizeof(title), "imv - [%i/%i] [LOADING] %s [%s]",
+      snprintf(title, sizeof(title), "imv - [%i/%i] [LOADING] %s [%s]",
           nav.cur_path + 1, nav.num_paths, current_path,
           scaling_label[g_options.scaling]);
       imv_viewport_set_title(&view, title);
@@ -566,36 +566,14 @@ int main(int argc, char** argv)
     if(need_redraw) {
       /* update window title */
       const char *current_path = imv_navigator_selection(&nav);
-      char title[256];
+      snprintf(title, sizeof(title), "imv - [%i/%i] [%ix%i] %s [%s]",
+          nav.cur_path + 1, nav.num_paths, tex.width, tex.height,
+          current_path, scaling_label[g_options.scaling]);
       if(g_options.delay >= 1000) {
-        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%lu/%lus] [%ix%i] "
-            "%s [%s]", nav.cur_path + 1, nav.num_paths, delay_msec / 1000 + 1,
-            g_options.delay / 1000, tex.width, tex.height, current_path,
-            scaling_label[g_options.scaling]);
-      } else {
-        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s [%s]",
-            nav.cur_path + 1, nav.num_paths, tex.width, tex.height,
-            current_path, scaling_label[g_options.scaling]);
+        snprintf(title, sizeof(title), "%s [%lu/%lus]", title,
+            delay_msec / 1000 + 1, g_options.delay / 1000);
       }
       imv_viewport_set_title(&view, title);
-
-      /* update the overlay */
-      if(font) {
-        if(g_options.delay >= 1000) {
-          snprintf(&title[0], sizeof(title), "[%i/%i] [%lu/%lus] %s [%s]",
-              nav.cur_path + 1, nav.num_paths, delay_msec / 1000 + 1,
-              g_options.delay / 1000, current_path,
-              scaling_label[g_options.scaling]);
-        } else {
-          snprintf(&title[0], sizeof(title), "[%i/%i] %s [%s]",
-              nav.cur_path + 1, nav.num_paths, current_path,
-              scaling_label[g_options.scaling]);
-        }
-        if(g_options.overlay_str) {
-          free(g_options.overlay_str);
-        }
-        g_options.overlay_str = strdup(title);
-      }
 
       /* first we draw the background */
       if(g_options.solid_bg) {
@@ -623,7 +601,8 @@ int main(int argc, char** argv)
       if(g_options.overlay && font) {
         SDL_Color fg = {255,255,255,255};
         SDL_Color bg = {0,0,0,160};
-        imv_printf(renderer, font, 0, 0, &fg, &bg, "%s", g_options.overlay_str);
+        imv_printf(renderer, font, 0, 0, &fg, &bg, "%s",
+            title + strlen("imv - "));
       }
 
       /* redraw complete, unset the flag */
