@@ -514,14 +514,16 @@ int main(int argc, char** argv)
 
     /* check if a new image is available to display */
     FIBITMAP *bmp;
-    int is_new_image;
-    if(imv_loader_get_image(&ldr, &bmp, &is_new_image)) {
+    int frame_number, num_frames;
+    if(imv_loader_get_image(&ldr, &bmp, &frame_number, &num_frames)) {
       imv_texture_set_image(&tex, bmp);
       iw = FreeImage_GetWidth(bmp);
       ih = FreeImage_GetWidth(bmp);
       FreeImage_Unload(bmp);
       need_redraw = 1;
-      need_rescale += is_new_image;
+      if(frame_number == 0) {
+        need_rescale = 1;
+      }
     }
 
     if(need_rescale) {
@@ -569,7 +571,10 @@ int main(int argc, char** argv)
       snprintf(title, sizeof(title), "imv - [%i/%i] [%ix%i] %s [%s]",
           nav.cur_path + 1, nav.num_paths, tex.width, tex.height,
           current_path, scaling_label[g_options.scaling]);
-      if(g_options.delay >= 1000) {
+      if(num_frames > 1) {
+        snprintf(title, sizeof(title), "%s [%i/%i]", title, frame_number + 1,
+            num_frames);
+      } else if(g_options.delay >= 1000) {
         snprintf(title, sizeof(title), "%s [%lu/%lus]", title,
             delay_msec / 1000 + 1, g_options.delay / 1000);
       }

@@ -93,7 +93,7 @@ void imv_loader_load(struct imv_loader *ldr, const char *path,
 }
 
 int imv_loader_get_image(struct imv_loader *ldr, FIBITMAP **out_bmp,
-                         int *out_is_new_image)
+                         int *frame_number, int *num_frames)
 {
   int ret = 0;
   pthread_mutex_lock(&ldr->lock);
@@ -101,8 +101,11 @@ int imv_loader_get_image(struct imv_loader *ldr, FIBITMAP **out_bmp,
   if(ldr->out_bmp) {
     *out_bmp = ldr->out_bmp;
     ldr->out_bmp = NULL;
-    *out_is_new_image = ldr->out_is_new_image;
-    ldr->out_is_new_image = 0;
+    *frame_number = ldr->frame_number++;
+    *num_frames = ldr->num_frames;
+    if (ldr->frame_number == ldr->num_frames) {
+      ldr->frame_number = 0;
+    }
     ret = 1;
   }
 
@@ -288,7 +291,7 @@ static void *bg_new_img(void *data)
     FreeImage_Unload(ldr->out_bmp);
   }
   ldr->out_bmp = FreeImage_Clone(bmp);
-  ldr->out_is_new_image = 1;
+  ldr->frame_number = 0;
   ldr->width = width;
   ldr->height = height;
   ldr->cur_frame = 0;
