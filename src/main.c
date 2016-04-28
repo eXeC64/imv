@@ -586,16 +586,17 @@ int main(int argc, char** argv)
     /* only redraw when something's changed */
     if(need_redraw) {
       /* update window title */
+      int len;
       const char *current_path = imv_navigator_selection(&nav);
-      snprintf(title, sizeof(title), "imv - [%i/%i] [%ix%i] %s [%s]",
+      len = snprintf(title, sizeof(title), "imv - [%i/%i] [%ix%i] %s [%s]",
           nav.cur_path + 1, nav.num_paths, tex.width, tex.height,
           current_path, scaling_label[g_options.scaling]);
       if(num_frames > 1) {
-        snprintf(title, sizeof(title), "%s [%i/%i]", title, frame_number + 1,
-            num_frames);
+        len += snprintf(title + len, sizeof(title) - len, " [%i/%i]",
+            frame_number + 1, num_frames);
       }
       if(g_options.delay >= 1000) {
-        snprintf(title, sizeof(title), "%s [%lu/%lus]", title,
+        len += snprintf(title + len, sizeof(title) - len, " [%lu/%lus]",
             delay_msec / 1000 + 1, g_options.delay / 1000);
       }
       imv_viewport_set_title(&view, title);
