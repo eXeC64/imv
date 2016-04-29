@@ -109,6 +109,7 @@ void imv_navigator_add(struct imv_navigator *nav, const char *path,
         if(recursive) {
           imv_navigator_add(nav, path_buf, recursive);
         } else {
+          stat(path_buf, &path_info);
           add_item(nav, path_buf, path_info.st_mtim.tv_sec);
         }
       }

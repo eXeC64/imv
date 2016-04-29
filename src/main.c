@@ -34,7 +34,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "viewport.h"
 #include "util.h"
 
-enum scaling_mode {
+enum scaling_modes {
   NONE,
   DOWN,
   FULL
@@ -55,12 +55,12 @@ struct {
   int solid_bg;
   int list;
   unsigned long delay;
+  int play_once;
   int cycle;
   unsigned char bg_r;
   unsigned char bg_g;
   unsigned char bg_b;
   int overlay;
-  char *overlay_str;
   const char *start_at;
   const char *font;
 } g_options = {
@@ -72,12 +72,12 @@ struct {
   .solid_bg = 1,
   .list = 0,
   .delay = 0,
+  .play_once = 0,
   .cycle = 1,
   .bg_r = 0,
   .bg_g = 0,
   .bg_b = 0,
   .overlay = 0,
-  .overlay_str = NULL,
   .start_at = NULL,
   .font = "Monospace:24",
 };
@@ -107,9 +107,10 @@ static void parse_args(int argc, char** argv)
 
   char *argp, o;
 
-  while((o = getopt(argc, argv, "firasSudxhln:b:e:t:")) != -1) {
+  while((o = getopt(argc, argv, "1firasSudxhln:b:e:t:")) != -1) {
     switch(o) {
-      case 'f': g_options.fullscreen = 1;   break;
+      case '1': g_options.play_once = 1;           break;
+      case 'f': g_options.fullscreen = 1;          break;
       case 'i':
         g_options.stdin_list = 1;
         fprintf(stderr, "Warning: '-i' is deprecated. No flag is needed.\n");
@@ -315,7 +316,7 @@ int main(int argc, char** argv)
   }
 
   /* help keeping track of time */
-  unsigned int last_time;
+  unsigned int last_time = SDL_GetTicks();
   unsigned int current_time;
 
   /* keep file change polling rate under control */
@@ -324,6 +325,12 @@ int main(int argc, char** argv)
   /* do we need to redraw the window? */
   int need_redraw = 1;
   int need_rescale = 0;
+
+  /* keep track of animation repetition */
+  int repeated = 0;
+
+  /* keep title buffer around for reuse */
+  char title[256];
 
   /* used to calculate when to skip to the next image in slideshow mode */
   unsigned long delay_msec = 0;
@@ -498,8 +505,9 @@ int main(int argc, char** argv)
         exit(1);
       }
 
-      char title[256];
-      snprintf(&title[0], sizeof(title), "imv - [%i/%i] [LOADING] %s [%s]",
+      repeated = 0;
+
+      snprintf(title, sizeof(title), "imv - [%i/%i] [LOADING] %s [%s]",
           nav.cur_path + 1, nav.num_paths, current_path,
           scaling_label[g_options.scaling]);
       imv_viewport_set_title(&view, title);
@@ -514,14 +522,28 @@ int main(int argc, char** argv)
 
     /* check if a new image is available to display */
     FIBITMAP *bmp;
-    int is_new_image;
-    if(imv_loader_get_image(&ldr, &bmp, &is_new_image)) {
+    int frame_number, num_frames;
+    if(imv_loader_get_image(&ldr, &bmp, &frame_number, &num_frames)) {
+      if(g_options.delay && g_options.play_once && frame_number == 0 &&
+          num_frames > 1 && repeated) {
+        imv_navigator_select_rel(&nav, 1);
+        delay_msec = 0;
+        continue;
+      }
       imv_texture_set_image(&tex, bmp);
       iw = FreeImage_GetWidth(bmp);
       ih = FreeImage_GetWidth(bmp);
       FreeImage_Unload(bmp);
       need_redraw = 1;
-      need_rescale += is_new_image;
+      if(frame_number == 0) {
+        need_rescale = 1;
+      }
+      if(frame_number == num_frames - 1) {
+        repeated = 1;
+        if(g_options.play_once && !g_options.delay) {
+          imv_viewport_toggle_playing(&view);
+        }
+      }
     }
 
     if(need_rescale) {
@@ -549,7 +571,7 @@ int main(int argc, char** argv)
 
       delay_msec += dt;
       need_redraw = 1;
-      if(delay_msec >= g_options.delay) {
+      if(delay_msec >= g_options.delay && repeated) {
         imv_navigator_select_rel(&nav, 1);
         delay_msec = 0;
       }
@@ -565,37 +587,20 @@ int main(int argc, char** argv)
     /* only redraw when something's changed */
     if(need_redraw) {
       /* update window title */
+      int len;
       const char *current_path = imv_navigator_selection(&nav);
-      char title[256];
+      len = snprintf(title, sizeof(title), "imv - [%i/%i] [%ix%i] %s [%s]",
+          nav.cur_path + 1, nav.num_paths, tex.width, tex.height,
+          current_path, scaling_label[g_options.scaling]);
+      if(num_frames > 1) {
+        len += snprintf(title + len, sizeof(title) - len, " [%i/%i]",
+            frame_number + 1, num_frames);
+      }
       if(g_options.delay >= 1000) {
-        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%lu/%lus] [%ix%i] "
-            "%s [%s]", nav.cur_path + 1, nav.num_paths, delay_msec / 1000 + 1,
-            g_options.delay / 1000, tex.width, tex.height, current_path,
-            scaling_label[g_options.scaling]);
-      } else {
-        snprintf(&title[0], sizeof(title), "imv - [%i/%i] [%ix%i] %s [%s]",
-            nav.cur_path + 1, nav.num_paths, tex.width, tex.height,
-            current_path, scaling_label[g_options.scaling]);
+        len += snprintf(title + len, sizeof(title) - len, " [%lu/%lus]",
+            delay_msec / 1000 + 1, g_options.delay / 1000);
       }
       imv_viewport_set_title(&view, title);
-
-      /* update the overlay */
-      if(font) {
-        if(g_options.delay >= 1000) {
-          snprintf(&title[0], sizeof(title), "[%i/%i] [%lu/%lus] %s [%s]",
-              nav.cur_path + 1, nav.num_paths, delay_msec / 1000 + 1,
-              g_options.delay / 1000, current_path,
-              scaling_label[g_options.scaling]);
-        } else {
-          snprintf(&title[0], sizeof(title), "[%i/%i] %s [%s]",
-              nav.cur_path + 1, nav.num_paths, current_path,
-              scaling_label[g_options.scaling]);
-        }
-        if(g_options.overlay_str) {
-          free(g_options.overlay_str);
-        }
-        g_options.overlay_str = strdup(title);
-      }
 
       /* first we draw the background */
       if(g_options.solid_bg) {
@@ -623,7 +628,8 @@ int main(int argc, char** argv)
       if(g_options.overlay && font) {
         SDL_Color fg = {255,255,255,255};
         SDL_Color bg = {0,0,0,160};
-        imv_printf(renderer, font, 0, 0, &fg, &bg, "%s", g_options.overlay_str);
+        imv_printf(renderer, font, 0, 0, &fg, &bg, "%s",
+            title + strlen("imv - "));
       }
 
       /* redraw complete, unset the flag */
