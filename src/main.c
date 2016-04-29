@@ -527,6 +527,7 @@ int main(int argc, char** argv)
       if(g_options.delay && g_options.play_once && frame_number == 0 &&
           num_frames > 1 && repeated) {
         imv_navigator_select_rel(&nav, 1);
+        delay_msec = 0;
         continue;
       }
       imv_texture_set_image(&tex, bmp);
