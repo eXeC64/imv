@@ -41,8 +41,9 @@ void imv_navigator_destroy(struct imv_navigator *nav);
 /* Adds the given path to the navigator's internal list.
  * If a directory is given, all files within that directory are added.
  * An internal copy of path is made.
- * If recursive is non-zero then subdirectories are recursed into. */
-void imv_navigator_add(struct imv_navigator *nav, const char *path,
+ * If recursive is non-zero then subdirectories are recursed into.
+ * Non-zero return code denotes failure. */
+int imv_navigator_add(struct imv_navigator *nav, const char *path,
                        int recursive);
 
 /* Returns a read-only reference to the current path. The pointer is only

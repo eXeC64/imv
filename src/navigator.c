@@ -48,7 +48,7 @@ void imv_navigator_destroy(struct imv_navigator *nav)
   memset(nav, 0, sizeof(struct imv_navigator));
 }
 
-static void add_item(struct imv_navigator *nav, const char *path,
+static int add_item(struct imv_navigator *nav, const char *path,
                      time_t mtime)
 {
   if(nav->num_paths % BUFFER_SIZE == 0) {
@@ -58,23 +58,24 @@ static void add_item(struct imv_navigator *nav, const char *path,
     new_paths = realloc(nav->paths, sizeof(char*) * new_size);
     new_mtimes = realloc(nav->mtimes, sizeof(time_t) * new_size);
     if (new_paths == NULL || new_mtimes == NULL) {
-      perror("add_item");
-      free(nav->paths);
-      free(nav->mtimes);
-      exit(1);
+      return 1;
     }
     nav->paths = new_paths;
     nav->mtimes = new_mtimes;
   }
-  nav->paths[nav->num_paths] = strdup(path);
+  if((nav->paths[nav->num_paths] = strndup(path, PATH_MAX)) == NULL) {
+    return 1;
+  }
   nav->mtimes[nav->num_paths] = mtime;
   nav->num_paths += 1;
   if(nav->num_paths == 1) {
     nav->changed = 1;
   }
+
+  return 0;
 }
 
-void imv_navigator_add(struct imv_navigator *nav, const char *path,
+int imv_navigator_add(struct imv_navigator *nav, const char *path,
                        int recursive)
 {
   char path_buf[PATH_MAX];
@@ -85,23 +86,28 @@ void imv_navigator_add(struct imv_navigator *nav, const char *path,
     if(d) {
       struct dirent *dir;
       while((dir = readdir(d)) != NULL) {
-        if(strcmp(dir->d_name, "..") == 0 ||
-            strcmp(dir->d_name, ".") == 0) {
+        if(strcmp(dir->d_name, "..") == 0 || strcmp(dir->d_name, ".") == 0) {
           continue;
         }
         snprintf(path_buf, sizeof(path_buf), "%s/%s", path, dir->d_name);
         if(recursive) {
-          imv_navigator_add(nav, path_buf, recursive);
+          if(imv_navigator_add(nav, path_buf, recursive) != 0) {
+            return 1;
+          }
         } else {
           stat(path_buf, &path_info);
-          add_item(nav, path_buf, path_info.st_mtim.tv_sec);
+          if(add_item(nav, path_buf, path_info.st_mtim.tv_sec) != 0) {
+            return 1;
+          }
         }
       }
       closedir(d);
     }
   } else {
-   add_item(nav, path, path_info.st_mtim.tv_sec); 
+    return add_item(nav, path, path_info.st_mtim.tv_sec); 
   }
+
+  return 0;
 }
 
 const char *imv_navigator_selection(struct imv_navigator *nav)

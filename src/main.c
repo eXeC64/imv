@@ -198,7 +198,10 @@ int main(int argc, char** argv)
         buf[--len] = 0;
       }
       if(len > 0) {
-        imv_navigator_add(&nav, buf, g_options.recursive);
+        if(imv_navigator_add(&nav, buf, g_options.recursive) != 0) {
+          imv_navigator_destroy(&nav);
+          exit(1);
+        }
         break;
       }
     }
@@ -230,7 +233,10 @@ int main(int argc, char** argv)
       errno = 0; /* clear errno */
     }
     /* add the given path to the list to load */
-    imv_navigator_add(&nav, argv[i], g_options.recursive);
+    if(imv_navigator_add(&nav, argv[i], g_options.recursive) != 0) {
+      imv_navigator_destroy(&nav);
+      exit(1);
+    }
   }
 
   /* if we weren't given any paths we have nothing to view. exit */
@@ -639,7 +645,9 @@ int main(int argc, char** argv)
           buf[--len] = 0;
         }
         if(len > 0) {
-          imv_navigator_add(&nav, buf, g_options.recursive);
+          if(imv_navigator_add(&nav, buf, g_options.recursive)) {
+            break;
+          }
           need_redraw = 1;
         }
       }

@@ -25,13 +25,13 @@ static void test_navigator_add_remove(void **state)
   /* Check poll_changed */
   assert_false(imv_navigator_poll_changed(&nav, 0));
 
-  /* Add 3 paths */
-  imv_navigator_add(&nav, FILENAME1, 0);
-  imv_navigator_add(&nav, FILENAME2, 0);
-  imv_navigator_add(&nav, FILENAME3, 0);
-  imv_navigator_add(&nav, FILENAME4, 0);
-  imv_navigator_add(&nav, FILENAME5, 0);
-  imv_navigator_add(&nav, FILENAME6, 0);
+  /* Add 6 paths, one non-existant should fail */
+  assert_false(imv_navigator_add(&nav, FILENAME1, 0));
+  assert_false(imv_navigator_add(&nav, FILENAME2, 0));
+  assert_false(imv_navigator_add(&nav, FILENAME3, 0));
+  assert_false(imv_navigator_add(&nav, FILENAME4, 0));
+  assert_false(imv_navigator_add(&nav, FILENAME5, 0));
+  assert_false(imv_navigator_add(&nav, FILENAME6, 0));
   assert_int_equal(nav.num_paths, 6);
 
   /* Check poll_changed */
@@ -88,7 +88,7 @@ static void test_navigator_file_changed(void **state)
   }
   assert_false(futimens(fd, times) == -1);
 
-  imv_navigator_add(&nav, FILENAME1, 0);
+  assert_false(imv_navigator_add(&nav, FILENAME1, 0));
   assert_true(imv_navigator_poll_changed(&nav, 0));
   assert_false(imv_navigator_poll_changed(&nav, 0));
 
