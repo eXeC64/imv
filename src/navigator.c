@@ -26,53 +26,37 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 void imv_navigator_init(struct imv_navigator *nav)
 {
-  nav->buf_size = 512;
-  nav->paths = malloc(sizeof(char*) * nav->buf_size);
-  if (nav->paths == NULL) {
-    perror("imv_navigator_init");
-    exit(1);
-  }
-  nav->mtimes = malloc(sizeof(time_t) * nav->buf_size);
-  if (nav->paths == NULL) {
-    perror("imv_navigator_init");
-    free(nav->paths);
-    exit(1);
-  }
-  nav->num_paths = 0;
-  nav->cur_path = 0;
+  memset(nav, 0, sizeof(struct imv_navigator));
   nav->last_move_direction = 1;
-  nav->changed = 0;
-  nav->wrapped = 0;
 }
 
 void imv_navigator_destroy(struct imv_navigator *nav)
 {
   if(nav->paths) {
     for(int i = 0; i < nav->num_paths; ++i) {
-      free(nav->paths[i]);
+      if(nav->paths[i] != NULL) {
+        free(nav->paths[i]);
+      }
     }
     free(nav->paths);
-    nav->paths = NULL;
   }
 
   if(nav->mtimes) {
     free(nav->mtimes);
-    nav->mtimes = NULL;
   }
 
-  nav->buf_size = 0;
-  nav->num_paths = 0;
+  memset(nav, 0, sizeof(struct imv_navigator));
 }
 
 static void add_item(struct imv_navigator *nav, const char *path,
                      time_t mtime)
 {
-  if(nav->buf_size == nav->num_paths) {
+  if(nav->num_paths % BUFFER_SIZE == 0) {
     char **new_paths;
     time_t *new_mtimes;
-    nav->buf_size *= 2;
-    new_paths = realloc(nav->paths, sizeof(char*) * nav->buf_size);
-    new_mtimes = realloc(nav->mtimes, sizeof(time_t) * nav->buf_size);
+    size_t new_size = nav->num_paths + BUFFER_SIZE;
+    new_paths = realloc(nav->paths, sizeof(char*) * new_size);
+    new_mtimes = realloc(nav->mtimes, sizeof(time_t) * new_size);
     if (new_paths == NULL || new_mtimes == NULL) {
       perror("add_item");
       free(nav->paths);
@@ -233,6 +217,10 @@ int imv_navigator_poll_changed(struct imv_navigator *nav, const int nopoll)
     return 1;
   }
   
+  if(nav->paths == NULL) {
+    return 0;
+  };
+
   if(!nopoll) {
     struct stat file_info;
     if(stat(nav->paths[nav->cur_path], &file_info) == -1) {
