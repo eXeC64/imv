@@ -9,8 +9,8 @@ ifeq ($(V),)
 MUTE :=	@
 endif
 
-CFLAGS ?= -W -Wall -Wpedantic -Wmissing-prototypes
-CFLAGS += -std=gnu11 $(shell sdl2-config --cflags)
+CFLAGS ?= -W -Wall -pedantic -Wmissing-prototypes
+CFLAGS += -std=c99 $(shell sdl2-config --cflags)
 LDFLAGS += $(shell sdl2-config --libs) -lfreeimage -lSDL2_ttf -lfontconfig -lpthread
 
 BUILDDIR ?= build
@@ -48,7 +48,7 @@ $(BUILDDIR)/%.o: src/%.c
 
 $(BUILDDIR)/test_%: test/%.c src/%.c
 	@echo "BUILDING $@"
-	$(MUTE)$(CC) -o $@ -Isrc $(TFLAGS) $(LDFLAGS) -std=gnu11 -lcmocka $^
+	$(MUTE)$(CC) -o $@ -Isrc $(TFLAGS) $(LDFLAGS) -lcmocka $^
 
 check: $(BUILDDIR) $(TESTS)
 	@echo "RUNNING TESTS"
