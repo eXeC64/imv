@@ -1,6 +1,14 @@
 imv Changelog
 =============
 
+v2,1,0 - 2016-05-12
+-------------------
+
+* Fix compatibility with older gcc versions
+* Fix bug where unchanged files were unnecessarily reloaded
+* Fix bug where first frame of gif or first slide was changed to quickly
+* Minor performance improvements
+
 v2.1.0 - 2016-04-27
 -------------------
 
