@@ -8,7 +8,7 @@ compiler:
   - gcc
 
 env:
-  - V=yes CFLAGS="-W -Wall -Wextra -Wpedantic -Wpointer-arith -Wuninitialized -Wstrict-prototypes -Wmissing-prototypes -Wunused -Wsign-compare -Wshadow -Werror --std=gnu11"
+  - V=yes CFLAGS="-W -Wall -Wextra -Wpedantic -Wpointer-arith -Wuninitialized -Wstrict-prototypes -Wmissing-prototypes -Wunused -Wsign-compare -Wshadow -Werror"
 
 script:
   - make
