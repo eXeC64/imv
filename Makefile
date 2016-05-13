@@ -10,7 +10,7 @@ MUTE :=	@
 endif
 
 CFLAGS ?= -W -Wall -pedantic -Wmissing-prototypes
-CFLAGS += -std=c99 $(shell sdl2-config --cflags)
+CFLAGS += -std=c99 $(shell sdl2-config --cflags) -D_XOPEN_SOURCE=700
 LDFLAGS += $(shell sdl2-config --libs) -lfreeimage -lSDL2_ttf -lfontconfig -lpthread
 
 BUILDDIR ?= build
