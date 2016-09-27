@@ -524,7 +524,7 @@ int main(int argc, char** argv)
     if(imv_loader_get_image(&ldr, &bmp, &is_new_image)) {
       imv_texture_set_image(&tex, bmp);
       iw = FreeImage_GetWidth(bmp);
-      ih = FreeImage_GetWidth(bmp);
+      ih = FreeImage_GetHeight(bmp);
       FreeImage_Unload(bmp);
       need_redraw = 1;
       need_rescale += is_new_image;
