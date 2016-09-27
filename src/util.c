@@ -79,6 +79,7 @@ TTF_Font *load_font(const char *font_spec)
     FcPatternDestroy(font);
   }
   FcPatternDestroy(pattern);
+  FcConfigDestroy(cfg);
 
   free(font_name);
   return ret;
