@@ -42,6 +42,7 @@ struct imv_loader {
   int next_frame;
   int num_frames;
   double frame_time;
+  pthread_attr_t thread_attrs;
 };
 
 /* Initialises an instance of imv_loader */
