@@ -31,7 +31,10 @@ size_t read_from_stdin(void **buffer) {
 
   for(*buffer = NULL; (*buffer = realloc((p = *buffer), len + step));
       len += (size_t)r) {
-    if((r = read(STDIN_FILENO, (uint8_t *)*buffer + len, step)) <= 0) {
+    if((r = read(STDIN_FILENO, (uint8_t *)*buffer + len, step)) == -1) {
+      perror(NULL);
+      break;
+    } else if (r == 0) {
       break;
     }
   }
