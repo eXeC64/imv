@@ -546,6 +546,12 @@ int main(int argc, char** argv)
      * passed */
     if(view.playing) {
       unsigned int dt = current_time - last_time;
+      /* We cap the delta-time to 100 ms so that if imv is asleep for several
+       * seconds or more (e.g. suspended), upon waking up it doesn't try to
+       * catch up all the time it missed by playing through the gif quickly. */
+      if(dt > 100) {
+        dt = 100;
+      }
       imv_loader_time_passed(&ldr, dt / 1000.0);
     }
 
