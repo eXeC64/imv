@@ -50,13 +50,6 @@ void imv_init_loader(struct imv_loader *ldr)
   pthread_mutex_init(&ldr->lock, NULL);
   /* ignore this signal in case we accidentally receive it */
   block_usr1_signal();
-
-  /* create new threads with PTHREAD_CREATE_DETATCHED set, so that the threads
-   * are automatically cleaned up by the operating system, without an explicit
-   * call to pthread_join()
-   */
-  pthread_attr_init(&ldr->thread_attrs);
-  pthread_attr_setdetachstate(&ldr->thread_attrs, PTHREAD_CREATE_DETACHED);
 }
 
 void imv_destroy_loader(struct imv_loader *ldr)
@@ -64,7 +57,6 @@ void imv_destroy_loader(struct imv_loader *ldr)
   /* wait for any existing bg thread to finish */
   pthread_join(ldr->bg_thread, NULL);
   pthread_mutex_destroy(&ldr->lock);
-  pthread_attr_destroy(&ldr->thread_attrs);
 
   if(ldr->bmp) {
     FreeImage_Unload(ldr->bmp);
@@ -80,13 +72,15 @@ void imv_destroy_loader(struct imv_loader *ldr)
 void imv_loader_load(struct imv_loader *ldr, const char *path,
                      const void *buffer, const size_t buffer_size)
 {
+  pthread_mutex_lock(&ldr->lock);
+
   /* cancel existing thread if already running */
   if(ldr->bg_thread) {
     pthread_kill(ldr->bg_thread, SIGUSR1);
+    pthread_detach(ldr->bg_thread);
   }
 
   /* kick off a new thread to load the image */
-  pthread_mutex_lock(&ldr->lock);
   if(ldr->path) {
     free(ldr->path);
   }
@@ -97,7 +91,7 @@ void imv_loader_load(struct imv_loader *ldr, const char *path,
   } else if (ldr->fi_buffer != NULL) {
     FreeImage_CloseMemory(ldr->fi_buffer);
   }
-  pthread_create(&ldr->bg_thread, &ldr->thread_attrs, &bg_new_img, ldr);
+  pthread_create(&ldr->bg_thread, NULL, &bg_new_img, ldr);
   pthread_mutex_unlock(&ldr->lock);
 }
 
