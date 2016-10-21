@@ -61,6 +61,9 @@ void imv_destroy_loader(struct imv_loader *ldr)
   if(ldr->bmp) {
     FreeImage_Unload(ldr->bmp);
   }
+  if(ldr->out_bmp) {
+    FreeImage_Unload(ldr->out_bmp);
+  }
   if(ldr->mbmp) {
     FreeImage_CloseMultiBitmap(ldr->mbmp, 0);
   }
