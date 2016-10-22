@@ -1,6 +1,14 @@
 imv Changelog
 =============
 
+v2.1.3 - 2016-10-22
+
+* Fix various resource leaks
+* Fix a bug where imv would to try and catch up on long periods of lost gif
+  playback time if it were suspended for a second or more.
+* Improve handling of unusual read() return codes
+* Fix a linking issue with unit tests on some platforms
+
 v2.1.2 - 2016-06-15
 -------------------
 
