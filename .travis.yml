@@ -7,12 +7,16 @@ compiler:
   - clang
   - gcc
 
+cache:
+  directories:
+    - $HOME/cmocka
+
 env:
-  - V=yes CFLAGS="-W -Wall -Wextra -Wpedantic -Wpointer-arith -Wuninitialized -Wstrict-prototypes -Wmissing-prototypes -Wunused -Wsign-compare -Wshadow -Werror"
+  - CFLAGS="-W -Wall -Wextra -Wpedantic -Wpointer-arith -Wuninitialized -Wstrict-prototypes -Wmissing-prototypes -Wunused -Wsign-compare -Wshadow -Werror"
 
 script:
-  - make
-# - make check
+  - make V=yes
+  - CFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" make check
 
 notifications:
   email: false
@@ -22,4 +26,16 @@ addons:
     packages:
       - libfreeimage-dev
       - libsdl2-ttf-dev
-#     - libcmocka-dev
+
+install:
+  # Note: travis concatinates lines belonging to the same item
+  - if [ ! -d $HOME/cmocka/cmocka-1.1.0 ];
+    then
+      curl "https://cmocka.org/files/1.1/cmocka-1.1.0.tar.xz" | tar xJf - -C $HOME/cmocka &&
+      cd $HOME/cmocka &&
+      env CFLAGS="-O2 -pipe" cmake cmocka-1.1.0 &&
+      env CFLAGS="-02 -pipe" make &&
+      cd -;
+    fi
+  - sudo make -C $HOME/cmocka install
+  - sudo ldconfig
