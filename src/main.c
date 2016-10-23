@@ -103,7 +103,7 @@ static void parse_args(int argc, char** argv)
   /* Do not print getopt errors */
   opterr = 0;
 
-  char *argp, o;
+  char *argp, *ep = *argv, o;
 
   while((o = getopt(argc, argv, "firasSudxhln:b:e:t:")) != -1) {
     switch(o) {
@@ -129,11 +129,15 @@ static void parse_args(int argc, char** argv)
           g_options.solid_bg = 0;
         } else {
           g_options.solid_bg = 1;
-          if(parse_hex_color(optarg,
-              &g_options.bg_r, &g_options.bg_g, &g_options.bg_b) != 0) {
+          argp = (*optarg == '#') ? optarg + 1 : optarg;
+          uint32_t n = strtoul(argp, &ep, 16);
+          if(*ep != '\0' || ep - argp != 6 || n > 0xFFFFFF) {
             fprintf(stderr, "Invalid hex color: '%s'\n", optarg);
             exit(1);
           }
+          g_options.bg_b = n & 0xFF;
+          g_options.bg_g = (n >> 8) & 0xFF;
+          g_options.bg_r = (n >> 16);
         }
         break;
       case 'e':
@@ -143,7 +147,6 @@ static void parse_args(int argc, char** argv)
         g_options.delay = strtoul(optarg, &argp, 10);
         g_options.delay *= 1000;
         if (*argp == '.') {
-          char *ep;
           long delay = strtoul(++argp, &ep, 10);
           for (int i = 3 - (ep - argp); i; i--) {
             delay *= 10;

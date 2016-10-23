@@ -124,40 +124,6 @@ SDL_Texture *create_chequered(SDL_Renderer *renderer)
   return ret;
 }
 
-static int parse_hex_digit(char c) {
-  if(c >= '0' && c <= '9') {
-    return c - '0';
-  } else if (c >= 'a' && c <= 'f') {
-    return c - 'a' + 10;
-  } else if (c >= 'A' && c <= 'F') {
-    return c - 'A' + 10;
-  }
-  return -1;
-}
-
-int parse_hex_color(const char* str,
-  unsigned char *r, unsigned char *g, unsigned char *b)
-{
-  if(str[0] == '#') {
-    ++str;
-  }
-
-  if(strlen(str) != 6) {
-    return 1;
-  }
-
-  for(int i = 0; i < 6; ++i) {
-    if(!isxdigit(str[i])) {
-      return 1;
-    }
-  }
-
-  *r = (parse_hex_digit(str[0]) << 4) + parse_hex_digit(str[1]);
-  *g = (parse_hex_digit(str[2]) << 4) + parse_hex_digit(str[3]);
-  *b = (parse_hex_digit(str[4]) << 4) + parse_hex_digit(str[5]);
-  return 0;
-}
-
 void imv_printf(SDL_Renderer *renderer, TTF_Font *font, int x, int y,
                 SDL_Color *fg, SDL_Color *bg, const char *fmt, ...)
 {

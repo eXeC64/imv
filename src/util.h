@@ -27,10 +27,6 @@ size_t read_from_stdin(void **buffer);
 /* Creates a new SDL_Texture* containing a chequeboard texture */
 SDL_Texture *create_chequered(SDL_Renderer *renderer);
 
-/* Parses a triplet of hexadecimal bytes. Writes values to r, g, and b. */
-int parse_hex_color(const char* str,
-  unsigned char *r, unsigned char *g, unsigned char *b);
-
 /* Loads a font using SDL2_ttf given a spec in the format "name:size" */
 TTF_Font *load_font(const char *font_spec);
 
