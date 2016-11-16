@@ -417,6 +417,8 @@ int main(int argc, char** argv)
             case SDLK_x:
               if(!e.key.repeat) {
                 imv_navigator_remove(&nav, imv_navigator_selection(&nav));
+                /* reset slideshow delay */
+                delay_msec = 0;
               }
               break;
             case SDLK_f:
