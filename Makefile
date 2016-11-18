@@ -10,8 +10,8 @@ MUTE :=	@
 endif
 
 CFLAGS ?= -W -Wall -pedantic -Wmissing-prototypes
-CFLAGS += -std=c99 $(shell sdl2-config --cflags) -D_XOPEN_SOURCE=700
-LDFLAGS += $(shell sdl2-config --libs) -lfreeimage -lSDL2_ttf -lfontconfig -lpthread
+override CFLAGS += -std=c99 $(shell sdl2-config --cflags) -D_XOPEN_SOURCE=700
+override LDFLAGS += $(shell sdl2-config --libs) -lfreeimage -lSDL2_ttf -lfontconfig -lpthread
 
 BUILDDIR ?= build
 TARGET := $(BUILDDIR)/imv
@@ -26,7 +26,7 @@ ifeq ($(VERSION),)
 VERSION := v2.1.3
 endif
 
-CFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
+override CFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
 
 imv: $(TARGET)
 
