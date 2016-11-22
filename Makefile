@@ -10,8 +10,9 @@ MUTE :=	@
 endif
 
 CFLAGS ?= -W -Wall -pedantic -Wmissing-prototypes
-CFLAGS += -std=c99 $(shell sdl2-config --cflags) -D_XOPEN_SOURCE=700
-LDFLAGS += $(shell sdl2-config --libs) -lfreeimage -lSDL2_ttf -lfontconfig -lpthread
+CFLAGS += -std=c99
+CPPFLAGS += $(shell sdl2-config --cflags) -D_XOPEN_SOURCE=700
+LIBS := $(shell sdl2-config --libs) -lfreeimage -lSDL2_ttf -lfontconfig -lpthread
 
 BUILDDIR ?= build
 TARGET := $(BUILDDIR)/imv
@@ -19,7 +20,8 @@ TARGET := $(BUILDDIR)/imv
 SOURCES := $(wildcard src/*.c)
 OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
 TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(wildcard test/*.c))
-TFLAGS ?= -g ${CFLAGS}
+TFLAGS ?= -g $(CFLAGS) $(CPPFLAGS) $(shell pkg-config --cflags cmocka)
+TLIBS := $(LIBS) $(shell pkg-config --libs cmocka)
 
 VERSION := $(shell git describe --abbrev=8 --dirty --always --tags 2> /dev/null)
 ifeq ($(VERSION),)
@@ -32,7 +34,7 @@ imv: $(TARGET)
 
 $(TARGET): $(OBJECTS)
 	@echo "LINKING $@"
-	$(MUTE)$(CC) -o $@ $^ $(LDLIBS) $(LDFLAGS)
+	$(MUTE)$(CC) -o $@ $^ $(LIBS) $(LDFLAGS)
 
 debug: CFLAGS += -DDEBUG -g -pg
 debug: $(TARGET)
@@ -44,11 +46,11 @@ $(BUILDDIR):
 
 $(BUILDDIR)/%.o: src/%.c
 	@echo "COMPILING $@"
-	$(MUTE)$(CC) -c $(CFLAGS) -o $@ $<
+	$(MUTE)$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
 $(BUILDDIR)/test_%: test/%.c src/%.c
 	@echo "BUILDING $@"
-	$(MUTE)$(CC) -o $@ -Isrc $(TFLAGS) $^ $(LDFLAGS) -lcmocka
+	$(MUTE)$(CC) -o $@ -Isrc $(TFLAGS) $^ $(LDFLAGS) $(TLIBS)
 
 check: $(BUILDDIR) $(TESTS)
 	@echo "RUNNING TESTS"
