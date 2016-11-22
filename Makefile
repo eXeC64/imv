@@ -23,10 +23,7 @@ TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(wildcard test/*.c))
 TFLAGS ?= -g $(CFLAGS) $(CPPFLAGS) $(shell pkg-config --cflags cmocka)
 TLIBS := $(LIBS) $(shell pkg-config --libs cmocka)
 
-VERSION := $(shell git describe --abbrev=8 --dirty --always --tags 2> /dev/null)
-ifeq ($(VERSION),)
-VERSION := v2.1.3
-endif
+VERSION != git describe --dirty --always --tags 2> /dev/null || echo v2.1.3
 
 CFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
 
