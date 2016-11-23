@@ -5,10 +5,6 @@ BINPREFIX ?= $(PREFIX)/bin
 MANPREFIX ?= $(PREFIX)/share/man
 DATAPREFIX ?= $(PREFIX)/share
 
-ifeq ($(V),)
-MUTE :=	@
-endif
-
 CFLAGS ?= -W -Wall -pedantic -Wmissing-prototypes
 CFLAGS += -std=c99
 CPPFLAGS += $(shell sdl2-config --cflags) -D_XOPEN_SOURCE=700
@@ -30,8 +26,7 @@ CFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
 imv: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	@echo "LINKING $@"
-	$(MUTE)$(CC) -o $@ $^ $(LIBS) $(LDFLAGS)
+	$(CC) -o $@ $^ $(LIBS) $(LDFLAGS)
 
 debug: CFLAGS += -DDEBUG -g -pg
 debug: $(TARGET)
@@ -39,22 +34,19 @@ debug: $(TARGET)
 $(OBJECTS): | $(BUILDDIR)
 
 $(BUILDDIR):
-	$(MUTE)mkdir -p $(BUILDDIR)
+	mkdir -p $(BUILDDIR)
 
 $(BUILDDIR)/%.o: src/%.c
-	@echo "COMPILING $@"
-	$(MUTE)$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
 $(BUILDDIR)/test_%: test/%.c src/%.c
-	@echo "BUILDING $@"
-	$(MUTE)$(CC) -o $@ -Isrc $(TFLAGS) $^ $(LDFLAGS) $(TLIBS)
+	$(CC) -o $@ -Isrc $(TFLAGS) $^ $(LDFLAGS) $(TLIBS)
 
 check: $(BUILDDIR) $(TESTS)
-	@echo "RUNNING TESTS"
-	$(MUTE)for t in $(TESTS); do $$t; done
+	for t in $(TESTS); do $$t; done
 
 clean:
-	$(MUTE)$(RM) -Rf $(BUILDDIR)
+	$(RM) -Rf $(BUILDDIR)
 
 install: $(TARGET)
 	install -D -m 0755 $(TARGET) $(DESTDIR)$(BINPREFIX)/imv
