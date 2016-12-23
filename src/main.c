@@ -645,11 +645,11 @@ int main(int argc, char** argv)
           clearerr(stdin);
           continue;
         }
-	if(feof(stdin)) {
-	  g_options.stdin_list = 0;
-	  fprintf(stderr, "done with stdin\n");
-	  continue;
-	}
+        if(feof(stdin)) {
+          g_options.stdin_list = 0;
+          fprintf(stderr, "done with stdin\n");
+          continue;
+        }
 
         size_t len = strlen(buf);
         if(buf[len-1] == '\n') {
