@@ -103,7 +103,8 @@ static void parse_args(int argc, char** argv)
   /* Do not print getopt errors */
   opterr = 0;
 
-  char *argp, *ep = *argv, o;
+  char *argp, *ep = *argv;
+  int o;
 
   while((o = getopt(argc, argv, "firasSudxhln:b:e:t:")) != -1) {
     switch(o) {
