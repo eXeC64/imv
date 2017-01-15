@@ -585,8 +585,9 @@ int main(int argc, char** argv)
       /* update window title */
       int len;
       const char *current_path = imv_navigator_selection(&nav);
-      len = snprintf(title, sizeof(title), "imv - [%i/%i] [%ix%i] %s [%s]",
+      len = snprintf(title, sizeof(title), "imv - [%i/%i] [%ix%i] [%.2f%%] %s [%s]",
           nav.cur_path + 1, nav.num_paths, tex.width, tex.height,
+          100.0 * view.scale,
           current_path, scaling_label[g_options.scaling]);
       if(g_options.delay >= 1000) {
         len += snprintf(title + len, sizeof(title) - len, "[%lu/%lus]",
