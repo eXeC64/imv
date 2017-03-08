@@ -417,7 +417,17 @@ int main(int argc, char** argv)
               break;
             case SDLK_x:
               if(!e.key.repeat) {
-                imv_navigator_remove(&nav, imv_navigator_selection(&nav));
+                char* path = strdup(imv_navigator_selection(&nav));
+                imv_navigator_remove(&nav, path);
+
+                if (SDL_GetModState() & KMOD_SHIFT) {
+                  if (remove(path)) {
+                    fprintf(stderr, "Warning: can't remove %s from disk.\n", path);
+                  }
+                }
+
+                free(path);
+
                 /* reset slideshow delay */
                 delay_msec = 0;
               }
