@@ -53,6 +53,12 @@ const char *imv_navigator_selection(struct imv_navigator *nav);
 /* Change the currently selected path. dir = -1 for previous, 1 for next. */
 void imv_navigator_select_rel(struct imv_navigator *nav, int dir);
 
+/* Change the current selected path.
+ * if pos < 0 go to the first image.
+ * if pos > num_path go to the last image
+ */
+void imv_navigator_select_abs(struct imv_navigator *nav, int pos);
+
 /* Removes the given path. The current selection is updated if necessary,
  * based on the last direction the selection moved. */
 void imv_navigator_remove(struct imv_navigator *nav, const char *path);

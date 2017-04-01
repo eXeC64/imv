@@ -148,6 +148,21 @@ void imv_navigator_select_rel(struct imv_navigator *nav, int direction)
   return;
 }
 
+void imv_navigator_select_abs(struct imv_navigator *nav, int pos) {
+  if(pos == nav->cur_path) {
+    return;
+  }
+  if(pos < 0) {
+    pos = 0;
+  }
+  if(pos >= nav->num_paths) {
+    pos = nav->num_paths - 1;
+  }
+  nav->cur_path = pos;
+  nav->last_move_direction = pos < nav->cur_path ? -1 : 1;
+  nav->changed = 1;
+}
+
 void imv_navigator_remove(struct imv_navigator *nav, const char *path)
 {
   int removed = -1;
