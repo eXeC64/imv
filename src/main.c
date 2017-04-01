@@ -343,6 +343,10 @@ int main(int argc, char** argv)
   int iw = 0, ih = 0;
 
   int quit = 0;
+
+  /* Accumulator for "goto" */
+  int value = 0;
+
   while(!quit) {
     /* handle any input/window events sent by SDL */
     SDL_Event e;
@@ -465,6 +469,62 @@ int main(int argc, char** argv)
                 g_options.delay += 1000;
               }
               need_redraw = 1;
+              break;
+            case SDLK_KP_0:
+            case SDLK_0:
+              value = value * 10;
+              delay_msec = 0;
+              break;
+            case SDLK_KP_1:
+            case SDLK_1:
+              value = value * 10 + 1;
+              delay_msec = 0;
+              break;
+            case SDLK_KP_2:
+            case SDLK_2:
+              value = value * 10 + 2;
+              delay_msec = 0;
+              break;
+            case SDLK_KP_3:
+            case SDLK_3:
+              value = value * 10 + 3;
+              delay_msec = 0;
+              break;
+            case SDLK_KP_4:
+            case SDLK_4:
+              value = value * 10 + 4;
+              delay_msec = 0;
+              break;
+            case SDLK_KP_5:
+            case SDLK_5:
+              value = value * 10 + 5;
+              delay_msec = 0;
+              break;
+            case SDLK_KP_6:
+            case SDLK_6:
+              value = value * 10 + 6;
+              delay_msec = 0;
+              break;
+            case SDLK_KP_7:
+            case SDLK_7:
+              value = value * 10 + 7;
+              delay_msec = 0;
+              break;
+            case SDLK_KP_8:
+            case SDLK_8:
+              value = value * 10 + 8;
+              delay_msec = 0;
+              break;
+            case SDLK_KP_9:
+            case SDLK_9:
+              value = value * 10 + 9;
+              delay_msec = 0;
+              break;
+            case SDLK_KP_ENTER:
+            case SDLK_RETURN:
+              imv_navigator_select_abs(&nav, value - 1);
+              value = 0;
+              delay_msec = 0;
               break;
           }
           break;
