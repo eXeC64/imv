@@ -170,6 +170,15 @@ static void parse_args(int argc, char** argv)
   }
 }
 
+#define _concat(a, n) a##n
+#define concat(a, n) _concat(a, n)
+#define define_jump(key) \
+  case concat(SDLK_KP_, key):\
+  case concat(SDLK_, key):\
+    value = value * 10 + key;\
+    delay_msec = 0;\
+    break;
+
 int main(int argc, char** argv)
 {
   struct imv_navigator nav;
@@ -470,56 +479,16 @@ int main(int argc, char** argv)
               }
               need_redraw = 1;
               break;
-            case SDLK_KP_0:
-            case SDLK_0:
-              value = value * 10;
-              delay_msec = 0;
-              break;
-            case SDLK_KP_1:
-            case SDLK_1:
-              value = value * 10 + 1;
-              delay_msec = 0;
-              break;
-            case SDLK_KP_2:
-            case SDLK_2:
-              value = value * 10 + 2;
-              delay_msec = 0;
-              break;
-            case SDLK_KP_3:
-            case SDLK_3:
-              value = value * 10 + 3;
-              delay_msec = 0;
-              break;
-            case SDLK_KP_4:
-            case SDLK_4:
-              value = value * 10 + 4;
-              delay_msec = 0;
-              break;
-            case SDLK_KP_5:
-            case SDLK_5:
-              value = value * 10 + 5;
-              delay_msec = 0;
-              break;
-            case SDLK_KP_6:
-            case SDLK_6:
-              value = value * 10 + 6;
-              delay_msec = 0;
-              break;
-            case SDLK_KP_7:
-            case SDLK_7:
-              value = value * 10 + 7;
-              delay_msec = 0;
-              break;
-            case SDLK_KP_8:
-            case SDLK_8:
-              value = value * 10 + 8;
-              delay_msec = 0;
-              break;
-            case SDLK_KP_9:
-            case SDLK_9:
-              value = value * 10 + 9;
-              delay_msec = 0;
-              break;
+            define_jump(0)
+            define_jump(1)
+            define_jump(2)
+            define_jump(3)
+            define_jump(4)
+            define_jump(5)
+            define_jump(6)
+            define_jump(7)
+            define_jump(8)
+            define_jump(9)
             case SDLK_KP_ENTER:
             case SDLK_RETURN:
               imv_navigator_select_abs(&nav, value - 1);
