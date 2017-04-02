@@ -181,6 +181,7 @@ static void parse_args(int argc, char** argv)
       value = value * 10 + key;\
     } \
     delay_msec = 0;\
+    need_redraw = 1;\
     break;
 
 int main(int argc, char** argv)
@@ -687,6 +688,20 @@ int main(int argc, char** argv)
         SDL_Color bg = {0,0,0,160};
         imv_printf(renderer, font, 0, 0, &fg, &bg, "%s",
             title + strlen("imv - "));
+      }
+      if(font && value >= 0) {
+        printf("Drawing\n");
+        SDL_Color fg = {255,255,255,255};
+        SDL_Color bg = {0,0,0,160};
+        // x = ww - strlen(txt) * font size
+        // y = font size + 10% (padding)
+        int size = TTF_FontHeight(font);
+        char txt[50];
+        sprintf(txt, "Jump to image %d", value);
+        imv_printf(renderer, font,
+                   0,
+                   size + (0.1 * size), &fg, &bg,
+                   "Jump to image %d", value);
       }
 
       /* redraw complete, unset the flag */
