@@ -175,7 +175,11 @@ static void parse_args(int argc, char** argv)
 #define define_jump(key) \
   case concat(SDLK_KP_, key):\
   case concat(SDLK_, key):\
-    value = value * 10 + key;\
+    if(value <= 0) { \
+      value = key; \
+    } else { \
+      value = value * 10 + key;\
+    } \
     delay_msec = 0;\
     break;
 
@@ -354,7 +358,7 @@ int main(int argc, char** argv)
   int quit = 0;
 
   /* Accumulator for "goto" */
-  int value = 0;
+  int value = -1;
 
   while(!quit) {
     /* handle any input/window events sent by SDL */
@@ -372,12 +376,14 @@ int main(int argc, char** argv)
               break;
             case SDLK_LEFTBRACKET:
             case SDLK_LEFT:
+              value = -1;
               imv_navigator_select_rel(&nav, -1);
               /* reset slideshow delay */
               delay_msec = 0;
               break;
             case SDLK_RIGHTBRACKET:
             case SDLK_RIGHT:
+              value = -1;
               imv_navigator_select_rel(&nav, 1);
               /* reset slideshow delay */
               delay_msec = 0;
@@ -386,14 +392,17 @@ int main(int argc, char** argv)
             case SDLK_PLUS:
             case SDLK_i:
             case SDLK_UP:
+              value = -1;
               imv_viewport_zoom(&view, &tex, IMV_ZOOM_KEYBOARD, 1);
               break;
             case SDLK_MINUS:
             case SDLK_o:
             case SDLK_DOWN:
+              value = -1;
               imv_viewport_zoom(&view, &tex, IMV_ZOOM_KEYBOARD, -1);
               break;
             case SDLK_s:
+              value = -1;
               if(!e.key.repeat) {
                 if((g_options.scaling += 1) > FULL) {
                   g_options.scaling = NONE;
@@ -401,34 +410,42 @@ int main(int argc, char** argv)
               }
             /* FALLTHROUGH */
             case SDLK_r:
+              value = -1;
               if(!e.key.repeat) {
                 need_rescale = 1;
                 need_redraw = 1;
               }
               break;
             case SDLK_a:
+              value = -1;
               if(!e.key.repeat) {
                 imv_viewport_scale_to_actual(&view, &tex);
               }
               break;
             case SDLK_c:
+              value = -1;
               if(!e.key.repeat) {
                 imv_viewport_center(&view, &tex);
               }
               break;
             case SDLK_j:
+              value = -1;
               imv_viewport_move(&view, 0, -50);
               break;
             case SDLK_k:
+              value = -1;
               imv_viewport_move(&view, 0, 50);
               break;
             case SDLK_h:
+              value = -1;
               imv_viewport_move(&view, 50, 0);
               break;
             case SDLK_l:
+              value = -1;
               imv_viewport_move(&view, -50, 0);
               break;
             case SDLK_x:
+              value = -1;
               if(!e.key.repeat) {
                 char* path = strdup(imv_navigator_selection(&nav));
                 imv_navigator_remove(&nav, path);
@@ -446,30 +463,36 @@ int main(int argc, char** argv)
               }
               break;
             case SDLK_f:
+              value = -1;
               if(!e.key.repeat) {
                 imv_viewport_toggle_fullscreen(&view);
               }
               break;
             case SDLK_PERIOD:
+              value = -1;
               imv_loader_load_next_frame(&ldr);
               break;
             case SDLK_SPACE:
+              value = -1;
               if(!e.key.repeat) {
                 imv_viewport_toggle_playing(&view);
               }
               break;
             case SDLK_p:
+              value = -1;
               if(!e.key.repeat) {
                 puts(imv_navigator_selection(&nav));
               }
               break;
             case SDLK_d:
+              value = -1;
               if(!e.key.repeat) {
                 g_options.overlay = !g_options.overlay;
                 need_redraw = 1;
               }
               break;
             case SDLK_t:
+              value = -1;
               if(e.key.keysym.mod & (KMOD_SHIFT|KMOD_CAPS)) {
                 if(g_options.delay >= 1000) {
                   g_options.delay -= 1000;
@@ -491,8 +514,10 @@ int main(int argc, char** argv)
             define_jump(9)
             case SDLK_KP_ENTER:
             case SDLK_RETURN:
-              imv_navigator_select_abs(&nav, value - 1);
-              value = 0;
+              if(value >= 0){
+                imv_navigator_select_abs(&nav, value - 1);
+              }
+              value = -1;
               delay_msec = 0;
               break;
           }
