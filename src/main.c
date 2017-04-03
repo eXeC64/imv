@@ -531,6 +531,9 @@ int main(int argc, char** argv)
               value = -1;
               delay_msec = 0;
               break;
+            default:
+              value = -1;
+              break;
           }
           break;
         case SDL_MOUSEWHEEL:
