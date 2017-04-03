@@ -177,6 +177,8 @@ static void parse_args(int argc, char** argv)
   case concat(SDLK_, key):\
     if(value <= 0) { \
       value = key; \
+      jmp_txt_col.g = 255; \
+      jmp_txt_col.b = 255; \
     } else { \
       value = value * 10 + key;\
       jmp_txt_col.g = 255; \
