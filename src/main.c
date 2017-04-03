@@ -170,6 +170,29 @@ static void parse_args(int argc, char** argv)
   }
 }
 
+#define _concat(a, n) a##n
+#define concat(a, n) _concat(a, n)
+#define define_jump(key) \
+  case concat(SDLK_KP_, key):\
+  case concat(SDLK_, key):\
+    if(value <= 0) { \
+      value = key; \
+      jmp_txt_col.g = 255; \
+      jmp_txt_col.b = 255; \
+    } else { \
+      value = value * 10 + key;\
+      jmp_txt_col.g = 255; \
+      jmp_txt_col.b = 255; \
+      if(value > nav.num_paths) { \
+        value = nav.num_paths; \
+        jmp_txt_col.g = 0; \
+        jmp_txt_col.b = 0; \
+      } \
+    } \
+    delay_msec = 0;\
+    need_redraw = 1;\
+    break;
+
 int main(int argc, char** argv)
 {
   struct imv_navigator nav;
@@ -343,6 +366,11 @@ int main(int argc, char** argv)
   int iw = 0, ih = 0;
 
   int quit = 0;
+
+  /* Accumulator for "goto" */
+  int value = -1;
+  SDL_Color jmp_txt_col = {255,255,255,255};
+
   while(!quit) {
     /* handle any input/window events sent by SDL */
     SDL_Event e;
@@ -359,12 +387,14 @@ int main(int argc, char** argv)
               break;
             case SDLK_LEFTBRACKET:
             case SDLK_LEFT:
+              value = -1;
               imv_navigator_select_rel(&nav, -1);
               /* reset slideshow delay */
               delay_msec = 0;
               break;
             case SDLK_RIGHTBRACKET:
             case SDLK_RIGHT:
+              value = -1;
               imv_navigator_select_rel(&nav, 1);
               /* reset slideshow delay */
               delay_msec = 0;
@@ -373,14 +403,17 @@ int main(int argc, char** argv)
             case SDLK_PLUS:
             case SDLK_i:
             case SDLK_UP:
+              value = -1;
               imv_viewport_zoom(&view, &tex, IMV_ZOOM_KEYBOARD, 1);
               break;
             case SDLK_MINUS:
             case SDLK_o:
             case SDLK_DOWN:
+              value = -1;
               imv_viewport_zoom(&view, &tex, IMV_ZOOM_KEYBOARD, -1);
               break;
             case SDLK_s:
+              value = -1;
               if(!e.key.repeat) {
                 if((g_options.scaling += 1) > FULL) {
                   g_options.scaling = NONE;
@@ -388,34 +421,42 @@ int main(int argc, char** argv)
               }
             /* FALLTHROUGH */
             case SDLK_r:
+              value = -1;
               if(!e.key.repeat) {
                 need_rescale = 1;
                 need_redraw = 1;
               }
               break;
             case SDLK_a:
+              value = -1;
               if(!e.key.repeat) {
                 imv_viewport_scale_to_actual(&view, &tex);
               }
               break;
             case SDLK_c:
+              value = -1;
               if(!e.key.repeat) {
                 imv_viewport_center(&view, &tex);
               }
               break;
             case SDLK_j:
+              value = -1;
               imv_viewport_move(&view, 0, -50);
               break;
             case SDLK_k:
+              value = -1;
               imv_viewport_move(&view, 0, 50);
               break;
             case SDLK_h:
+              value = -1;
               imv_viewport_move(&view, 50, 0);
               break;
             case SDLK_l:
+              value = -1;
               imv_viewport_move(&view, -50, 0);
               break;
             case SDLK_x:
+              value = -1;
               if(!e.key.repeat) {
                 char* path = strdup(imv_navigator_selection(&nav));
                 imv_navigator_remove(&nav, path);
@@ -433,30 +474,36 @@ int main(int argc, char** argv)
               }
               break;
             case SDLK_f:
+              value = -1;
               if(!e.key.repeat) {
                 imv_viewport_toggle_fullscreen(&view);
               }
               break;
             case SDLK_PERIOD:
+              value = -1;
               imv_loader_load_next_frame(&ldr);
               break;
             case SDLK_SPACE:
+              value = -1;
               if(!e.key.repeat) {
                 imv_viewport_toggle_playing(&view);
               }
               break;
             case SDLK_p:
+              value = -1;
               if(!e.key.repeat) {
                 puts(imv_navigator_selection(&nav));
               }
               break;
             case SDLK_d:
+              value = -1;
               if(!e.key.repeat) {
                 g_options.overlay = !g_options.overlay;
                 need_redraw = 1;
               }
               break;
             case SDLK_t:
+              value = -1;
               if(e.key.keysym.mod & (KMOD_SHIFT|KMOD_CAPS)) {
                 if(g_options.delay >= 1000) {
                   g_options.delay -= 1000;
@@ -465,6 +512,27 @@ int main(int argc, char** argv)
                 g_options.delay += 1000;
               }
               need_redraw = 1;
+              break;
+            define_jump(0)
+            define_jump(1)
+            define_jump(2)
+            define_jump(3)
+            define_jump(4)
+            define_jump(5)
+            define_jump(6)
+            define_jump(7)
+            define_jump(8)
+            define_jump(9)
+            case SDLK_KP_ENTER:
+            case SDLK_RETURN:
+              if(value >= 0){
+                imv_navigator_select_abs(&nav, value - 1);
+              }
+              value = -1;
+              delay_msec = 0;
+              break;
+            default:
+              value = -1;
               break;
           }
           break;
@@ -633,6 +701,16 @@ int main(int argc, char** argv)
         SDL_Color bg = {0,0,0,160};
         imv_printf(renderer, font, 0, 0, &fg, &bg, "%s",
             title + strlen("imv - "));
+      }
+      if(font && value >= 0) {
+        SDL_Color bg = {0,0,0,160};
+        int size = TTF_FontHeight(font);
+        char txt[50];
+        sprintf(txt, "Jump to image %d", value);
+        imv_printf(renderer, font,
+                   0,
+                   size + (0.1 * size), &jmp_txt_col, &bg,
+                   "Jump to image %d", value);
       }
 
       /* redraw complete, unset the flag */
