@@ -179,6 +179,13 @@ static void parse_args(int argc, char** argv)
       value = key; \
     } else { \
       value = value * 10 + key;\
+      jmp_txt_col.g = 255; \
+      jmp_txt_col.b = 255; \
+      if(value > nav.num_paths) { \
+        value = nav.num_paths; \
+        jmp_txt_col.g = 0; \
+        jmp_txt_col.b = 0; \
+      } \
     } \
     delay_msec = 0;\
     need_redraw = 1;\
@@ -360,6 +367,7 @@ int main(int argc, char** argv)
 
   /* Accumulator for "goto" */
   int value = -1;
+  SDL_Color jmp_txt_col = {255,255,255,255};
 
   while(!quit) {
     /* handle any input/window events sent by SDL */
@@ -690,17 +698,13 @@ int main(int argc, char** argv)
             title + strlen("imv - "));
       }
       if(font && value >= 0) {
-        printf("Drawing\n");
-        SDL_Color fg = {255,255,255,255};
         SDL_Color bg = {0,0,0,160};
-        // x = ww - strlen(txt) * font size
-        // y = font size + 10% (padding)
         int size = TTF_FontHeight(font);
         char txt[50];
         sprintf(txt, "Jump to image %d", value);
         imv_printf(renderer, font,
                    0,
-                   size + (0.1 * size), &fg, &bg,
+                   size + (0.1 * size), &jmp_txt_col, &bg,
                    "Jump to image %d", value);
       }
 
