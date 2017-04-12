@@ -28,6 +28,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <poll.h>
 #include <errno.h>
 
+#include "commands.h"
+#include "list.h"
 #include "loader.h"
 #include "texture.h"
 #include "navigator.h"
@@ -170,10 +172,44 @@ static void parse_args(int argc, char** argv)
   }
 }
 
+struct {
+  struct imv_navigator nav;
+  struct imv_loader ldr;
+  struct imv_texture tex;
+  struct imv_viewport view;
+  SDL_Window *window;
+  SDL_Renderer *renderer;
+  int quit;
+
+  /* used to calculate when to skip to the next image in slideshow mode */
+  unsigned long delay_msec;
+
+  /* do we need to redraw the window? */
+  int need_redraw;
+  int need_rescale;
+} g_state;
+
+void cmd_quit(struct imv_list *args);
+void cmd_pan(struct imv_list *args);
+void cmd_select_rel(struct imv_list *args);
+void cmd_select_abs(struct imv_list *args);
+void cmd_zoom(struct imv_list *args);
+void cmd_remove(struct imv_list *args);
+void cmd_fullscreen(struct imv_list *args);
+void cmd_overlay(struct imv_list *args);
+
 int main(int argc, char** argv)
 {
-  struct imv_navigator nav;
-  imv_navigator_init(&nav);
+  imv_command_register("quit", &cmd_quit);
+  imv_command_register("pan", &cmd_pan);
+  imv_command_register("select_rel", &cmd_select_rel);
+  imv_command_register("select_abs", &cmd_select_abs);
+  imv_command_register("zoom", &cmd_zoom);
+  imv_command_register("remove", &cmd_remove);
+  imv_command_register("fullscreen", &cmd_fullscreen);
+  imv_command_register("overlay", &cmd_overlay);
+
+  imv_navigator_init(&g_state.nav);
 
   /* parse any command line options given */
   parse_args(argc, argv);
@@ -202,8 +238,8 @@ int main(int argc, char** argv)
         buf[--len] = 0;
       }
       if(len > 0) {
-        if(imv_navigator_add(&nav, buf, g_options.recursive) != 0) {
-          imv_navigator_destroy(&nav);
+        if(imv_navigator_add(&g_state.nav, buf, g_options.recursive) != 0) {
+          imv_navigator_destroy(&g_state.nav);
           exit(1);
         }
         break;
@@ -237,25 +273,25 @@ int main(int argc, char** argv)
       errno = 0; /* clear errno */
     }
     /* add the given path to the list to load */
-    if(imv_navigator_add(&nav, argv[i], g_options.recursive) != 0) {
-      imv_navigator_destroy(&nav);
+    if(imv_navigator_add(&g_state.nav, argv[i], g_options.recursive) != 0) {
+      imv_navigator_destroy(&g_state.nav);
       exit(1);
     }
   }
 
   /* if we weren't given any paths we have nothing to view. exit */
-  if(!imv_navigator_selection(&nav)) {
+  if(!imv_navigator_selection(&g_state.nav)) {
     fprintf(stderr, "No input files. Exiting.\n");
     exit(1);
   }
 
   /* go to the chosen starting image if possible */
   if(g_options.start_at) {
-    int start_index = imv_navigator_find_path(&nav, g_options.start_at);
+    int start_index = imv_navigator_find_path(&g_state.nav, g_options.start_at);
     if(start_index < 0) {
       start_index = strtol(g_options.start_at,NULL,10) - 1;
     }
-    imv_navigator_select_str(&nav, start_index);
+    imv_navigator_select_str(&g_state.nav, start_index);
   }
 
   /* we've got something to display, so create an SDL window */
@@ -269,23 +305,23 @@ int main(int argc, char** argv)
   const int width = 1280;
   const int height = 720;
 
-  SDL_Window *window = SDL_CreateWindow(
+  g_state.window = SDL_CreateWindow(
         "imv",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         width, height,
         SDL_WINDOW_RESIZABLE);
-  if(!window) {
+  if(!g_state.window) {
     fprintf(stderr, "SDL Failed to create window: %s\n", SDL_GetError());
     SDL_Quit();
     exit(1);
   }
 
   /* we'll use SDL's built-in renderer, hardware accelerated if possible */
-  SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
-  if(!renderer) {
+  g_state.renderer = SDL_CreateRenderer(g_state.window, -1, 0);
+  if(!g_state.renderer) {
     fprintf(stderr, "SDL Failed to create renderer: %s\n", SDL_GetError());
-    SDL_DestroyWindow(window);
+    SDL_DestroyWindow(g_state.window);
     SDL_Quit();
     exit(1);
   }
@@ -297,7 +333,7 @@ int main(int argc, char** argv)
   /* construct a chequered background texture */
   SDL_Texture *chequered_tex = NULL;
   if(!g_options.solid_bg) {
-    chequered_tex = create_chequered(renderer);
+    chequered_tex = create_chequered(g_state.renderer);
   }
 
   /* set up the required fonts and surfaces for displaying the overlay */
@@ -308,18 +344,15 @@ int main(int argc, char** argv)
   }
 
   /* create our main classes on the stack*/
-  struct imv_loader ldr;
-  imv_init_loader(&ldr);
+  imv_init_loader(&g_state.ldr);
 
-  struct imv_texture tex;
-  imv_init_texture(&tex, renderer);
+  imv_init_texture(&g_state.tex, g_state.renderer);
 
-  struct imv_viewport view;
-  imv_init_viewport(&view, window);
+  imv_init_viewport(&g_state.view, g_state.window);
 
   /* put us in fullscren mode to begin with if requested */
   if(g_options.fullscreen) {
-    imv_viewport_toggle_fullscreen(&view);
+    imv_viewport_toggle_fullscreen(&g_state.view);
   }
 
   /* help keeping track of time */
@@ -329,56 +362,50 @@ int main(int argc, char** argv)
   /* keep file change polling rate under control */
   static uint8_t poll_countdown = UINT8_MAX;
 
-  /* do we need to redraw the window? */
-  int need_redraw = 1;
-  int need_rescale = 0;
+  g_state.need_redraw = 1;
+  g_state.need_rescale = 0;
 
   /* keep title buffer around for reuse */
   char title[256];
 
-  /* used to calculate when to skip to the next image in slideshow mode */
-  unsigned long delay_msec = 0;
+  g_state.delay_msec = 0;
 
   /* initialize variables holding image dimentions */
   int iw = 0, ih = 0;
 
-  int quit = 0;
-  while(!quit) {
+  g_state.quit = 0;
+  while(!g_state.quit) {
     /* handle any input/window events sent by SDL */
     SDL_Event e;
-    while(!quit && SDL_PollEvent(&e)) {
+    while(!g_state.quit && SDL_PollEvent(&e)) {
       switch(e.type) {
         case SDL_QUIT:
-          quit = 1;
+          imv_command_exec("quit");
           break;
         case SDL_KEYDOWN:
           SDL_ShowCursor(SDL_DISABLE);
           switch (e.key.keysym.sym) {
             case SDLK_q:
-              quit = 1;
+              imv_command_exec("quit");
               break;
             case SDLK_LEFTBRACKET:
             case SDLK_LEFT:
-              imv_navigator_select_rel(&nav, -1);
-              /* reset slideshow delay */
-              delay_msec = 0;
+              imv_command_exec("select_rel -1");
               break;
             case SDLK_RIGHTBRACKET:
             case SDLK_RIGHT:
-              imv_navigator_select_rel(&nav, 1);
-              /* reset slideshow delay */
-              delay_msec = 0;
+              imv_command_exec("select_rel 1");
               break;
             case SDLK_EQUALS:
             case SDLK_PLUS:
             case SDLK_i:
             case SDLK_UP:
-              imv_viewport_zoom(&view, &tex, IMV_ZOOM_KEYBOARD, 1);
+              imv_viewport_zoom(&g_state.view, &g_state.tex, IMV_ZOOM_KEYBOARD, 1);
               break;
             case SDLK_MINUS:
             case SDLK_o:
             case SDLK_DOWN:
-              imv_viewport_zoom(&view, &tex, IMV_ZOOM_KEYBOARD, -1);
+              imv_viewport_zoom(&g_state.view, &g_state.tex, IMV_ZOOM_KEYBOARD, -1);
               break;
             case SDLK_s:
               if(!e.key.repeat) {
@@ -389,71 +416,58 @@ int main(int argc, char** argv)
             /* FALLTHROUGH */
             case SDLK_r:
               if(!e.key.repeat) {
-                need_rescale = 1;
-                need_redraw = 1;
+                g_state.need_rescale = 1;
+                g_state.need_redraw = 1;
               }
               break;
             case SDLK_a:
               if(!e.key.repeat) {
-                imv_viewport_scale_to_actual(&view, &tex);
+                imv_viewport_scale_to_actual(&g_state.view, &g_state.tex);
               }
               break;
             case SDLK_c:
               if(!e.key.repeat) {
-                imv_viewport_center(&view, &tex);
+                imv_viewport_center(&g_state.view, &g_state.tex);
               }
               break;
             case SDLK_j:
-              imv_viewport_move(&view, 0, -50);
+              imv_command_exec("pan 0 -50");
               break;
             case SDLK_k:
-              imv_viewport_move(&view, 0, 50);
+              imv_command_exec("pan 0 50");
               break;
             case SDLK_h:
-              imv_viewport_move(&view, 50, 0);
+              imv_command_exec("pan 50 0");
               break;
             case SDLK_l:
-              imv_viewport_move(&view, -50, 0);
+              imv_command_exec("pan -50 0");
               break;
             case SDLK_x:
               if(!e.key.repeat) {
-                char* path = strdup(imv_navigator_selection(&nav));
-                imv_navigator_remove(&nav, path);
-
-                if (SDL_GetModState() & KMOD_SHIFT) {
-                  if (remove(path)) {
-                    fprintf(stderr, "Warning: can't remove %s from disk.\n", path);
-                  }
-                }
-
-                free(path);
-
-                /* reset slideshow delay */
-                delay_msec = 0;
+                imv_command_exec("remove");
               }
               break;
             case SDLK_f:
               if(!e.key.repeat) {
-                imv_viewport_toggle_fullscreen(&view);
+                imv_command_exec("fullscreen");
               }
               break;
             case SDLK_PERIOD:
-              imv_loader_load_next_frame(&ldr);
+              imv_loader_load_next_frame(&g_state.ldr);
               break;
             case SDLK_SPACE:
               if(!e.key.repeat) {
-                imv_viewport_toggle_playing(&view);
+                imv_viewport_toggle_playing(&g_state.view);
               }
               break;
             case SDLK_p:
               if(!e.key.repeat) {
-                puts(imv_navigator_selection(&nav));
+                puts(imv_navigator_selection(&g_state.nav));
               }
               break;
             case SDLK_d:
               if(!e.key.repeat) {
-                g_options.overlay = !g_options.overlay;
-                need_redraw = 1;
+                imv_command_exec("overlay");
               }
               break;
             case SDLK_t:
@@ -464,35 +478,35 @@ int main(int argc, char** argv)
               } else {
                 g_options.delay += 1000;
               }
-              need_redraw = 1;
+              g_state.need_redraw = 1;
               break;
           }
           break;
         case SDL_MOUSEWHEEL:
-          imv_viewport_zoom(&view, &tex, IMV_ZOOM_MOUSE, e.wheel.y);
+          imv_viewport_zoom(&g_state.view, &g_state.tex, IMV_ZOOM_MOUSE, e.wheel.y);
           SDL_ShowCursor(SDL_ENABLE);
           break;
         case SDL_MOUSEMOTION:
           if(e.motion.state & SDL_BUTTON_LMASK) {
-            imv_viewport_move(&view, e.motion.xrel, e.motion.yrel);
+            imv_viewport_move(&g_state.view, e.motion.xrel, e.motion.yrel);
           }
           SDL_ShowCursor(SDL_ENABLE);
           break;
         case SDL_WINDOWEVENT:
-          imv_viewport_update(&view, &tex);
+          imv_viewport_update(&g_state.view, &g_state.tex);
           break;
       }
     }
 
     /* if we're quitting, don't bother drawing any more images */
-    if(quit) {
+    if(g_state.quit) {
       break;
     }
 
     /* check if an image failed to load, if so, remove it from our image list */
-    char *err_path = imv_loader_get_error(&ldr);
+    char *err_path = imv_loader_get_error(&g_state.ldr);
     if(err_path) {
-      imv_navigator_remove(&nav, err_path);
+      imv_navigator_remove(&g_state.nav, err_path);
       if (strncmp(err_path, "-", 2) == 0) {
         free(stdin_buffer);
         stdin_buffer_size = 0;
@@ -506,13 +520,13 @@ int main(int argc, char** argv)
     }
 
     /* Check if navigator wrapped around paths lists */
-    if(!g_options.cycle && imv_navigator_wrapped(&nav)) {
+    if(!g_options.cycle && imv_navigator_wrapped(&g_state.nav)) {
       break;
     }
 
     /* if the user has changed image, start loading the new one */
-    if(imv_navigator_poll_changed(&nav, poll_countdown--)) {
-      const char *current_path = imv_navigator_selection(&nav);
+    if(imv_navigator_poll_changed(&g_state.nav, poll_countdown--)) {
+      const char *current_path = imv_navigator_selection(&g_state.nav);
       if(!current_path) {
         if(g_options.stdin_list) {
           continue;
@@ -522,37 +536,37 @@ int main(int argc, char** argv)
       }
 
       snprintf(title, sizeof(title), "imv - [%i/%i] [LOADING] %s [%s]",
-          nav.cur_path + 1, nav.num_paths, current_path,
+          g_state.nav.cur_path + 1, g_state.nav.num_paths, current_path,
           scaling_label[g_options.scaling]);
-      imv_viewport_set_title(&view, title);
+      imv_viewport_set_title(&g_state.view, title);
 
-      imv_loader_load(&ldr, current_path, stdin_buffer, stdin_buffer_size);
-      view.playing = 1;
+      imv_loader_load(&g_state.ldr, current_path, stdin_buffer, stdin_buffer_size);
+      g_state.view.playing = 1;
     }
 
     /* get window height and width */
     int ww, wh;
-    SDL_GetWindowSize(window, &ww, &wh);
+    SDL_GetWindowSize(g_state.window, &ww, &wh);
 
     /* check if a new image is available to display */
     FIBITMAP *bmp;
     int is_new_image;
-    if(imv_loader_get_image(&ldr, &bmp, &is_new_image)) {
-      imv_texture_set_image(&tex, bmp);
+    if(imv_loader_get_image(&g_state.ldr, &bmp, &is_new_image)) {
+      imv_texture_set_image(&g_state.tex, bmp);
       iw = FreeImage_GetWidth(bmp);
       ih = FreeImage_GetHeight(bmp);
       FreeImage_Unload(bmp);
-      need_redraw = 1;
-      need_rescale += is_new_image;
+      g_state.need_redraw = 1;
+      g_state.need_rescale += is_new_image;
     }
 
-    if(need_rescale) {
-      need_rescale = 0;
+    if(g_state.need_rescale) {
+      g_state.need_rescale = 0;
       if(g_options.scaling == NONE ||
           (g_options.scaling == DOWN && ww > iw && wh > ih)) {
-        imv_viewport_scale_to_actual(&view, &tex);
+        imv_viewport_scale_to_actual(&g_state.view, &g_state.tex);
       } else {
-        imv_viewport_scale_to_window(&view, &tex);
+        imv_viewport_scale_to_window(&g_state.view, &g_state.tex);
       }
     }
 
@@ -560,7 +574,7 @@ int main(int argc, char** argv)
 
     /* if we're playing an animated gif, tell the loader how much time has
      * passed */
-    if(view.playing) {
+    if(g_state.view.playing) {
       unsigned int dt = current_time - last_time;
       /* We cap the delta-time to 100 ms so that if imv is asleep for several
        * seconds or more (e.g. suspended), upon waking up it doesn't try to
@@ -568,49 +582,49 @@ int main(int argc, char** argv)
       if(dt > 100) {
         dt = 100;
       }
-      imv_loader_time_passed(&ldr, dt / 1000.0);
+      imv_loader_time_passed(&g_state.ldr, dt / 1000.0);
     }
 
     /* handle slideshow */
     if(g_options.delay) {
       unsigned int dt = current_time - last_time;
 
-      delay_msec += dt;
-      need_redraw = 1;
-      if(delay_msec >= g_options.delay) {
-        imv_navigator_select_rel(&nav, 1);
-        delay_msec = 0;
+      g_state.delay_msec += dt;
+      g_state.need_redraw = 1;
+      if(g_state.delay_msec >= g_options.delay) {
+        imv_navigator_select_rel(&g_state.nav, 1);
+        g_state.delay_msec = 0;
       }
     }
 
     last_time = current_time;
 
     /* check if the viewport needs a redraw */
-    if(imv_viewport_needs_redraw(&view)) {
-      need_redraw = 1;
+    if(imv_viewport_needs_redraw(&g_state.view)) {
+      g_state.need_redraw = 1;
     }
 
     /* only redraw when something's changed */
-    if(need_redraw) {
+    if(g_state.need_redraw) {
       /* update window title */
       int len;
-      const char *current_path = imv_navigator_selection(&nav);
+      const char *current_path = imv_navigator_selection(&g_state.nav);
       len = snprintf(title, sizeof(title), "imv - [%i/%i] [%ix%i] [%.2f%%] %s [%s]",
-          nav.cur_path + 1, nav.num_paths, tex.width, tex.height,
-          100.0 * view.scale,
+          g_state.nav.cur_path + 1, g_state.nav.num_paths, g_state.tex.width, g_state.tex.height,
+          100.0 * g_state.view.scale,
           current_path, scaling_label[g_options.scaling]);
       if(g_options.delay >= 1000) {
         len += snprintf(title + len, sizeof(title) - len, "[%lu/%lus]",
-            delay_msec / 1000 + 1, g_options.delay / 1000);
+            g_state.delay_msec / 1000 + 1, g_options.delay / 1000);
       }
-      imv_viewport_set_title(&view, title);
+      imv_viewport_set_title(&g_state.view, title);
 
       /* first we draw the background */
       if(g_options.solid_bg) {
         /* solid background */
-        SDL_SetRenderDrawColor(renderer,
+        SDL_SetRenderDrawColor(g_state.renderer,
             g_options.bg_r, g_options.bg_g, g_options.bg_b, 255);
-        SDL_RenderClear(renderer);
+        SDL_RenderClear(g_state.renderer);
       } else {
         /* chequered background */
         int img_w, img_h;
@@ -619,30 +633,30 @@ int main(int argc, char** argv)
         for(int y = 0; y < wh; y += img_h) {
           for(int x = 0; x < ww; x += img_w) {
             SDL_Rect dst_rect = {x,y,img_w,img_h};
-            SDL_RenderCopy(renderer, chequered_tex, NULL, &dst_rect);
+            SDL_RenderCopy(g_state.renderer, chequered_tex, NULL, &dst_rect);
           }
         }
       }
 
       /* draw our actual texture */
-      imv_texture_draw(&tex, view.x, view.y, view.scale);
+      imv_texture_draw(&g_state.tex, g_state.view.x, g_state.view.y, g_state.view.scale);
 
       /* if the overlay needs to be drawn, draw that too */
       if(g_options.overlay && font) {
         SDL_Color fg = {255,255,255,255};
         SDL_Color bg = {0,0,0,160};
-        imv_printf(renderer, font, 0, 0, &fg, &bg, "%s",
+        imv_printf(g_state.renderer, font, 0, 0, &fg, &bg, "%s",
             title + strlen("imv - "));
       }
 
       /* redraw complete, unset the flag */
-      need_redraw = 0;
+      g_state.need_redraw = 0;
 
       /* reset poll countdown timer */
       poll_countdown = UINT8_MAX;
 
       /* tell SDL to show the newly drawn frame */
-      SDL_RenderPresent(renderer);
+      SDL_RenderPresent(g_state.renderer);
     }
 
     /* sleep a little bit so we don't waste CPU time */
@@ -668,10 +682,10 @@ int main(int argc, char** argv)
           buf[--len] = 0;
         }
         if(len > 0) {
-          if(imv_navigator_add(&nav, buf, g_options.recursive)) {
+          if(imv_navigator_add(&g_state.nav, buf, g_options.recursive)) {
             break;
           }
-          need_redraw = 1;
+          g_state.need_redraw = 1;
         }
       }
     } else {
@@ -679,18 +693,18 @@ int main(int argc, char** argv)
     }
   }
   while(g_options.list) {
-    const char *path = imv_navigator_selection(&nav);
+    const char *path = imv_navigator_selection(&g_state.nav);
     if(!path) {
       break;
     }
     fprintf(stdout, "%s\n", path);
-    imv_navigator_remove(&nav, path);
+    imv_navigator_remove(&g_state.nav, path);
   }
   /* clean up our resources now that we're exiting */
-  imv_destroy_loader(&ldr);
-  imv_destroy_texture(&tex);
-  imv_navigator_destroy(&nav);
-  imv_destroy_viewport(&view);
+  imv_destroy_loader(&g_state.ldr);
+  imv_destroy_texture(&g_state.tex);
+  imv_navigator_destroy(&g_state.nav);
+  imv_destroy_viewport(&g_state.view);
 
   if(font) {
     TTF_CloseFont(font);
@@ -699,12 +713,76 @@ int main(int argc, char** argv)
   if(chequered_tex) {
     SDL_DestroyTexture(chequered_tex);
   }
-  SDL_DestroyRenderer(renderer);
-  SDL_DestroyWindow(window);
+  SDL_DestroyRenderer(g_state.renderer);
+  SDL_DestroyWindow(g_state.window);
   SDL_Quit();
 
   return 0;
 }
 
+void cmd_quit(struct imv_list *args)
+{
+  (void)args;
+  g_state.quit = 1;
+}
+
+void cmd_pan(struct imv_list *args)
+{
+  if(args->len != 3) {
+    return;
+  }
+
+  long int x = strtol(args->items[1], NULL, 10);
+  long int y = strtol(args->items[2], NULL, 10);
+
+  imv_viewport_move(&g_state.view, x, y);
+}
+
+void cmd_select_rel(struct imv_list *args)
+{
+  if(args->len != 2) {
+    return;
+  }
+
+  long int index = strtol(args->items[1], NULL, 10);
+  imv_navigator_select_rel(&g_state.nav, index);
+
+  /* reset slideshow delay */
+  g_state.delay_msec = 0;
+}
+
+void cmd_select_abs(struct imv_list *args)
+{
+  (void)args;
+}
+
+void cmd_zoom(struct imv_list *args)
+{
+  (void)args;
+}
+
+void cmd_remove(struct imv_list *args)
+{
+  (void)args;
+  char* path = strdup(imv_navigator_selection(&g_state.nav));
+  imv_navigator_remove(&g_state.nav, path);
+  free(path);
+
+  /* reset slideshow delay */
+  g_state.delay_msec = 0;
+}
+
+void cmd_fullscreen(struct imv_list *args)
+{
+  (void)args;
+  imv_viewport_toggle_fullscreen(&g_state.view);
+}
+
+void cmd_overlay(struct imv_list *args)
+{
+  (void)args;
+  g_options.overlay = !g_options.overlay;
+  g_state.need_redraw = 1;
+}
 
 /* vim:set ts=2 sts=2 sw=2 et: */
