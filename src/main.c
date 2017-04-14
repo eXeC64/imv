@@ -299,6 +299,7 @@ int main(int argc, char** argv)
 
   /* start outside of command mode */
   g_state.command_buffer = NULL;
+  SDL_StopTextInput();
 
   /* initialize variables holding image dimentions */
   int iw = 0, ih = 0;
@@ -655,9 +656,15 @@ static void parse_args(int *argc, char ***argv)
 
 void handle_event(SDL_Event *event)
 {
+  const int command_buffer_len = 1024;
   switch(event->type) {
     case SDL_QUIT:
       imv_command_exec(g_state.cmds, "quit");
+      break;
+
+    case SDL_TEXTINPUT:
+      strncat(g_state.command_buffer, event->text.text, command_buffer_len - 1);
+      g_state.need_redraw = 1;
       break;
 
     case SDL_KEYDOWN:
@@ -666,11 +673,13 @@ void handle_event(SDL_Event *event)
       if(g_state.command_buffer) {
         /* in command mode, update the buffer */
         if(event->key.keysym.sym == SDLK_ESCAPE) {
+          SDL_StopTextInput();
           free(g_state.command_buffer);
           g_state.command_buffer = NULL;
           g_state.need_redraw = 1;
         } else if(event->key.keysym.sym == SDLK_RETURN) {
           imv_command_exec(g_state.cmds, g_state.command_buffer);
+          SDL_StopTextInput();
           free(g_state.command_buffer);
           g_state.command_buffer = NULL;
           g_state.need_redraw = 1;
@@ -678,13 +687,6 @@ void handle_event(SDL_Event *event)
           const size_t len = strlen(g_state.command_buffer);
           if(len > 0) {
             g_state.command_buffer[len - 1] = '\0';
-            g_state.need_redraw = 1;
-          }
-        } else if(event->key.keysym.sym >= ' ' && event->key.keysym.sym <= '~') {
-          const size_t len = strlen(g_state.command_buffer);
-          if(len + 1 < 1024) {
-            g_state.command_buffer[len] = event->key.keysym.sym;
-            g_state.command_buffer[len+1] = '\0';
             g_state.need_redraw = 1;
           }
         }
@@ -695,7 +697,8 @@ void handle_event(SDL_Event *event)
       switch (event->key.keysym.sym) {
         case SDLK_SEMICOLON:
           if(event->key.keysym.mod & KMOD_SHIFT) {
-            g_state.command_buffer = malloc(1024);
+            SDL_StartTextInput();
+            g_state.command_buffer = malloc(command_buffer_len);
             g_state.command_buffer[0] = '\0';
             g_state.need_redraw = 1;
           }
