@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 struct imv_command {
   const char* command;
   void (*handler)(struct imv_list *args);
+  const char* alias;
 };
 
 struct imv_list *g_commands = NULL;
@@ -34,6 +35,20 @@ void imv_command_register(const char *command, void (*handler)())
   struct imv_command *cmd = malloc(sizeof(struct imv_command));
   cmd->command = strdup(command);
   cmd->handler = handler;
+  cmd->alias = NULL;
+  imv_list_append(g_commands, cmd);
+}
+
+void imv_command_alias(const char *command, const char *alias)
+{
+  if(!g_commands) {
+    g_commands = imv_list_create();
+  }
+
+  struct imv_command *cmd = malloc(sizeof(struct imv_command));
+  cmd->command = strdup(command);
+  cmd->handler = NULL;
+  cmd->alias = strdup(alias);
   imv_list_append(g_commands, cmd);
 }
 
@@ -50,8 +65,12 @@ int imv_command_exec(const char *command)
     for(size_t i = 0; i < g_commands->len; ++i) {
       struct imv_command *cmd = g_commands->items[i];
       if(!strcmp(cmd->command, args->items[0])) {
-        cmd->handler(args);
-        ret = 0;
+        if(cmd->handler) {
+          cmd->handler(args);
+          ret = 0;
+        } else if(cmd->alias) {
+          ret = imv_command_exec(cmd->alias);
+        }
         break;
       }
     }

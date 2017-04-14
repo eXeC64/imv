@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define COMMANDS_H
 
 void imv_command_register(const char *command, void (*handler)());
+void imv_command_alias(const char *command, const char *alias);
 int imv_command_exec(const char *command);
 
 #endif
