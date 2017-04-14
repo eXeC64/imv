@@ -42,7 +42,7 @@ enum scaling_mode {
   FULL
 };
 
-static char *scaling_label[] = {
+static const char *scaling_label[] = {
   "actual size",
   "best fit",
   "perfect fit"
@@ -203,6 +203,7 @@ void cmd_fullscreen(struct imv_list *args);
 void cmd_overlay(struct imv_list *args);
 
 void handle_event(SDL_Event *event);
+void render_window(TTF_Font *text_font, SDL_Texture *bg_texture);
 
 int main(int argc, char** argv)
 {
@@ -500,65 +501,7 @@ int main(int argc, char** argv)
 
     /* only redraw when something's changed */
     if(g_state.need_redraw) {
-      /* update window title */
-      int len;
-      const char *current_path = imv_navigator_selection(g_state.nav);
-      len = snprintf(title, sizeof(title), "imv - [%i/%i] [%ix%i] [%.2f%%] %s [%s]",
-          g_state.nav->cur_path + 1, g_state.nav->num_paths, g_state.tex->width, g_state.tex->height,
-          100.0 * g_state.view->scale,
-          current_path, scaling_label[g_options.scaling]);
-      if(g_options.delay >= 1000) {
-        len += snprintf(title + len, sizeof(title) - len, "[%lu/%lus]",
-            g_state.delay_msec / 1000 + 1, g_options.delay / 1000);
-      }
-      imv_viewport_set_title(g_state.view, title);
-
-      /* first we draw the background */
-      if(g_options.solid_bg) {
-        /* solid background */
-        SDL_SetRenderDrawColor(g_state.renderer,
-            g_options.bg_r, g_options.bg_g, g_options.bg_b, 255);
-        SDL_RenderClear(g_state.renderer);
-      } else {
-        /* chequered background */
-        int img_w, img_h;
-        SDL_QueryTexture(chequered_tex, NULL, NULL, &img_w, &img_h);
-        /* tile the texture so it fills the window */
-        for(int y = 0; y < wh; y += img_h) {
-          for(int x = 0; x < ww; x += img_w) {
-            SDL_Rect dst_rect = {x,y,img_w,img_h};
-            SDL_RenderCopy(g_state.renderer, chequered_tex, NULL, &dst_rect);
-          }
-        }
-      }
-
-      /* draw our actual texture */
-      imv_texture_draw(g_state.tex, g_state.view->x, g_state.view->y, g_state.view->scale);
-
-      /* if the overlay needs to be drawn, draw that too */
-      if(g_options.overlay && font) {
-        SDL_Color fg = {255,255,255,255};
-        SDL_Color bg = {0,0,0,160};
-        imv_printf(g_state.renderer, font, 0, 0, &fg, &bg, "%s",
-            title + strlen("imv - "));
-      }
-
-      /* draw command entry bar if needed */
-      if(g_state.command_buffer && font) {
-        SDL_Color fg = {255,255,255,255};
-        SDL_Color bg = {0,0,0,160};
-        imv_printf(g_state.renderer,
-            font,
-            0, wh - TTF_FontHeight(font),
-            &fg, &bg,
-            ":%s", g_state.command_buffer);
-      }
-
-      /* redraw complete, unset the flag */
-      g_state.need_redraw = 0;
-
-      /* tell SDL to show the newly drawn frame */
-      SDL_RenderPresent(g_state.renderer);
+      render_window(font, chequered_tex);
     }
 
     /* sleep a little bit so we don't waste CPU time */
@@ -851,6 +794,72 @@ void handle_event(SDL_Event *event)
       imv_viewport_update(g_state.view, g_state.tex);
       break;
   }
+}
+
+void render_window(TTF_Font *text_font, SDL_Texture *bg_texture)
+{
+  char title[1024];
+  int ww, wh;
+  SDL_GetWindowSize(g_state.window, &ww, &wh);
+
+  /* update window title */
+  const char *current_path = imv_navigator_selection(g_state.nav);
+  int len = snprintf(title, sizeof(title), "imv - [%i/%i] [%ix%i] [%.2f%%] %s [%s]",
+      g_state.nav->cur_path + 1, g_state.nav->num_paths, g_state.tex->width, g_state.tex->height,
+      100.0 * g_state.view->scale,
+      current_path, scaling_label[g_options.scaling]);
+  if(g_options.delay >= 1000) {
+    len += snprintf(title + len, sizeof(title) - len, "[%lu/%lus]",
+        g_state.delay_msec / 1000 + 1, g_options.delay / 1000);
+  }
+  imv_viewport_set_title(g_state.view, title);
+
+  /* first we draw the background */
+  if(g_options.solid_bg) {
+    /* solid background */
+    SDL_SetRenderDrawColor(g_state.renderer,
+        g_options.bg_r, g_options.bg_g, g_options.bg_b, 255);
+    SDL_RenderClear(g_state.renderer);
+  } else {
+    /* background */
+    int img_w, img_h;
+    SDL_QueryTexture(bg_texture, NULL, NULL, &img_w, &img_h);
+    /* tile the texture so it fills the window */
+    for(int y = 0; y < wh; y += img_h) {
+      for(int x = 0; x < ww; x += img_w) {
+        SDL_Rect dst_rect = {x,y,img_w,img_h};
+        SDL_RenderCopy(g_state.renderer, bg_texture, NULL, &dst_rect);
+      }
+    }
+  }
+
+  /* draw our actual texture */
+  imv_texture_draw(g_state.tex, g_state.view->x, g_state.view->y, g_state.view->scale);
+
+  /* if the overlay needs to be drawn, draw that too */
+  if(g_options.overlay && text_font) {
+    SDL_Color fg = {255,255,255,255};
+    SDL_Color bg = {0,0,0,160};
+    imv_printf(g_state.renderer, text_font, 0, 0, &fg, &bg, "%s",
+        title + strlen("imv - "));
+  }
+
+  /* draw command entry bar if needed */
+  if(g_state.command_buffer && text_font) {
+    SDL_Color fg = {255,255,255,255};
+    SDL_Color bg = {0,0,0,160};
+    imv_printf(g_state.renderer,
+        text_font,
+        0, wh - TTF_FontHeight(text_font),
+        &fg, &bg,
+        ":%s", g_state.command_buffer);
+  }
+
+  /* redraw complete, unset the flag */
+  g_state.need_redraw = 0;
+
+  /* tell SDL to show the newly drawn frame */
+  SDL_RenderPresent(g_state.renderer);
 }
 
 /* vim:set ts=2 sts=2 sw=2 et: */
