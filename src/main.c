@@ -177,6 +177,7 @@ struct {
   struct imv_loader ldr;
   struct imv_texture tex;
   struct imv_viewport view;
+  struct imv_commands *cmds;
   SDL_Window *window;
   SDL_Renderer *renderer;
   int quit;
@@ -203,20 +204,21 @@ void cmd_overlay(struct imv_list *args);
 
 int main(int argc, char** argv)
 {
-  imv_command_register("quit", &cmd_quit);
-  imv_command_register("pan", &cmd_pan);
-  imv_command_register("select_rel", &cmd_select_rel);
-  imv_command_register("select_abs", &cmd_select_abs);
-  imv_command_register("zoom", &cmd_zoom);
-  imv_command_register("remove", &cmd_remove);
-  imv_command_register("fullscreen", &cmd_fullscreen);
-  imv_command_register("overlay", &cmd_overlay);
+  g_state.cmds = imv_commands_create();
+  imv_command_register(g_state.cmds, "quit", &cmd_quit);
+  imv_command_register(g_state.cmds, "pan", &cmd_pan);
+  imv_command_register(g_state.cmds, "select_rel", &cmd_select_rel);
+  imv_command_register(g_state.cmds, "select_abs", &cmd_select_abs);
+  imv_command_register(g_state.cmds, "zoom", &cmd_zoom);
+  imv_command_register(g_state.cmds, "remove", &cmd_remove);
+  imv_command_register(g_state.cmds, "fullscreen", &cmd_fullscreen);
+  imv_command_register(g_state.cmds, "overlay", &cmd_overlay);
 
-  imv_command_alias("q", "quit");
-  imv_command_alias("next", "select_rel 1");
-  imv_command_alias("previous", "select_rel -1");
-  imv_command_alias("n", "select_rel 1");
-  imv_command_alias("p", "select_rel -1");
+  imv_command_alias(g_state.cmds, "q", "quit");
+  imv_command_alias(g_state.cmds, "next", "select_rel 1");
+  imv_command_alias(g_state.cmds, "previous", "select_rel -1");
+  imv_command_alias(g_state.cmds, "n", "select_rel 1");
+  imv_command_alias(g_state.cmds, "p", "select_rel -1");
 
   imv_navigator_init(&g_state.nav);
 
@@ -392,7 +394,7 @@ int main(int argc, char** argv)
     while(!g_state.quit && SDL_PollEvent(&e)) {
       switch(e.type) {
         case SDL_QUIT:
-          imv_command_exec("quit");
+          imv_command_exec(g_state.cmds, "quit");
           break;
 
         case SDL_KEYDOWN:
@@ -405,7 +407,7 @@ int main(int argc, char** argv)
               g_state.command_buffer = NULL;
               g_state.need_redraw = 1;
             } else if(e.key.keysym.sym == SDLK_RETURN) {
-              imv_command_exec(g_state.command_buffer);
+              imv_command_exec(g_state.cmds, g_state.command_buffer);
               free(g_state.command_buffer);
               g_state.command_buffer = NULL;
               g_state.need_redraw = 1;
@@ -437,15 +439,15 @@ int main(int argc, char** argv)
               }
               break;
             case SDLK_q:
-              imv_command_exec("quit");
+              imv_command_exec(g_state.cmds, "quit");
               break;
             case SDLK_LEFTBRACKET:
             case SDLK_LEFT:
-              imv_command_exec("select_rel -1");
+              imv_command_exec(g_state.cmds, "select_rel -1");
               break;
             case SDLK_RIGHTBRACKET:
             case SDLK_RIGHT:
-              imv_command_exec("select_rel 1");
+              imv_command_exec(g_state.cmds, "select_rel 1");
               break;
             case SDLK_EQUALS:
             case SDLK_PLUS:
@@ -482,25 +484,25 @@ int main(int argc, char** argv)
               }
               break;
             case SDLK_j:
-              imv_command_exec("pan 0 -50");
+              imv_command_exec(g_state.cmds, "pan 0 -50");
               break;
             case SDLK_k:
-              imv_command_exec("pan 0 50");
+              imv_command_exec(g_state.cmds, "pan 0 50");
               break;
             case SDLK_h:
-              imv_command_exec("pan 50 0");
+              imv_command_exec(g_state.cmds, "pan 50 0");
               break;
             case SDLK_l:
-              imv_command_exec("pan -50 0");
+              imv_command_exec(g_state.cmds, "pan -50 0");
               break;
             case SDLK_x:
               if(!e.key.repeat) {
-                imv_command_exec("remove");
+                imv_command_exec(g_state.cmds, "remove");
               }
               break;
             case SDLK_f:
               if(!e.key.repeat) {
-                imv_command_exec("fullscreen");
+                imv_command_exec(g_state.cmds, "fullscreen");
               }
               break;
             case SDLK_PERIOD:
@@ -518,7 +520,7 @@ int main(int argc, char** argv)
               break;
             case SDLK_d:
               if(!e.key.repeat) {
-                imv_command_exec("overlay");
+                imv_command_exec(g_state.cmds, "overlay");
               }
               break;
             case SDLK_t:
@@ -772,6 +774,7 @@ int main(int argc, char** argv)
   imv_destroy_texture(&g_state.tex);
   imv_navigator_destroy(&g_state.nav);
   imv_destroy_viewport(&g_state.view);
+  imv_commands_free(g_state.cmds);
 
   if(font) {
     TTF_CloseFont(font);
