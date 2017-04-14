@@ -175,7 +175,7 @@ static void parse_args(int argc, char** argv)
 struct {
   struct imv_navigator nav;
   struct imv_loader *ldr;
-  struct imv_texture tex;
+  struct imv_texture *tex;
   struct imv_viewport view;
   struct imv_commands *cmds;
   SDL_Window *window;
@@ -356,8 +356,7 @@ int main(int argc, char** argv)
 
   /* create our main classes */
   g_state.ldr = imv_loader_create();
-
-  imv_init_texture(&g_state.tex, g_state.renderer);
+  g_state.tex = imv_texture_create(g_state.renderer);
 
   imv_init_viewport(&g_state.view, g_state.window);
 
@@ -453,12 +452,12 @@ int main(int argc, char** argv)
             case SDLK_PLUS:
             case SDLK_i:
             case SDLK_UP:
-              imv_viewport_zoom(&g_state.view, &g_state.tex, IMV_ZOOM_KEYBOARD, 1);
+              imv_viewport_zoom(&g_state.view, g_state.tex, IMV_ZOOM_KEYBOARD, 1);
               break;
             case SDLK_MINUS:
             case SDLK_o:
             case SDLK_DOWN:
-              imv_viewport_zoom(&g_state.view, &g_state.tex, IMV_ZOOM_KEYBOARD, -1);
+              imv_viewport_zoom(&g_state.view, g_state.tex, IMV_ZOOM_KEYBOARD, -1);
               break;
             case SDLK_s:
               if(!e.key.repeat) {
@@ -475,12 +474,12 @@ int main(int argc, char** argv)
               break;
             case SDLK_a:
               if(!e.key.repeat) {
-                imv_viewport_scale_to_actual(&g_state.view, &g_state.tex);
+                imv_viewport_scale_to_actual(&g_state.view, g_state.tex);
               }
               break;
             case SDLK_c:
               if(!e.key.repeat) {
-                imv_viewport_center(&g_state.view, &g_state.tex);
+                imv_viewport_center(&g_state.view, g_state.tex);
               }
               break;
             case SDLK_j:
@@ -536,7 +535,7 @@ int main(int argc, char** argv)
           }
           break;
         case SDL_MOUSEWHEEL:
-          imv_viewport_zoom(&g_state.view, &g_state.tex, IMV_ZOOM_MOUSE, e.wheel.y);
+          imv_viewport_zoom(&g_state.view, g_state.tex, IMV_ZOOM_MOUSE, e.wheel.y);
           SDL_ShowCursor(SDL_ENABLE);
           break;
         case SDL_MOUSEMOTION:
@@ -546,7 +545,7 @@ int main(int argc, char** argv)
           SDL_ShowCursor(SDL_ENABLE);
           break;
         case SDL_WINDOWEVENT:
-          imv_viewport_update(&g_state.view, &g_state.tex);
+          imv_viewport_update(&g_state.view, g_state.tex);
           break;
       }
     }
@@ -605,7 +604,7 @@ int main(int argc, char** argv)
     FIBITMAP *bmp;
     int is_new_image;
     if(imv_loader_get_image(g_state.ldr, &bmp, &is_new_image)) {
-      imv_texture_set_image(&g_state.tex, bmp);
+      imv_texture_set_image(g_state.tex, bmp);
       iw = FreeImage_GetWidth(bmp);
       ih = FreeImage_GetHeight(bmp);
       FreeImage_Unload(bmp);
@@ -617,9 +616,9 @@ int main(int argc, char** argv)
       g_state.need_rescale = 0;
       if(g_options.scaling == NONE ||
           (g_options.scaling == DOWN && ww > iw && wh > ih)) {
-        imv_viewport_scale_to_actual(&g_state.view, &g_state.tex);
+        imv_viewport_scale_to_actual(&g_state.view, g_state.tex);
       } else {
-        imv_viewport_scale_to_window(&g_state.view, &g_state.tex);
+        imv_viewport_scale_to_window(&g_state.view, g_state.tex);
       }
     }
 
@@ -663,7 +662,7 @@ int main(int argc, char** argv)
       int len;
       const char *current_path = imv_navigator_selection(&g_state.nav);
       len = snprintf(title, sizeof(title), "imv - [%i/%i] [%ix%i] [%.2f%%] %s [%s]",
-          g_state.nav.cur_path + 1, g_state.nav.num_paths, g_state.tex.width, g_state.tex.height,
+          g_state.nav.cur_path + 1, g_state.nav.num_paths, g_state.tex->width, g_state.tex->height,
           100.0 * g_state.view.scale,
           current_path, scaling_label[g_options.scaling]);
       if(g_options.delay >= 1000) {
@@ -692,7 +691,7 @@ int main(int argc, char** argv)
       }
 
       /* draw our actual texture */
-      imv_texture_draw(&g_state.tex, g_state.view.x, g_state.view.y, g_state.view.scale);
+      imv_texture_draw(g_state.tex, g_state.view.x, g_state.view.y, g_state.view.scale);
 
       /* if the overlay needs to be drawn, draw that too */
       if(g_options.overlay && font) {
@@ -771,7 +770,7 @@ int main(int argc, char** argv)
   }
 
   imv_loader_free(g_state.ldr);
-  imv_destroy_texture(&g_state.tex);
+  imv_texture_free(g_state.tex);
   imv_navigator_destroy(&g_state.nav);
   imv_destroy_viewport(&g_state.view);
   imv_commands_free(g_state.cmds);
