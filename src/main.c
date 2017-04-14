@@ -173,7 +173,7 @@ static void parse_args(int argc, char** argv)
 }
 
 struct {
-  struct imv_navigator nav;
+  struct imv_navigator *nav;
   struct imv_loader *ldr;
   struct imv_texture *tex;
   struct imv_viewport *view;
@@ -220,7 +220,7 @@ int main(int argc, char** argv)
   imv_command_alias(g_state.cmds, "n", "select_rel 1");
   imv_command_alias(g_state.cmds, "p", "select_rel -1");
 
-  imv_navigator_init(&g_state.nav);
+  g_state.nav = imv_navigator_create();
 
   /* parse any command line options given */
   parse_args(argc, argv);
@@ -249,8 +249,8 @@ int main(int argc, char** argv)
         buf[--len] = 0;
       }
       if(len > 0) {
-        if(imv_navigator_add(&g_state.nav, buf, g_options.recursive) != 0) {
-          imv_navigator_destroy(&g_state.nav);
+        if(imv_navigator_add(g_state.nav, buf, g_options.recursive) != 0) {
+          imv_navigator_free(g_state.nav);
           exit(1);
         }
         break;
@@ -284,25 +284,25 @@ int main(int argc, char** argv)
       errno = 0; /* clear errno */
     }
     /* add the given path to the list to load */
-    if(imv_navigator_add(&g_state.nav, argv[i], g_options.recursive) != 0) {
-      imv_navigator_destroy(&g_state.nav);
+    if(imv_navigator_add(g_state.nav, argv[i], g_options.recursive) != 0) {
+      imv_navigator_free(g_state.nav);
       exit(1);
     }
   }
 
   /* if we weren't given any paths we have nothing to view. exit */
-  if(!imv_navigator_selection(&g_state.nav)) {
+  if(!imv_navigator_selection(g_state.nav)) {
     fprintf(stderr, "No input files. Exiting.\n");
     exit(1);
   }
 
   /* go to the chosen starting image if possible */
   if(g_options.start_at) {
-    int start_index = imv_navigator_find_path(&g_state.nav, g_options.start_at);
+    int start_index = imv_navigator_find_path(g_state.nav, g_options.start_at);
     if(start_index < 0) {
       start_index = strtol(g_options.start_at,NULL,10) - 1;
     }
-    imv_navigator_select_str(&g_state.nav, start_index);
+    imv_navigator_select_str(g_state.nav, start_index);
   }
 
   /* we've got something to display, so create an SDL window */
@@ -513,7 +513,7 @@ int main(int argc, char** argv)
               break;
             case SDLK_p:
               if(!e.key.repeat) {
-                puts(imv_navigator_selection(&g_state.nav));
+                puts(imv_navigator_selection(g_state.nav));
               }
               break;
             case SDLK_d:
@@ -557,7 +557,7 @@ int main(int argc, char** argv)
     /* check if an image failed to load, if so, remove it from our image list */
     char *err_path = imv_loader_get_error(g_state.ldr);
     if(err_path) {
-      imv_navigator_remove(&g_state.nav, err_path);
+      imv_navigator_remove(g_state.nav, err_path);
       if (strncmp(err_path, "-", 2) == 0) {
         free(stdin_buffer);
         stdin_buffer_size = 0;
@@ -571,13 +571,13 @@ int main(int argc, char** argv)
     }
 
     /* Check if navigator wrapped around paths lists */
-    if(!g_options.cycle && imv_navigator_wrapped(&g_state.nav)) {
+    if(!g_options.cycle && imv_navigator_wrapped(g_state.nav)) {
       break;
     }
 
     /* if the user has changed image, start loading the new one */
-    if(imv_navigator_poll_changed(&g_state.nav, poll_countdown--)) {
-      const char *current_path = imv_navigator_selection(&g_state.nav);
+    if(imv_navigator_poll_changed(g_state.nav, poll_countdown--)) {
+      const char *current_path = imv_navigator_selection(g_state.nav);
       if(!current_path) {
         if(g_options.stdin_list) {
           continue;
@@ -587,7 +587,7 @@ int main(int argc, char** argv)
       }
 
       snprintf(title, sizeof(title), "imv - [%i/%i] [LOADING] %s [%s]",
-          g_state.nav.cur_path + 1, g_state.nav.num_paths, current_path,
+          g_state.nav->cur_path + 1, g_state.nav->num_paths, current_path,
           scaling_label[g_options.scaling]);
       imv_viewport_set_title(g_state.view, title);
 
@@ -643,7 +643,7 @@ int main(int argc, char** argv)
       g_state.delay_msec += dt;
       g_state.need_redraw = 1;
       if(g_state.delay_msec >= g_options.delay) {
-        imv_navigator_select_rel(&g_state.nav, 1);
+        imv_navigator_select_rel(g_state.nav, 1);
         g_state.delay_msec = 0;
       }
     }
@@ -659,9 +659,9 @@ int main(int argc, char** argv)
     if(g_state.need_redraw) {
       /* update window title */
       int len;
-      const char *current_path = imv_navigator_selection(&g_state.nav);
+      const char *current_path = imv_navigator_selection(g_state.nav);
       len = snprintf(title, sizeof(title), "imv - [%i/%i] [%ix%i] [%.2f%%] %s [%s]",
-          g_state.nav.cur_path + 1, g_state.nav.num_paths, g_state.tex->width, g_state.tex->height,
+          g_state.nav->cur_path + 1, g_state.nav->num_paths, g_state.tex->width, g_state.tex->height,
           100.0 * g_state.view->scale,
           current_path, scaling_label[g_options.scaling]);
       if(g_options.delay >= 1000) {
@@ -744,7 +744,7 @@ int main(int argc, char** argv)
           buf[--len] = 0;
         }
         if(len > 0) {
-          if(imv_navigator_add(&g_state.nav, buf, g_options.recursive)) {
+          if(imv_navigator_add(g_state.nav, buf, g_options.recursive)) {
             break;
           }
           g_state.need_redraw = 1;
@@ -755,12 +755,12 @@ int main(int argc, char** argv)
     }
   }
   while(g_options.list) {
-    const char *path = imv_navigator_selection(&g_state.nav);
+    const char *path = imv_navigator_selection(g_state.nav);
     if(!path) {
       break;
     }
     fprintf(stdout, "%s\n", path);
-    imv_navigator_remove(&g_state.nav, path);
+    imv_navigator_remove(g_state.nav, path);
   }
 
   /* clean up our resources now that we're exiting */
@@ -770,7 +770,7 @@ int main(int argc, char** argv)
 
   imv_loader_free(g_state.ldr);
   imv_texture_free(g_state.tex);
-  imv_navigator_destroy(&g_state.nav);
+  imv_navigator_free(g_state.nav);
   imv_viewport_free(g_state.view);
   imv_commands_free(g_state.cmds);
 
@@ -813,7 +813,7 @@ void cmd_select_rel(struct imv_list *args)
   }
 
   long int index = strtol(args->items[1], NULL, 10);
-  imv_navigator_select_rel(&g_state.nav, index);
+  imv_navigator_select_rel(g_state.nav, index);
 
   /* reset slideshow delay */
   g_state.delay_msec = 0;
@@ -832,8 +832,8 @@ void cmd_zoom(struct imv_list *args)
 void cmd_remove(struct imv_list *args)
 {
   (void)args;
-  char* path = strdup(imv_navigator_selection(&g_state.nav));
-  imv_navigator_remove(&g_state.nav, path);
+  char* path = strdup(imv_navigator_selection(g_state.nav));
+  imv_navigator_remove(g_state.nav, path);
   free(path);
 
   /* reset slideshow delay */

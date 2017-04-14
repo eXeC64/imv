@@ -19,78 +19,76 @@
 static void test_navigator_add_remove(void **state)
 {
   (void)state;
-  struct imv_navigator nav;
-  imv_navigator_init(&nav);
+  struct imv_navigator *nav = imv_navigator_create();
 
   /* Check poll_changed */
-  assert_false(imv_navigator_poll_changed(&nav, 0));
+  assert_false(imv_navigator_poll_changed(nav, 0));
 
   /* Add 6 paths, one non-existant should fail */
-  assert_false(imv_navigator_add(&nav, FILENAME1, 0));
-  assert_false(imv_navigator_add(&nav, FILENAME2, 0));
-  assert_false(imv_navigator_add(&nav, FILENAME3, 0));
-  assert_false(imv_navigator_add(&nav, FILENAME4, 0));
-  assert_false(imv_navigator_add(&nav, FILENAME5, 0));
-  assert_false(imv_navigator_add(&nav, FILENAME6, 0));
-  assert_int_equal(nav.num_paths, 6);
+  assert_false(imv_navigator_add(nav, FILENAME1, 0));
+  assert_false(imv_navigator_add(nav, FILENAME2, 0));
+  assert_false(imv_navigator_add(nav, FILENAME3, 0));
+  assert_false(imv_navigator_add(nav, FILENAME4, 0));
+  assert_false(imv_navigator_add(nav, FILENAME5, 0));
+  assert_false(imv_navigator_add(nav, FILENAME6, 0));
+  assert_int_equal(nav->num_paths, 6);
 
   /* Check poll_changed */
-  assert_true(imv_navigator_poll_changed(&nav, 0));
+  assert_true(imv_navigator_poll_changed(nav, 0));
 
   /* Make sure current selection  is #1 */
-  assert_string_equal(imv_navigator_selection(&nav), FILENAME1);
+  assert_string_equal(imv_navigator_selection(nav), FILENAME1);
 
   /* Move right and remove current file (#2); should get to #3 */
-  imv_navigator_select_rel(&nav, 1);
-  assert_string_equal(imv_navigator_selection(&nav), FILENAME2);
-  imv_navigator_remove(&nav, FILENAME2);
-  assert_int_equal(nav.num_paths, 5);
-  assert_string_equal(imv_navigator_selection(&nav), FILENAME3);
+  imv_navigator_select_rel(nav, 1);
+  assert_string_equal(imv_navigator_selection(nav), FILENAME2);
+  imv_navigator_remove(nav, FILENAME2);
+  assert_int_equal(nav->num_paths, 5);
+  assert_string_equal(imv_navigator_selection(nav), FILENAME3);
 
   /* Move left and remove current file (#1); should get to #6 */
-  imv_navigator_select_rel(&nav, -1);
-  assert_string_equal(imv_navigator_selection(&nav), FILENAME1);
-  imv_navigator_remove(&nav, FILENAME1);
-  assert_string_equal(imv_navigator_selection(&nav), FILENAME6);
+  imv_navigator_select_rel(nav, -1);
+  assert_string_equal(imv_navigator_selection(nav), FILENAME1);
+  imv_navigator_remove(nav, FILENAME1);
+  assert_string_equal(imv_navigator_selection(nav), FILENAME6);
 
   /* Move left, right, remove current file (#6); should get to #3 */
-  imv_navigator_select_rel(&nav, -1);
-  imv_navigator_select_rel(&nav, 1);
-  assert_string_equal(imv_navigator_selection(&nav), FILENAME6);
-  imv_navigator_remove(&nav, FILENAME6);
-  assert_string_equal(imv_navigator_selection(&nav), FILENAME3);
+  imv_navigator_select_rel(nav, -1);
+  imv_navigator_select_rel(nav, 1);
+  assert_string_equal(imv_navigator_selection(nav), FILENAME6);
+  imv_navigator_remove(nav, FILENAME6);
+  assert_string_equal(imv_navigator_selection(nav), FILENAME3);
 
   /* Remove #4; should not move */
-  imv_navigator_remove(&nav, FILENAME4);
-  assert_string_equal(imv_navigator_selection(&nav), FILENAME3);
+  imv_navigator_remove(nav, FILENAME4);
+  assert_string_equal(imv_navigator_selection(nav), FILENAME3);
 
   /* Verify that #4 is removed by moving left; should get to #5 */
-  imv_navigator_select_rel(&nav, 1);
-  assert_string_equal(imv_navigator_selection(&nav), FILENAME5);
+  imv_navigator_select_rel(nav, 1);
+  assert_string_equal(imv_navigator_selection(nav), FILENAME5);
 
-  imv_navigator_destroy(&nav);
+  imv_navigator_free(nav);
 }
 
 static void test_navigator_file_changed(void **state)
 {
   int fd;
-  struct imv_navigator nav;
+  struct imv_navigator *nav = imv_navigator_create();
   struct timespec times[2] = { {0, 0}, {0, 0} };
 
   (void)state;
-  imv_navigator_init(&nav);
 
   fd = open(FILENAME1, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   if (fd == -1) {
-    imv_navigator_destroy(&nav);
+    imv_navigator_free(nav);
     (void)unlink(FILENAME1);
     skip();
   }
   assert_false(futimens(fd, times) == -1);
 
-  assert_false(imv_navigator_add(&nav, FILENAME1, 0));
-  assert_true(imv_navigator_poll_changed(&nav, 0));
-  assert_false(imv_navigator_poll_changed(&nav, 0));
+  assert_false(imv_navigator_add(nav, FILENAME1, 0));
+  assert_true(imv_navigator_poll_changed(nav, 0));
+  assert_false(imv_navigator_poll_changed(nav, 0));
 
   assert_false(sleep(1));
 
@@ -103,11 +101,11 @@ static void test_navigator_file_changed(void **state)
   times[1].tv_sec = UTIME_NOW;
   assert_false(futimens(fd, times) == -1);
 
-  assert_true(imv_navigator_poll_changed(&nav, 0));
+  assert_true(imv_navigator_poll_changed(nav, 0));
 
   (void)close(fd);
   (void)unlink(FILENAME1);
-  imv_navigator_destroy(&nav);
+  imv_navigator_free(nav);
 }
 
 int main(void)

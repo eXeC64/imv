@@ -24,13 +24,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <string.h>
 #include <stdio.h>
 
-void imv_navigator_init(struct imv_navigator *nav)
+struct imv_navigator *imv_navigator_create(void)
 {
+  struct imv_navigator *nav = malloc(sizeof(struct imv_navigator));
   memset(nav, 0, sizeof(struct imv_navigator));
   nav->last_move_direction = 1;
+  return nav;
 }
 
-void imv_navigator_destroy(struct imv_navigator *nav)
+void imv_navigator_free(struct imv_navigator *nav)
 {
   if(nav->paths) {
     for(int i = 0; i < nav->num_paths; ++i) {
@@ -45,7 +47,7 @@ void imv_navigator_destroy(struct imv_navigator *nav)
     free(nav->mtimes);
   }
 
-  memset(nav, 0, sizeof(struct imv_navigator));
+  free(nav);
 }
 
 static int add_item(struct imv_navigator *nav, const char *path,

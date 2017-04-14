@@ -32,11 +32,11 @@ struct imv_navigator {
   int wrapped;
 };
 
-/* Initialises an instance of imv_navigator */
-void imv_navigator_init(struct imv_navigator *nav);
+/* Creates an instance of imv_navigator */
+struct imv_navigator *imv_navigator_create(void);
 
-/* Cleans up all resources owned by a imv_navigator instance */
-void imv_navigator_destroy(struct imv_navigator *nav);
+/* Cleans up an imv_navigator instance */
+void imv_navigator_free(struct imv_navigator *nav);
 
 /* Adds the given path to the navigator's internal list.
  * If a directory is given, all files within that directory are added.
