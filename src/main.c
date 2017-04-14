@@ -202,6 +202,8 @@ void cmd_remove(struct imv_list *args);
 void cmd_fullscreen(struct imv_list *args);
 void cmd_overlay(struct imv_list *args);
 
+void handle_event(SDL_Event *event);
+
 int main(int argc, char** argv)
 {
   g_state.cmds = imv_commands_create();
@@ -390,163 +392,7 @@ int main(int argc, char** argv)
     /* handle any input/window events sent by SDL */
     SDL_Event e;
     while(!g_state.quit && SDL_PollEvent(&e)) {
-      switch(e.type) {
-        case SDL_QUIT:
-          imv_command_exec(g_state.cmds, "quit");
-          break;
-
-        case SDL_KEYDOWN:
-          SDL_ShowCursor(SDL_DISABLE);
-
-          if(g_state.command_buffer) {
-            /* in command mode, update the buffer */
-            if(e.key.keysym.sym == SDLK_ESCAPE) {
-              free(g_state.command_buffer);
-              g_state.command_buffer = NULL;
-              g_state.need_redraw = 1;
-            } else if(e.key.keysym.sym == SDLK_RETURN) {
-              imv_command_exec(g_state.cmds, g_state.command_buffer);
-              free(g_state.command_buffer);
-              g_state.command_buffer = NULL;
-              g_state.need_redraw = 1;
-            } else if(e.key.keysym.sym == SDLK_BACKSPACE) {
-              const size_t len = strlen(g_state.command_buffer);
-              if(len > 0) {
-                g_state.command_buffer[len - 1] = '\0';
-                g_state.need_redraw = 1;
-              }
-            } else if(e.key.keysym.sym >= ' ' && e.key.keysym.sym <= '~') {
-              const size_t len = strlen(g_state.command_buffer);
-              if(len + 1 < 1024) {
-                g_state.command_buffer[len] = e.key.keysym.sym;
-                g_state.command_buffer[len+1] = '\0';
-                g_state.need_redraw = 1;
-              }
-            }
-
-            /* input has been consumed by command input, move onto next event */
-            continue;
-          }
-
-          switch (e.key.keysym.sym) {
-            case SDLK_SEMICOLON:
-              if(e.key.keysym.mod & KMOD_SHIFT) {
-                g_state.command_buffer = malloc(1024);
-                g_state.command_buffer[0] = '\0';
-                g_state.need_redraw = 1;
-              }
-              break;
-            case SDLK_q:
-              imv_command_exec(g_state.cmds, "quit");
-              break;
-            case SDLK_LEFTBRACKET:
-            case SDLK_LEFT:
-              imv_command_exec(g_state.cmds, "select_rel -1");
-              break;
-            case SDLK_RIGHTBRACKET:
-            case SDLK_RIGHT:
-              imv_command_exec(g_state.cmds, "select_rel 1");
-              break;
-            case SDLK_EQUALS:
-            case SDLK_PLUS:
-            case SDLK_i:
-            case SDLK_UP:
-              imv_viewport_zoom(g_state.view, g_state.tex, IMV_ZOOM_KEYBOARD, 1);
-              break;
-            case SDLK_MINUS:
-            case SDLK_o:
-            case SDLK_DOWN:
-              imv_viewport_zoom(g_state.view, g_state.tex, IMV_ZOOM_KEYBOARD, -1);
-              break;
-            case SDLK_s:
-              if(!e.key.repeat) {
-                if((g_options.scaling += 1) > FULL) {
-                  g_options.scaling = NONE;
-                }
-              }
-            /* FALLTHROUGH */
-            case SDLK_r:
-              if(!e.key.repeat) {
-                g_state.need_rescale = 1;
-                g_state.need_redraw = 1;
-              }
-              break;
-            case SDLK_a:
-              if(!e.key.repeat) {
-                imv_viewport_scale_to_actual(g_state.view, g_state.tex);
-              }
-              break;
-            case SDLK_c:
-              if(!e.key.repeat) {
-                imv_viewport_center(g_state.view, g_state.tex);
-              }
-              break;
-            case SDLK_j:
-              imv_command_exec(g_state.cmds, "pan 0 -50");
-              break;
-            case SDLK_k:
-              imv_command_exec(g_state.cmds, "pan 0 50");
-              break;
-            case SDLK_h:
-              imv_command_exec(g_state.cmds, "pan 50 0");
-              break;
-            case SDLK_l:
-              imv_command_exec(g_state.cmds, "pan -50 0");
-              break;
-            case SDLK_x:
-              if(!e.key.repeat) {
-                imv_command_exec(g_state.cmds, "remove");
-              }
-              break;
-            case SDLK_f:
-              if(!e.key.repeat) {
-                imv_command_exec(g_state.cmds, "fullscreen");
-              }
-              break;
-            case SDLK_PERIOD:
-              imv_loader_load_next_frame(g_state.ldr);
-              break;
-            case SDLK_SPACE:
-              if(!e.key.repeat) {
-                imv_viewport_toggle_playing(g_state.view);
-              }
-              break;
-            case SDLK_p:
-              if(!e.key.repeat) {
-                puts(imv_navigator_selection(g_state.nav));
-              }
-              break;
-            case SDLK_d:
-              if(!e.key.repeat) {
-                imv_command_exec(g_state.cmds, "overlay");
-              }
-              break;
-            case SDLK_t:
-              if(e.key.keysym.mod & (KMOD_SHIFT|KMOD_CAPS)) {
-                if(g_options.delay >= 1000) {
-                  g_options.delay -= 1000;
-                }
-              } else {
-                g_options.delay += 1000;
-              }
-              g_state.need_redraw = 1;
-              break;
-          }
-          break;
-        case SDL_MOUSEWHEEL:
-          imv_viewport_zoom(g_state.view, g_state.tex, IMV_ZOOM_MOUSE, e.wheel.y);
-          SDL_ShowCursor(SDL_ENABLE);
-          break;
-        case SDL_MOUSEMOTION:
-          if(e.motion.state & SDL_BUTTON_LMASK) {
-            imv_viewport_move(g_state.view, e.motion.xrel, e.motion.yrel);
-          }
-          SDL_ShowCursor(SDL_ENABLE);
-          break;
-        case SDL_WINDOWEVENT:
-          imv_viewport_update(g_state.view, g_state.tex);
-          break;
-      }
+      handle_event(&e);
     }
 
     /* if we're quitting, don't bother drawing any more images */
@@ -851,6 +697,166 @@ void cmd_overlay(struct imv_list *args)
   (void)args;
   g_options.overlay = !g_options.overlay;
   g_state.need_redraw = 1;
+}
+
+void handle_event(SDL_Event *event)
+{
+  switch(event->type) {
+    case SDL_QUIT:
+      imv_command_exec(g_state.cmds, "quit");
+      break;
+
+    case SDL_KEYDOWN:
+      SDL_ShowCursor(SDL_DISABLE);
+
+      if(g_state.command_buffer) {
+        /* in command mode, update the buffer */
+        if(event->key.keysym.sym == SDLK_ESCAPE) {
+          free(g_state.command_buffer);
+          g_state.command_buffer = NULL;
+          g_state.need_redraw = 1;
+        } else if(event->key.keysym.sym == SDLK_RETURN) {
+          imv_command_exec(g_state.cmds, g_state.command_buffer);
+          free(g_state.command_buffer);
+          g_state.command_buffer = NULL;
+          g_state.need_redraw = 1;
+        } else if(event->key.keysym.sym == SDLK_BACKSPACE) {
+          const size_t len = strlen(g_state.command_buffer);
+          if(len > 0) {
+            g_state.command_buffer[len - 1] = '\0';
+            g_state.need_redraw = 1;
+          }
+        } else if(event->key.keysym.sym >= ' ' && event->key.keysym.sym <= '~') {
+          const size_t len = strlen(g_state.command_buffer);
+          if(len + 1 < 1024) {
+            g_state.command_buffer[len] = event->key.keysym.sym;
+            g_state.command_buffer[len+1] = '\0';
+            g_state.need_redraw = 1;
+          }
+        }
+
+        return;
+      }
+
+      switch (event->key.keysym.sym) {
+        case SDLK_SEMICOLON:
+          if(event->key.keysym.mod & KMOD_SHIFT) {
+            g_state.command_buffer = malloc(1024);
+            g_state.command_buffer[0] = '\0';
+            g_state.need_redraw = 1;
+          }
+          break;
+        case SDLK_q:
+          imv_command_exec(g_state.cmds, "quit");
+          break;
+        case SDLK_LEFTBRACKET:
+        case SDLK_LEFT:
+          imv_command_exec(g_state.cmds, "select_rel -1");
+          break;
+        case SDLK_RIGHTBRACKET:
+        case SDLK_RIGHT:
+          imv_command_exec(g_state.cmds, "select_rel 1");
+          break;
+        case SDLK_EQUALS:
+        case SDLK_PLUS:
+        case SDLK_i:
+        case SDLK_UP:
+          imv_viewport_zoom(g_state.view, g_state.tex, IMV_ZOOM_KEYBOARD, 1);
+          break;
+        case SDLK_MINUS:
+        case SDLK_o:
+        case SDLK_DOWN:
+          imv_viewport_zoom(g_state.view, g_state.tex, IMV_ZOOM_KEYBOARD, -1);
+          break;
+        case SDLK_s:
+          if(!event->key.repeat) {
+            if((g_options.scaling += 1) > FULL) {
+              g_options.scaling = NONE;
+            }
+          }
+        /* FALLTHROUGH */
+        case SDLK_r:
+          if(!event->key.repeat) {
+            g_state.need_rescale = 1;
+            g_state.need_redraw = 1;
+          }
+          break;
+        case SDLK_a:
+          if(!event->key.repeat) {
+            imv_viewport_scale_to_actual(g_state.view, g_state.tex);
+          }
+          break;
+        case SDLK_c:
+          if(!event->key.repeat) {
+            imv_viewport_center(g_state.view, g_state.tex);
+          }
+          break;
+        case SDLK_j:
+          imv_command_exec(g_state.cmds, "pan 0 -50");
+          break;
+        case SDLK_k:
+          imv_command_exec(g_state.cmds, "pan 0 50");
+          break;
+        case SDLK_h:
+          imv_command_exec(g_state.cmds, "pan 50 0");
+          break;
+        case SDLK_l:
+          imv_command_exec(g_state.cmds, "pan -50 0");
+          break;
+        case SDLK_x:
+          if(!event->key.repeat) {
+            imv_command_exec(g_state.cmds, "remove");
+          }
+          break;
+        case SDLK_f:
+          if(!event->key.repeat) {
+            imv_command_exec(g_state.cmds, "fullscreen");
+          }
+          break;
+        case SDLK_PERIOD:
+          imv_loader_load_next_frame(g_state.ldr);
+          break;
+        case SDLK_SPACE:
+          if(!event->key.repeat) {
+            imv_viewport_toggle_playing(g_state.view);
+          }
+          break;
+        case SDLK_p:
+          if(!event->key.repeat) {
+            puts(imv_navigator_selection(g_state.nav));
+          }
+          break;
+        case SDLK_d:
+          if(!event->key.repeat) {
+            imv_command_exec(g_state.cmds, "overlay");
+          }
+          break;
+        case SDLK_t:
+          if(event->key.keysym.mod & (KMOD_SHIFT|KMOD_CAPS)) {
+            if(g_options.delay >= 1000) {
+              g_options.delay -= 1000;
+            }
+          } else {
+            g_options.delay += 1000;
+          }
+          g_state.need_redraw = 1;
+          break;
+      }
+      break;
+    case SDL_MOUSEWHEEL:
+      imv_viewport_zoom(g_state.view, g_state.tex, IMV_ZOOM_MOUSE, event->wheel.y);
+      SDL_ShowCursor(SDL_ENABLE);
+      break;
+    case SDL_MOUSEMOTION:
+      if(event->motion.state & SDL_BUTTON_LMASK) {
+        imv_viewport_move(g_state.view, event->motion.xrel, event->motion.yrel);
+      }
+      SDL_ShowCursor(SDL_ENABLE);
+      break;
+    case SDL_WINDOWEVENT:
+      imv_viewport_update(g_state.view, g_state.tex);
+      break;
+  }
 }
 
 /* vim:set ts=2 sts=2 sw=2 et: */
