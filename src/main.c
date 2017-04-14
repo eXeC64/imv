@@ -212,6 +212,12 @@ int main(int argc, char** argv)
   imv_command_register("fullscreen", &cmd_fullscreen);
   imv_command_register("overlay", &cmd_overlay);
 
+  imv_command_alias("q", "quit");
+  imv_command_alias("next", "select_rel 1");
+  imv_command_alias("previous", "select_rel -1");
+  imv_command_alias("n", "select_rel 1");
+  imv_command_alias("p", "select_rel -1");
+
   imv_navigator_init(&g_state.nav);
 
   /* parse any command line options given */
