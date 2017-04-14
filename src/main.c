@@ -82,96 +82,6 @@ struct {
   .font = "Monospace:24",
 };
 
-static void print_usage(void)
-{
-  fprintf(stdout,
-  "imv %s\n"
-  "See manual for usage information.\n"
-  "\n"
-  "Legal:\n"
-  "This program is free software; you can redistribute it and/or\n"
-  "modify it under the terms of the GNU General Public License\n"
-  "as published by the Free Software Foundation; either version 2\n"
-  "of the License, or (at your option) any later version.\n"
-  "\n"
-  "This software uses the FreeImage open source image library.\n"
-  "See http://freeimage.sourceforge.net for details.\n"
-  "FreeImage is used under the GNU GPLv2.\n"
-  , IMV_VERSION);
-}
-
-static void parse_args(int argc, char** argv)
-{
-  /* Do not print getopt errors */
-  opterr = 0;
-
-  char *argp, *ep = *argv;
-  int o;
-
-  while((o = getopt(argc, argv, "firasSudxhln:b:e:t:")) != -1) {
-    switch(o) {
-      case 'f': g_options.fullscreen = 1;   break;
-      case 'i':
-        g_options.stdin_list = 1;
-        fprintf(stderr, "Warning: '-i' is deprecated. No flag is needed.\n");
-        break;
-      case 'r': g_options.recursive = 1;           break;
-      case 'a': g_options.scaling = NONE;          break;
-      case 's': g_options.scaling = DOWN;          break;
-      case 'S': g_options.scaling = FULL;          break;
-      case 'u': g_options.nearest_neighbour = 1;   break;
-      case 'd': g_options.overlay = 1;             break;
-      case 'x': g_options.cycle = 0;               break;
-      case 'h': print_usage(); exit(0);            break;
-      case 'l': g_options.list = 1;                break;
-      case 'n':
-        g_options.start_at = optarg;
-        break;
-      case 'b':
-        if(strcmp("checks", optarg) == 0) {
-          g_options.solid_bg = 0;
-        } else {
-          g_options.solid_bg = 1;
-          argp = (*optarg == '#') ? optarg + 1 : optarg;
-          uint32_t n = strtoul(argp, &ep, 16);
-          if(*ep != '\0' || ep - argp != 6 || n > 0xFFFFFF) {
-            fprintf(stderr, "Invalid hex color: '%s'\n", optarg);
-            exit(1);
-          }
-          g_options.bg_b = n & 0xFF;
-          g_options.bg_g = (n >> 8) & 0xFF;
-          g_options.bg_r = (n >> 16);
-        }
-        break;
-      case 'e':
-        g_options.font = optarg;
-        break;
-      case 't':
-        g_options.delay = strtoul(optarg, &argp, 10);
-        g_options.delay *= 1000;
-        if (*argp == '.') {
-          long delay = strtoul(++argp, &ep, 10);
-          for (int i = 3 - (ep - argp); i; i--) {
-            delay *= 10;
-          }
-          if (delay < 1000) {
-            g_options.delay += delay;
-          } else {
-            g_options.delay = ULONG_MAX;
-          }
-        }
-        if (g_options.delay == ULONG_MAX) {
-          fprintf(stderr, "Wrong slideshow delay '%s'. Aborting.\n", optarg);
-          exit(1);
-        }
-        break;
-      case '?':
-        fprintf(stderr, "Unknown argument '%c'. Aborting.\n", optopt);
-        exit(1);
-    }
-  }
-}
-
 struct {
   struct imv_navigator *nav;
   struct imv_loader *ldr;
@@ -200,6 +110,7 @@ void cmd_remove(struct imv_list *args);
 void cmd_fullscreen(struct imv_list *args);
 void cmd_overlay(struct imv_list *args);
 
+static void parse_args(int argc, char** argv);
 void handle_event(SDL_Event *event);
 void render_window(
     SDL_Window *window,
@@ -639,6 +550,97 @@ void cmd_overlay(struct imv_list *args)
   g_options.overlay = !g_options.overlay;
   g_state.need_redraw = 1;
 }
+
+static void print_usage(void)
+{
+  fprintf(stdout,
+  "imv %s\n"
+  "See manual for usage information.\n"
+  "\n"
+  "Legal:\n"
+  "This program is free software; you can redistribute it and/or\n"
+  "modify it under the terms of the GNU General Public License\n"
+  "as published by the Free Software Foundation; either version 2\n"
+  "of the License, or (at your option) any later version.\n"
+  "\n"
+  "This software uses the FreeImage open source image library.\n"
+  "See http://freeimage.sourceforge.net for details.\n"
+  "FreeImage is used under the GNU GPLv2.\n"
+  , IMV_VERSION);
+}
+
+static void parse_args(int argc, char** argv)
+{
+  /* Do not print getopt errors */
+  opterr = 0;
+
+  char *argp, *ep = *argv;
+  int o;
+
+  while((o = getopt(argc, argv, "firasSudxhln:b:e:t:")) != -1) {
+    switch(o) {
+      case 'f': g_options.fullscreen = 1;   break;
+      case 'i':
+        g_options.stdin_list = 1;
+        fprintf(stderr, "Warning: '-i' is deprecated. No flag is needed.\n");
+        break;
+      case 'r': g_options.recursive = 1;           break;
+      case 'a': g_options.scaling = NONE;          break;
+      case 's': g_options.scaling = DOWN;          break;
+      case 'S': g_options.scaling = FULL;          break;
+      case 'u': g_options.nearest_neighbour = 1;   break;
+      case 'd': g_options.overlay = 1;             break;
+      case 'x': g_options.cycle = 0;               break;
+      case 'h': print_usage(); exit(0);            break;
+      case 'l': g_options.list = 1;                break;
+      case 'n':
+        g_options.start_at = optarg;
+        break;
+      case 'b':
+        if(strcmp("checks", optarg) == 0) {
+          g_options.solid_bg = 0;
+        } else {
+          g_options.solid_bg = 1;
+          argp = (*optarg == '#') ? optarg + 1 : optarg;
+          uint32_t n = strtoul(argp, &ep, 16);
+          if(*ep != '\0' || ep - argp != 6 || n > 0xFFFFFF) {
+            fprintf(stderr, "Invalid hex color: '%s'\n", optarg);
+            exit(1);
+          }
+          g_options.bg_b = n & 0xFF;
+          g_options.bg_g = (n >> 8) & 0xFF;
+          g_options.bg_r = (n >> 16);
+        }
+        break;
+      case 'e':
+        g_options.font = optarg;
+        break;
+      case 't':
+        g_options.delay = strtoul(optarg, &argp, 10);
+        g_options.delay *= 1000;
+        if (*argp == '.') {
+          long delay = strtoul(++argp, &ep, 10);
+          for (int i = 3 - (ep - argp); i; i--) {
+            delay *= 10;
+          }
+          if (delay < 1000) {
+            g_options.delay += delay;
+          } else {
+            g_options.delay = ULONG_MAX;
+          }
+        }
+        if (g_options.delay == ULONG_MAX) {
+          fprintf(stderr, "Wrong slideshow delay '%s'. Aborting.\n", optarg);
+          exit(1);
+        }
+        break;
+      case '?':
+        fprintf(stderr, "Unknown argument '%c'. Aborting.\n", optopt);
+        exit(1);
+    }
+  }
+}
+
 
 void handle_event(SDL_Event *event)
 {
