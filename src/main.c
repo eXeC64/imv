@@ -176,7 +176,7 @@ struct {
   struct imv_navigator nav;
   struct imv_loader *ldr;
   struct imv_texture *tex;
-  struct imv_viewport view;
+  struct imv_viewport *view;
   struct imv_commands *cmds;
   SDL_Window *window;
   SDL_Renderer *renderer;
@@ -357,12 +357,11 @@ int main(int argc, char** argv)
   /* create our main classes */
   g_state.ldr = imv_loader_create();
   g_state.tex = imv_texture_create(g_state.renderer);
-
-  imv_init_viewport(&g_state.view, g_state.window);
+  g_state.view = imv_viewport_create(g_state.window);
 
   /* put us in fullscren mode to begin with if requested */
   if(g_options.fullscreen) {
-    imv_viewport_toggle_fullscreen(&g_state.view);
+    imv_viewport_toggle_fullscreen(g_state.view);
   }
 
   /* help keeping track of time */
@@ -452,12 +451,12 @@ int main(int argc, char** argv)
             case SDLK_PLUS:
             case SDLK_i:
             case SDLK_UP:
-              imv_viewport_zoom(&g_state.view, g_state.tex, IMV_ZOOM_KEYBOARD, 1);
+              imv_viewport_zoom(g_state.view, g_state.tex, IMV_ZOOM_KEYBOARD, 1);
               break;
             case SDLK_MINUS:
             case SDLK_o:
             case SDLK_DOWN:
-              imv_viewport_zoom(&g_state.view, g_state.tex, IMV_ZOOM_KEYBOARD, -1);
+              imv_viewport_zoom(g_state.view, g_state.tex, IMV_ZOOM_KEYBOARD, -1);
               break;
             case SDLK_s:
               if(!e.key.repeat) {
@@ -474,12 +473,12 @@ int main(int argc, char** argv)
               break;
             case SDLK_a:
               if(!e.key.repeat) {
-                imv_viewport_scale_to_actual(&g_state.view, g_state.tex);
+                imv_viewport_scale_to_actual(g_state.view, g_state.tex);
               }
               break;
             case SDLK_c:
               if(!e.key.repeat) {
-                imv_viewport_center(&g_state.view, g_state.tex);
+                imv_viewport_center(g_state.view, g_state.tex);
               }
               break;
             case SDLK_j:
@@ -509,7 +508,7 @@ int main(int argc, char** argv)
               break;
             case SDLK_SPACE:
               if(!e.key.repeat) {
-                imv_viewport_toggle_playing(&g_state.view);
+                imv_viewport_toggle_playing(g_state.view);
               }
               break;
             case SDLK_p:
@@ -535,17 +534,17 @@ int main(int argc, char** argv)
           }
           break;
         case SDL_MOUSEWHEEL:
-          imv_viewport_zoom(&g_state.view, g_state.tex, IMV_ZOOM_MOUSE, e.wheel.y);
+          imv_viewport_zoom(g_state.view, g_state.tex, IMV_ZOOM_MOUSE, e.wheel.y);
           SDL_ShowCursor(SDL_ENABLE);
           break;
         case SDL_MOUSEMOTION:
           if(e.motion.state & SDL_BUTTON_LMASK) {
-            imv_viewport_move(&g_state.view, e.motion.xrel, e.motion.yrel);
+            imv_viewport_move(g_state.view, e.motion.xrel, e.motion.yrel);
           }
           SDL_ShowCursor(SDL_ENABLE);
           break;
         case SDL_WINDOWEVENT:
-          imv_viewport_update(&g_state.view, g_state.tex);
+          imv_viewport_update(g_state.view, g_state.tex);
           break;
       }
     }
@@ -590,10 +589,10 @@ int main(int argc, char** argv)
       snprintf(title, sizeof(title), "imv - [%i/%i] [LOADING] %s [%s]",
           g_state.nav.cur_path + 1, g_state.nav.num_paths, current_path,
           scaling_label[g_options.scaling]);
-      imv_viewport_set_title(&g_state.view, title);
+      imv_viewport_set_title(g_state.view, title);
 
       imv_loader_load(g_state.ldr, current_path, stdin_buffer, stdin_buffer_size);
-      g_state.view.playing = 1;
+      g_state.view->playing = 1;
     }
 
     /* get window height and width */
@@ -616,9 +615,9 @@ int main(int argc, char** argv)
       g_state.need_rescale = 0;
       if(g_options.scaling == NONE ||
           (g_options.scaling == DOWN && ww > iw && wh > ih)) {
-        imv_viewport_scale_to_actual(&g_state.view, g_state.tex);
+        imv_viewport_scale_to_actual(g_state.view, g_state.tex);
       } else {
-        imv_viewport_scale_to_window(&g_state.view, g_state.tex);
+        imv_viewport_scale_to_window(g_state.view, g_state.tex);
       }
     }
 
@@ -626,7 +625,7 @@ int main(int argc, char** argv)
 
     /* if we're playing an animated gif, tell the loader how much time has
      * passed */
-    if(g_state.view.playing) {
+    if(g_state.view->playing) {
       unsigned int dt = current_time - last_time;
       /* We cap the delta-time to 100 ms so that if imv is asleep for several
        * seconds or more (e.g. suspended), upon waking up it doesn't try to
@@ -652,7 +651,7 @@ int main(int argc, char** argv)
     last_time = current_time;
 
     /* check if the viewport needs a redraw */
-    if(imv_viewport_needs_redraw(&g_state.view)) {
+    if(imv_viewport_needs_redraw(g_state.view)) {
       g_state.need_redraw = 1;
     }
 
@@ -663,13 +662,13 @@ int main(int argc, char** argv)
       const char *current_path = imv_navigator_selection(&g_state.nav);
       len = snprintf(title, sizeof(title), "imv - [%i/%i] [%ix%i] [%.2f%%] %s [%s]",
           g_state.nav.cur_path + 1, g_state.nav.num_paths, g_state.tex->width, g_state.tex->height,
-          100.0 * g_state.view.scale,
+          100.0 * g_state.view->scale,
           current_path, scaling_label[g_options.scaling]);
       if(g_options.delay >= 1000) {
         len += snprintf(title + len, sizeof(title) - len, "[%lu/%lus]",
             g_state.delay_msec / 1000 + 1, g_options.delay / 1000);
       }
-      imv_viewport_set_title(&g_state.view, title);
+      imv_viewport_set_title(g_state.view, title);
 
       /* first we draw the background */
       if(g_options.solid_bg) {
@@ -691,7 +690,7 @@ int main(int argc, char** argv)
       }
 
       /* draw our actual texture */
-      imv_texture_draw(g_state.tex, g_state.view.x, g_state.view.y, g_state.view.scale);
+      imv_texture_draw(g_state.tex, g_state.view->x, g_state.view->y, g_state.view->scale);
 
       /* if the overlay needs to be drawn, draw that too */
       if(g_options.overlay && font) {
@@ -772,7 +771,7 @@ int main(int argc, char** argv)
   imv_loader_free(g_state.ldr);
   imv_texture_free(g_state.tex);
   imv_navigator_destroy(&g_state.nav);
-  imv_destroy_viewport(&g_state.view);
+  imv_viewport_free(g_state.view);
   imv_commands_free(g_state.cmds);
 
   if(font) {
@@ -804,7 +803,7 @@ void cmd_pan(struct imv_list *args)
   long int x = strtol(args->items[1], NULL, 10);
   long int y = strtol(args->items[2], NULL, 10);
 
-  imv_viewport_move(&g_state.view, x, y);
+  imv_viewport_move(g_state.view, x, y);
 }
 
 void cmd_select_rel(struct imv_list *args)
@@ -844,7 +843,7 @@ void cmd_remove(struct imv_list *args)
 void cmd_fullscreen(struct imv_list *args)
 {
   (void)args;
-  imv_viewport_toggle_fullscreen(&g_state.view);
+  imv_viewport_toggle_fullscreen(g_state.view);
 }
 
 void cmd_overlay(struct imv_list *args)
