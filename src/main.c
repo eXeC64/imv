@@ -110,7 +110,7 @@ void cmd_remove(struct imv_list *args);
 void cmd_fullscreen(struct imv_list *args);
 void cmd_overlay(struct imv_list *args);
 
-static void parse_args(int argc, char** argv);
+static void parse_args(int *argc, char ***argv);
 void handle_event(SDL_Event *event);
 void render_window(
     SDL_Window *window,
@@ -139,10 +139,7 @@ int main(int argc, char** argv)
   g_state.nav = imv_navigator_create();
 
   /* parse any command line options given */
-  parse_args(argc, argv);
-
-  argc -= optind;
-  argv += optind;
+  parse_args(&argc, &argv);
 
   /* if no names are given, expect them on stdin */
   if(argc == 0) {
@@ -185,12 +182,16 @@ int main(int argc, char** argv)
 
   /* handle any image paths given as arguments */
   for(int i = 0; i < argc; ++i) {
-    /* special case: '-' is actually an option */
+
+    /* special case: '-' means load raw image data from stdin */
     if(!strcmp("-",argv[i])) {
+      /* did we already load data from stdin? */
       if (stdin_buffer) {
         fprintf(stderr, "Can't read from stdin twice\n");
+        imv_navigator_free(g_state.nav);
         exit(1);
       }
+      /* actually load the data from stdin */
       stdin_buffer_size = read_from_stdin(&stdin_buffer);
       if (stdin_buffer_size == 0) {
         perror(NULL);
@@ -209,6 +210,7 @@ int main(int argc, char** argv)
   /* if we weren't given any paths we have nothing to view. exit */
   if(!imv_navigator_selection(g_state.nav)) {
     fprintf(stderr, "No input files. Exiting.\n");
+    imv_navigator_free(g_state.nav);
     exit(1);
   }
 
@@ -224,6 +226,7 @@ int main(int argc, char** argv)
   /* we've got something to display, so create an SDL window */
   if(SDL_Init(SDL_INIT_VIDEO) != 0) {
     fprintf(stderr, "SDL Failed to Init: %s\n", SDL_GetError());
+    imv_navigator_free(g_state.nav);
     exit(1);
   }
 
@@ -240,6 +243,7 @@ int main(int argc, char** argv)
         SDL_WINDOW_RESIZABLE);
   if(!window) {
     fprintf(stderr, "SDL Failed to create window: %s\n", SDL_GetError());
+    imv_navigator_free(g_state.nav);
     SDL_Quit();
     exit(1);
   }
@@ -248,6 +252,7 @@ int main(int argc, char** argv)
   SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
   if(!renderer) {
     fprintf(stderr, "SDL Failed to create renderer: %s\n", SDL_GetError());
+    imv_navigator_free(g_state.nav);
     SDL_DestroyWindow(window);
     SDL_Quit();
     exit(1);
@@ -315,6 +320,8 @@ int main(int argc, char** argv)
     char *err_path = imv_loader_get_error(g_state.ldr);
     if(err_path) {
       imv_navigator_remove(g_state.nav, err_path);
+
+      /* special case: the image came from stdin */
       if (strncmp(err_path, "-", 2) == 0) {
         free(stdin_buffer);
         stdin_buffer_size = 0;
@@ -336,11 +343,11 @@ int main(int argc, char** argv)
     if(imv_navigator_poll_changed(g_state.nav)) {
       const char *current_path = imv_navigator_selection(g_state.nav);
       if(!current_path) {
-        if(g_options.stdin_list) {
-          continue;
+        if(!g_options.stdin_list) {
+          fprintf(stderr, "No input files left. Exiting.\n");
+          g_state.quit = 1;
         }
-        fprintf(stderr, "No input files left. Exiting.\n");
-        exit(1);
+        continue;
       }
 
       snprintf(title, sizeof(title), "imv - [%i/%i] [LOADING] %s [%s]",
@@ -352,9 +359,6 @@ int main(int argc, char** argv)
       g_state.view->playing = 1;
     }
 
-    /* get window height and width */
-    int ww, wh;
-    SDL_GetWindowSize(window, &ww, &wh);
 
     /* check if a new image is available to display */
     FIBITMAP *bmp;
@@ -369,6 +373,9 @@ int main(int argc, char** argv)
     }
 
     if(g_state.need_rescale) {
+      int ww, wh;
+      SDL_GetWindowSize(window, &ww, &wh);
+
       g_state.need_rescale = 0;
       if(g_options.scaling == NONE ||
           (g_options.scaling == DOWN && ww > iw && wh > ih)) {
@@ -419,7 +426,7 @@ int main(int argc, char** argv)
       SDL_RenderPresent(renderer);
     }
 
-    /* sleep a little bit so we don't waste CPU time */
+    /* try to read some more paths from stdin */
     if(g_options.stdin_list) {
       if(poll(rfds, 1, 10) != 1 || rfds[0].revents & (POLLERR|POLLNVAL)) {
         fprintf(stderr, "error polling stdin");
@@ -449,6 +456,7 @@ int main(int argc, char** argv)
         }
       }
     } else {
+      /* sleep a little bit so we don't waste CPU time */
       SDL_Delay(10);
     }
   }
@@ -569,15 +577,15 @@ static void print_usage(void)
   , IMV_VERSION);
 }
 
-static void parse_args(int argc, char** argv)
+static void parse_args(int *argc, char ***argv)
 {
   /* Do not print getopt errors */
   opterr = 0;
 
-  char *argp, *ep = *argv;
+  char *argp, *ep = **argv;
   int o;
 
-  while((o = getopt(argc, argv, "firasSudxhln:b:e:t:")) != -1) {
+  while((o = getopt(*argc, *argv, "firasSudxhln:b:e:t:")) != -1) {
     switch(o) {
       case 'f': g_options.fullscreen = 1;   break;
       case 'i':
@@ -639,6 +647,9 @@ static void parse_args(int argc, char** argv)
         exit(1);
     }
   }
+
+  *argc -= optind;
+  *argv += optind;
 }
 
 
