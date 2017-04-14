@@ -178,8 +178,6 @@ struct {
   struct imv_texture *tex;
   struct imv_viewport *view;
   struct imv_commands *cmds;
-  SDL_Window *window;
-  SDL_Renderer *renderer;
   int quit;
 
   /* used to calculate when to skip to the next image in slideshow mode */
@@ -203,7 +201,11 @@ void cmd_fullscreen(struct imv_list *args);
 void cmd_overlay(struct imv_list *args);
 
 void handle_event(SDL_Event *event);
-void render_window(TTF_Font *text_font, SDL_Texture *bg_texture);
+void render_window(
+    SDL_Window *window,
+    SDL_Renderer *renderer,
+    TTF_Font *text_font,
+    SDL_Texture *bg_texture);
 
 int main(int argc, char** argv)
 {
@@ -319,23 +321,23 @@ int main(int argc, char** argv)
   const int width = 1280;
   const int height = 720;
 
-  g_state.window = SDL_CreateWindow(
+  SDL_Window *window = SDL_CreateWindow(
         "imv",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         width, height,
         SDL_WINDOW_RESIZABLE);
-  if(!g_state.window) {
+  if(!window) {
     fprintf(stderr, "SDL Failed to create window: %s\n", SDL_GetError());
     SDL_Quit();
     exit(1);
   }
 
   /* we'll use SDL's built-in renderer, hardware accelerated if possible */
-  g_state.renderer = SDL_CreateRenderer(g_state.window, -1, 0);
-  if(!g_state.renderer) {
+  SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
+  if(!renderer) {
     fprintf(stderr, "SDL Failed to create renderer: %s\n", SDL_GetError());
-    SDL_DestroyWindow(g_state.window);
+    SDL_DestroyWindow(window);
     SDL_Quit();
     exit(1);
   }
@@ -347,7 +349,7 @@ int main(int argc, char** argv)
   /* construct a chequered background texture */
   SDL_Texture *chequered_tex = NULL;
   if(!g_options.solid_bg) {
-    chequered_tex = create_chequered(g_state.renderer);
+    chequered_tex = create_chequered(renderer);
   }
 
   /* set up the required fonts and surfaces for displaying the overlay */
@@ -359,8 +361,8 @@ int main(int argc, char** argv)
 
   /* create our main classes */
   g_state.ldr = imv_loader_create();
-  g_state.tex = imv_texture_create(g_state.renderer);
-  g_state.view = imv_viewport_create(g_state.window);
+  g_state.tex = imv_texture_create(renderer);
+  g_state.view = imv_viewport_create(window);
 
   /* put us in fullscren mode to begin with if requested */
   if(g_options.fullscreen) {
@@ -441,7 +443,7 @@ int main(int argc, char** argv)
 
     /* get window height and width */
     int ww, wh;
-    SDL_GetWindowSize(g_state.window, &ww, &wh);
+    SDL_GetWindowSize(window, &ww, &wh);
 
     /* check if a new image is available to display */
     FIBITMAP *bmp;
@@ -501,7 +503,9 @@ int main(int argc, char** argv)
 
     /* only redraw when something's changed */
     if(g_state.need_redraw) {
-      render_window(font, chequered_tex);
+      render_window(window, renderer, font, chequered_tex);
+      /* tell SDL to show the newly drawn frame */
+      SDL_RenderPresent(renderer);
     }
 
     /* sleep a little bit so we don't waste CPU time */
@@ -564,8 +568,8 @@ int main(int argc, char** argv)
   if(chequered_tex) {
     SDL_DestroyTexture(chequered_tex);
   }
-  SDL_DestroyRenderer(g_state.renderer);
-  SDL_DestroyWindow(g_state.window);
+  SDL_DestroyRenderer(renderer);
+  SDL_DestroyWindow(window);
   SDL_Quit();
 
   return 0;
@@ -796,11 +800,15 @@ void handle_event(SDL_Event *event)
   }
 }
 
-void render_window(TTF_Font *text_font, SDL_Texture *bg_texture)
+void render_window(
+    SDL_Window *window,
+    SDL_Renderer *renderer,
+    TTF_Font *text_font,
+    SDL_Texture *bg_texture)
 {
   char title[1024];
   int ww, wh;
-  SDL_GetWindowSize(g_state.window, &ww, &wh);
+  SDL_GetWindowSize(window, &ww, &wh);
 
   /* update window title */
   const char *current_path = imv_navigator_selection(g_state.nav);
@@ -817,9 +825,9 @@ void render_window(TTF_Font *text_font, SDL_Texture *bg_texture)
   /* first we draw the background */
   if(g_options.solid_bg) {
     /* solid background */
-    SDL_SetRenderDrawColor(g_state.renderer,
+    SDL_SetRenderDrawColor(renderer,
         g_options.bg_r, g_options.bg_g, g_options.bg_b, 255);
-    SDL_RenderClear(g_state.renderer);
+    SDL_RenderClear(renderer);
   } else {
     /* background */
     int img_w, img_h;
@@ -828,7 +836,7 @@ void render_window(TTF_Font *text_font, SDL_Texture *bg_texture)
     for(int y = 0; y < wh; y += img_h) {
       for(int x = 0; x < ww; x += img_w) {
         SDL_Rect dst_rect = {x,y,img_w,img_h};
-        SDL_RenderCopy(g_state.renderer, bg_texture, NULL, &dst_rect);
+        SDL_RenderCopy(renderer, bg_texture, NULL, &dst_rect);
       }
     }
   }
@@ -840,7 +848,7 @@ void render_window(TTF_Font *text_font, SDL_Texture *bg_texture)
   if(g_options.overlay && text_font) {
     SDL_Color fg = {255,255,255,255};
     SDL_Color bg = {0,0,0,160};
-    imv_printf(g_state.renderer, text_font, 0, 0, &fg, &bg, "%s",
+    imv_printf(renderer, text_font, 0, 0, &fg, &bg, "%s",
         title + strlen("imv - "));
   }
 
@@ -848,7 +856,7 @@ void render_window(TTF_Font *text_font, SDL_Texture *bg_texture)
   if(g_state.command_buffer && text_font) {
     SDL_Color fg = {255,255,255,255};
     SDL_Color bg = {0,0,0,160};
-    imv_printf(g_state.renderer,
+    imv_printf(renderer,
         text_font,
         0, wh - TTF_FontHeight(text_font),
         &fg, &bg,
@@ -857,9 +865,6 @@ void render_window(TTF_Font *text_font, SDL_Texture *bg_texture)
 
   /* redraw complete, unset the flag */
   g_state.need_redraw = 0;
-
-  /* tell SDL to show the newly drawn frame */
-  SDL_RenderPresent(g_state.renderer);
 }
 
 /* vim:set ts=2 sts=2 sw=2 et: */
