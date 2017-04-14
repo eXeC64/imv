@@ -187,6 +187,9 @@ struct {
   /* do we need to redraw the window? */
   int need_redraw;
   int need_rescale;
+
+  /* buffer for command input - NULL when not in command mode */
+  char *command_buffer;
 } g_state;
 
 void cmd_quit(struct imv_list *args);
@@ -370,6 +373,9 @@ int main(int argc, char** argv)
 
   g_state.delay_msec = 0;
 
+  /* start outside of command mode */
+  g_state.command_buffer = NULL;
+
   /* initialize variables holding image dimentions */
   int iw = 0, ih = 0;
 
@@ -382,9 +388,48 @@ int main(int argc, char** argv)
         case SDL_QUIT:
           imv_command_exec("quit");
           break;
+
         case SDL_KEYDOWN:
           SDL_ShowCursor(SDL_DISABLE);
+
+          if(g_state.command_buffer) {
+            /* in command mode, update the buffer */
+            if(e.key.keysym.sym == SDLK_ESCAPE) {
+              free(g_state.command_buffer);
+              g_state.command_buffer = NULL;
+              g_state.need_redraw = 1;
+            } else if(e.key.keysym.sym == SDLK_RETURN) {
+              imv_command_exec(g_state.command_buffer);
+              free(g_state.command_buffer);
+              g_state.command_buffer = NULL;
+              g_state.need_redraw = 1;
+            } else if(e.key.keysym.sym == SDLK_BACKSPACE) {
+              const size_t len = strlen(g_state.command_buffer);
+              if(len > 0) {
+                g_state.command_buffer[len - 1] = '\0';
+                g_state.need_redraw = 1;
+              }
+            } else if(e.key.keysym.sym >= ' ' && e.key.keysym.sym <= '~') {
+              const size_t len = strlen(g_state.command_buffer);
+              if(len + 1 < 1024) {
+                g_state.command_buffer[len] = e.key.keysym.sym;
+                g_state.command_buffer[len+1] = '\0';
+                g_state.need_redraw = 1;
+              }
+            }
+
+            /* input has been consumed by command input, move onto next event */
+            continue;
+          }
+
           switch (e.key.keysym.sym) {
+            case SDLK_SEMICOLON:
+              if(e.key.keysym.mod & KMOD_SHIFT) {
+                g_state.command_buffer = malloc(1024);
+                g_state.command_buffer[0] = '\0';
+                g_state.need_redraw = 1;
+              }
+              break;
             case SDLK_q:
               imv_command_exec("quit");
               break;
@@ -649,6 +694,17 @@ int main(int argc, char** argv)
             title + strlen("imv - "));
       }
 
+      /* draw command entry bar if needed */
+      if(g_state.command_buffer && font) {
+        SDL_Color fg = {255,255,255,255};
+        SDL_Color bg = {0,0,0,160};
+        imv_printf(g_state.renderer,
+            font,
+            0, wh - TTF_FontHeight(font),
+            &fg, &bg,
+            ":%s", g_state.command_buffer);
+      }
+
       /* redraw complete, unset the flag */
       g_state.need_redraw = 0;
 
@@ -700,7 +756,12 @@ int main(int argc, char** argv)
     fprintf(stdout, "%s\n", path);
     imv_navigator_remove(&g_state.nav, path);
   }
+
   /* clean up our resources now that we're exiting */
+  if(g_state.command_buffer) {
+    free(g_state.command_buffer);
+  }
+
   imv_destroy_loader(&g_state.ldr);
   imv_destroy_texture(&g_state.tex);
   imv_navigator_destroy(&g_state.nav);
