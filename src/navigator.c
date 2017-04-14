@@ -47,6 +47,10 @@ void imv_navigator_free(struct imv_navigator *nav)
     free(nav->mtimes);
   }
 
+  if(nav->ctimes) {
+    free(nav->ctimes);
+  }
+
   free(nav);
 }
 
@@ -56,19 +60,23 @@ static int add_item(struct imv_navigator *nav, const char *path,
   if(nav->num_paths % BUFFER_SIZE == 0) {
     char **new_paths;
     time_t *new_mtimes;
+    time_t *new_ctimes;
     size_t new_size = nav->num_paths + BUFFER_SIZE;
     new_paths = realloc(nav->paths, sizeof(char*) * new_size);
     new_mtimes = realloc(nav->mtimes, sizeof(time_t) * new_size);
-    if (new_paths == NULL || new_mtimes == NULL) {
+    new_ctimes = realloc(nav->ctimes, sizeof(time_t) * new_size);
+    if (new_paths == NULL || new_mtimes == NULL || new_ctimes == NULL) {
       return 1;
     }
     nav->paths = new_paths;
     nav->mtimes = new_mtimes;
+    nav->ctimes = new_ctimes;
   }
   if((nav->paths[nav->num_paths] = strndup(path, PATH_MAX)) == NULL) {
     return 1;
   }
   nav->mtimes[nav->num_paths] = mtime;
+  nav->ctimes[nav->num_paths] = time(NULL);
   nav->num_paths += 1;
   if(nav->num_paths == 1) {
     nav->changed = 1;
@@ -218,7 +226,7 @@ int imv_navigator_find_path(struct imv_navigator *nav, const char *path)
   return -1;
 }
 
-int imv_navigator_poll_changed(struct imv_navigator *nav, const int nopoll)
+int imv_navigator_poll_changed(struct imv_navigator *nav)
 {
   if(nav->changed) {
     nav->changed = 0;
@@ -229,7 +237,11 @@ int imv_navigator_poll_changed(struct imv_navigator *nav, const int nopoll)
     return 0;
   };
 
-  if(!nopoll) {
+  time_t cur_time = time(NULL);
+  /* limit polling to once per second */
+  if(nav->ctimes[nav->cur_path] < cur_time - 1) {
+    nav->ctimes[nav->cur_path] = cur_time;
+
     struct stat file_info;
     if(stat(nav->paths[nav->cur_path], &file_info) == -1) {
       return 0;

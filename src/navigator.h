@@ -27,9 +27,11 @@ struct imv_navigator {
   int cur_path;
   char **paths;
   time_t *mtimes;
+  time_t *ctimes;
   int last_move_direction;
   int changed;
   int wrapped;
+  int poll_countdown;
 };
 
 /* Creates an instance of imv_navigator */
@@ -65,7 +67,7 @@ int imv_navigator_find_path(struct imv_navigator *nav, const char *path);
 
 /* Returns 1 if either the currently selected path or underlying file has
  * changed since last called */
-int imv_navigator_poll_changed(struct imv_navigator *nav, const int nopoll);
+int imv_navigator_poll_changed(struct imv_navigator *nav);
 
 /* Check whether navigator wrapped around paths list */
 int imv_navigator_wrapped(struct imv_navigator *nav);

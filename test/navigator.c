@@ -22,7 +22,7 @@ static void test_navigator_add_remove(void **state)
   struct imv_navigator *nav = imv_navigator_create();
 
   /* Check poll_changed */
-  assert_false(imv_navigator_poll_changed(nav, 0));
+  assert_false(imv_navigator_poll_changed(nav));
 
   /* Add 6 paths, one non-existant should fail */
   assert_false(imv_navigator_add(nav, FILENAME1, 0));
@@ -34,7 +34,7 @@ static void test_navigator_add_remove(void **state)
   assert_int_equal(nav->num_paths, 6);
 
   /* Check poll_changed */
-  assert_true(imv_navigator_poll_changed(nav, 0));
+  assert_true(imv_navigator_poll_changed(nav));
 
   /* Make sure current selection  is #1 */
   assert_string_equal(imv_navigator_selection(nav), FILENAME1);
@@ -87,8 +87,8 @@ static void test_navigator_file_changed(void **state)
   assert_false(futimens(fd, times) == -1);
 
   assert_false(imv_navigator_add(nav, FILENAME1, 0));
-  assert_true(imv_navigator_poll_changed(nav, 0));
-  assert_false(imv_navigator_poll_changed(nav, 0));
+  assert_true(imv_navigator_poll_changed(nav));
+  assert_false(imv_navigator_poll_changed(nav));
 
   assert_false(sleep(1));
 
@@ -101,7 +101,10 @@ static void test_navigator_file_changed(void **state)
   times[1].tv_sec = UTIME_NOW;
   assert_false(futimens(fd, times) == -1);
 
-  assert_true(imv_navigator_poll_changed(nav, 0));
+  /* sleep to ensure we don't hit the poll rate-limiting */
+  sleep(1);
+
+  assert_true(imv_navigator_poll_changed(nav));
 
   (void)close(fd);
   (void)unlink(FILENAME1);

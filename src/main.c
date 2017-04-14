@@ -370,9 +370,6 @@ int main(int argc, char** argv)
   unsigned int last_time = SDL_GetTicks();
   unsigned int current_time;
 
-  /* keep file change polling rate under control */
-  static uint8_t poll_countdown = UINT8_MAX;
-
   g_state.need_redraw = 1;
   g_state.need_rescale = 0;
 
@@ -422,7 +419,7 @@ int main(int argc, char** argv)
     }
 
     /* if the user has changed image, start loading the new one */
-    if(imv_navigator_poll_changed(g_state.nav, poll_countdown--)) {
+    if(imv_navigator_poll_changed(g_state.nav)) {
       const char *current_path = imv_navigator_selection(g_state.nav);
       if(!current_path) {
         if(g_options.stdin_list) {
@@ -559,9 +556,6 @@ int main(int argc, char** argv)
 
       /* redraw complete, unset the flag */
       g_state.need_redraw = 0;
-
-      /* reset poll countdown timer */
-      poll_countdown = UINT8_MAX;
 
       /* tell SDL to show the newly drawn frame */
       SDL_RenderPresent(g_state.renderer);
