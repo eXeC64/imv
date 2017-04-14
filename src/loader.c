@@ -44,15 +44,17 @@ static int is_thread_cancelled(void)
   return sigismember(&sigmask, SIGUSR1);
 }
 
-void imv_init_loader(struct imv_loader *ldr)
+struct imv_loader *imv_loader_create(void)
 {
+  struct imv_loader *ldr = malloc(sizeof(struct imv_loader));
   memset(ldr, 0, sizeof(struct imv_loader));
   pthread_mutex_init(&ldr->lock, NULL);
   /* ignore this signal in case we accidentally receive it */
   block_usr1_signal();
+  return ldr;
 }
 
-void imv_destroy_loader(struct imv_loader *ldr)
+void imv_loader_free(struct imv_loader *ldr)
 {
   /* wait for any existing bg thread to finish */
   pthread_join(ldr->bg_thread, NULL);
@@ -70,6 +72,7 @@ void imv_destroy_loader(struct imv_loader *ldr)
   if(ldr->path) {
     free(ldr->path);
   }
+  free(ldr);
 }
 
 void imv_loader_load(struct imv_loader *ldr, const char *path,

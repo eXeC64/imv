@@ -44,11 +44,11 @@ struct imv_loader {
   double frame_time;
 };
 
-/* Initialises an instance of imv_loader */
-void imv_init_loader(struct imv_loader *img);
+/* Creates an instance of imv_loader */
+struct imv_loader *imv_loader_create(void);
 
-/* Cleans up all resources owned by a imv_loader instance */
-void imv_destroy_loader(struct imv_loader *img);
+/* Cleans up an imv_loader instance */
+void imv_loader_free(struct imv_loader *ldr);
 
 /* Asynchronously load the given file */
 void imv_loader_load(struct imv_loader *ldr, const char *path,

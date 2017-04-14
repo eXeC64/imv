@@ -174,7 +174,7 @@ static void parse_args(int argc, char** argv)
 
 struct {
   struct imv_navigator nav;
-  struct imv_loader ldr;
+  struct imv_loader *ldr;
   struct imv_texture tex;
   struct imv_viewport view;
   struct imv_commands *cmds;
@@ -354,8 +354,8 @@ int main(int argc, char** argv)
     fprintf(stderr, "Error loading font: %s\n", TTF_GetError());
   }
 
-  /* create our main classes on the stack*/
-  imv_init_loader(&g_state.ldr);
+  /* create our main classes */
+  g_state.ldr = imv_loader_create();
 
   imv_init_texture(&g_state.tex, g_state.renderer);
 
@@ -506,7 +506,7 @@ int main(int argc, char** argv)
               }
               break;
             case SDLK_PERIOD:
-              imv_loader_load_next_frame(&g_state.ldr);
+              imv_loader_load_next_frame(g_state.ldr);
               break;
             case SDLK_SPACE:
               if(!e.key.repeat) {
@@ -557,7 +557,7 @@ int main(int argc, char** argv)
     }
 
     /* check if an image failed to load, if so, remove it from our image list */
-    char *err_path = imv_loader_get_error(&g_state.ldr);
+    char *err_path = imv_loader_get_error(g_state.ldr);
     if(err_path) {
       imv_navigator_remove(&g_state.nav, err_path);
       if (strncmp(err_path, "-", 2) == 0) {
@@ -593,7 +593,7 @@ int main(int argc, char** argv)
           scaling_label[g_options.scaling]);
       imv_viewport_set_title(&g_state.view, title);
 
-      imv_loader_load(&g_state.ldr, current_path, stdin_buffer, stdin_buffer_size);
+      imv_loader_load(g_state.ldr, current_path, stdin_buffer, stdin_buffer_size);
       g_state.view.playing = 1;
     }
 
@@ -604,7 +604,7 @@ int main(int argc, char** argv)
     /* check if a new image is available to display */
     FIBITMAP *bmp;
     int is_new_image;
-    if(imv_loader_get_image(&g_state.ldr, &bmp, &is_new_image)) {
+    if(imv_loader_get_image(g_state.ldr, &bmp, &is_new_image)) {
       imv_texture_set_image(&g_state.tex, bmp);
       iw = FreeImage_GetWidth(bmp);
       ih = FreeImage_GetHeight(bmp);
@@ -635,7 +635,7 @@ int main(int argc, char** argv)
       if(dt > 100) {
         dt = 100;
       }
-      imv_loader_time_passed(&g_state.ldr, dt / 1000.0);
+      imv_loader_time_passed(g_state.ldr, dt / 1000.0);
     }
 
     /* handle slideshow */
@@ -770,7 +770,7 @@ int main(int argc, char** argv)
     free(g_state.command_buffer);
   }
 
-  imv_destroy_loader(&g_state.ldr);
+  imv_loader_free(g_state.ldr);
   imv_destroy_texture(&g_state.tex);
   imv_navigator_destroy(&g_state.nav);
   imv_destroy_viewport(&g_state.view);
