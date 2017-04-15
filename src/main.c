@@ -101,14 +101,14 @@ struct {
   char *command_buffer;
 } g_state;
 
-void cmd_quit(struct imv_list *args);
-void cmd_pan(struct imv_list *args);
-void cmd_select_rel(struct imv_list *args);
-void cmd_select_abs(struct imv_list *args);
-void cmd_zoom(struct imv_list *args);
-void cmd_remove(struct imv_list *args);
-void cmd_fullscreen(struct imv_list *args);
-void cmd_overlay(struct imv_list *args);
+void cmd_quit(struct imv_list *args, void *data);
+void cmd_pan(struct imv_list *args, void *data);
+void cmd_select_rel(struct imv_list *args, void *data);
+void cmd_select_abs(struct imv_list *args, void *data);
+void cmd_zoom(struct imv_list *args, void *data);
+void cmd_remove(struct imv_list *args, void *data);
+void cmd_fullscreen(struct imv_list *args, void *data);
+void cmd_overlay(struct imv_list *args, void *data);
 
 static void parse_args(int *argc, char ***argv);
 void handle_event(SDL_Event *event);
@@ -495,14 +495,16 @@ int main(int argc, char** argv)
   return 0;
 }
 
-void cmd_quit(struct imv_list *args)
+void cmd_quit(struct imv_list *args, void *data)
 {
   (void)args;
+  (void)data;
   g_state.quit = 1;
 }
 
-void cmd_pan(struct imv_list *args)
+void cmd_pan(struct imv_list *args, void *data)
 {
+  (void)data;
   if(args->len != 3) {
     return;
   }
@@ -513,8 +515,9 @@ void cmd_pan(struct imv_list *args)
   imv_viewport_move(g_state.view, x, y);
 }
 
-void cmd_select_rel(struct imv_list *args)
+void cmd_select_rel(struct imv_list *args, void *data)
 {
+  (void)data;
   if(args->len != 2) {
     return;
   }
@@ -526,19 +529,22 @@ void cmd_select_rel(struct imv_list *args)
   g_state.delay_msec = 0;
 }
 
-void cmd_select_abs(struct imv_list *args)
+void cmd_select_abs(struct imv_list *args, void *data)
 {
   (void)args;
+  (void)data;
 }
 
-void cmd_zoom(struct imv_list *args)
+void cmd_zoom(struct imv_list *args, void *data)
 {
   (void)args;
+  (void)data;
 }
 
-void cmd_remove(struct imv_list *args)
+void cmd_remove(struct imv_list *args, void *data)
 {
   (void)args;
+  (void)data;
   char* path = strdup(imv_navigator_selection(g_state.nav));
   imv_navigator_remove(g_state.nav, path);
   free(path);
@@ -547,15 +553,17 @@ void cmd_remove(struct imv_list *args)
   g_state.delay_msec = 0;
 }
 
-void cmd_fullscreen(struct imv_list *args)
+void cmd_fullscreen(struct imv_list *args, void *data)
 {
   (void)args;
+  (void)data;
   imv_viewport_toggle_fullscreen(g_state.view);
 }
 
-void cmd_overlay(struct imv_list *args)
+void cmd_overlay(struct imv_list *args, void *data)
 {
   (void)args;
+  (void)data;
   g_options.overlay = !g_options.overlay;
   g_state.need_redraw = 1;
 }
@@ -659,7 +667,7 @@ void handle_event(SDL_Event *event)
   const int command_buffer_len = 1024;
   switch(event->type) {
     case SDL_QUIT:
-      imv_command_exec(g_state.cmds, "quit");
+      imv_command_exec(g_state.cmds, "quit", NULL);
       break;
 
     case SDL_TEXTINPUT:
@@ -678,7 +686,7 @@ void handle_event(SDL_Event *event)
           g_state.command_buffer = NULL;
           g_state.need_redraw = 1;
         } else if(event->key.keysym.sym == SDLK_RETURN) {
-          imv_command_exec(g_state.cmds, g_state.command_buffer);
+          imv_command_exec(g_state.cmds, g_state.command_buffer, NULL);
           SDL_StopTextInput();
           free(g_state.command_buffer);
           g_state.command_buffer = NULL;
@@ -704,15 +712,15 @@ void handle_event(SDL_Event *event)
           }
           break;
         case SDLK_q:
-          imv_command_exec(g_state.cmds, "quit");
+          imv_command_exec(g_state.cmds, "quit", NULL);
           break;
         case SDLK_LEFTBRACKET:
         case SDLK_LEFT:
-          imv_command_exec(g_state.cmds, "select_rel -1");
+          imv_command_exec(g_state.cmds, "select_rel -1", NULL);
           break;
         case SDLK_RIGHTBRACKET:
         case SDLK_RIGHT:
-          imv_command_exec(g_state.cmds, "select_rel 1");
+          imv_command_exec(g_state.cmds, "select_rel 1", NULL);
           break;
         case SDLK_EQUALS:
         case SDLK_PLUS:
@@ -749,25 +757,25 @@ void handle_event(SDL_Event *event)
           }
           break;
         case SDLK_j:
-          imv_command_exec(g_state.cmds, "pan 0 -50");
+          imv_command_exec(g_state.cmds, "pan 0 -50", NULL);
           break;
         case SDLK_k:
-          imv_command_exec(g_state.cmds, "pan 0 50");
+          imv_command_exec(g_state.cmds, "pan 0 50", NULL);
           break;
         case SDLK_h:
-          imv_command_exec(g_state.cmds, "pan 50 0");
+          imv_command_exec(g_state.cmds, "pan 50 0", NULL);
           break;
         case SDLK_l:
-          imv_command_exec(g_state.cmds, "pan -50 0");
+          imv_command_exec(g_state.cmds, "pan -50 0", NULL);
           break;
         case SDLK_x:
           if(!event->key.repeat) {
-            imv_command_exec(g_state.cmds, "remove");
+            imv_command_exec(g_state.cmds, "remove", NULL);
           }
           break;
         case SDLK_f:
           if(!event->key.repeat) {
-            imv_command_exec(g_state.cmds, "fullscreen");
+            imv_command_exec(g_state.cmds, "fullscreen", NULL);
           }
           break;
         case SDLK_PERIOD:
@@ -785,7 +793,7 @@ void handle_event(SDL_Event *event)
           break;
         case SDLK_d:
           if(!event->key.repeat) {
-            imv_command_exec(g_state.cmds, "overlay");
+            imv_command_exec(g_state.cmds, "overlay", NULL);
           }
           break;
         case SDLK_t:

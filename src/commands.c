@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 struct command {
   char* command;
-  void (*handler)(struct imv_list *args);
+  void (*handler)(struct imv_list *args, void *data);
   char* alias;
 };
 
@@ -63,7 +63,7 @@ void imv_command_alias(struct imv_commands *cmds, const char *command, const cha
   imv_list_append(cmds->command_list, cmd);
 }
 
-int imv_command_exec(struct imv_commands *cmds, const char *command)
+int imv_command_exec(struct imv_commands *cmds, const char *command, void *data)
 {
   struct imv_list *args = imv_split_string(command, ' ');
   int ret = 1;
@@ -73,10 +73,10 @@ int imv_command_exec(struct imv_commands *cmds, const char *command)
       struct command *cmd = cmds->command_list->items[i];
       if(!strcmp(cmd->command, args->items[0])) {
         if(cmd->handler) {
-          cmd->handler(args);
+          cmd->handler(args, data);
           ret = 0;
         } else if(cmd->alias) {
-          ret = imv_command_exec(cmds, cmd->alias);
+          ret = imv_command_exec(cmds, cmd->alias, data);
         }
         break;
       }
