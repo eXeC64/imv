@@ -83,6 +83,15 @@ struct imv {
   bool ttf_init;
 };
 
+void command_quit(struct imv_list *args, void *data);
+void command_pan(struct imv_list *args, void *data);
+void command_select_rel(struct imv_list *args, void *data);
+void command_select_abs(struct imv_list *args, void *data);
+void command_zoom(struct imv_list *args, void *data);
+void command_remove(struct imv_list *args, void *data);
+void command_fullscreen(struct imv_list *args, void *data);
+void command_overlay(struct imv_list *args, void *data);
+
 static bool setup_window(struct imv *imv);
 static void handle_event(struct imv *imv, SDL_Event *event);
 static void render_window(struct imv *imv);
@@ -115,6 +124,22 @@ struct imv *imv_create(void)
   imv->background_texture = NULL;
   imv->sdl_init = false;
   imv->ttf_init = false;
+
+  imv_command_register(imv->commands, "quit", &command_quit);
+  imv_command_register(imv->commands, "pan", &command_pan);
+  imv_command_register(imv->commands, "select_rel", &command_select_rel);
+  imv_command_register(imv->commands, "select_abs", &command_select_abs);
+  imv_command_register(imv->commands, "zoom", &command_zoom);
+  imv_command_register(imv->commands, "remove", &command_remove);
+  imv_command_register(imv->commands, "fullscreen", &command_fullscreen);
+  imv_command_register(imv->commands, "overlay", &command_overlay);
+
+  imv_command_alias(imv->commands, "q", "quit");
+  imv_command_alias(imv->commands, "next", "select_rel 1");
+  imv_command_alias(imv->commands, "previous", "select_rel -1");
+  imv_command_alias(imv->commands, "n", "select_rel 1");
+  imv_command_alias(imv->commands, "p", "select_rel -1");
+
   return imv;
 }
 
@@ -413,7 +438,7 @@ static void handle_event(struct imv *imv, SDL_Event *event)
   const int command_buffer_len = 1024;
   switch(event->type) {
     case SDL_QUIT:
-      imv_command_exec(imv->commands, "quit", NULL);
+      imv_command_exec(imv->commands, "quit", imv);
       break;
 
     case SDL_TEXTINPUT:
@@ -432,7 +457,7 @@ static void handle_event(struct imv *imv, SDL_Event *event)
           imv->input_buffer = NULL;
           imv->need_redraw = true;
         } else if(event->key.keysym.sym == SDLK_RETURN) {
-          imv_command_exec(imv->commands, imv->input_buffer, NULL);
+          imv_command_exec(imv->commands, imv->input_buffer, imv);
           SDL_StopTextInput();
           free(imv->input_buffer);
           imv->input_buffer = NULL;
@@ -458,15 +483,16 @@ static void handle_event(struct imv *imv, SDL_Event *event)
           }
           break;
         case SDLK_q:
-          imv_command_exec(imv->commands, "quit", NULL);
+          imv->quit = true;
+          imv_command_exec(imv->commands, "quit", imv);
           break;
         case SDLK_LEFTBRACKET:
         case SDLK_LEFT:
-          imv_command_exec(imv->commands, "select_rel -1", NULL);
+          imv_command_exec(imv->commands, "select_rel -1", imv);
           break;
         case SDLK_RIGHTBRACKET:
         case SDLK_RIGHT:
-          imv_command_exec(imv->commands, "select_rel 1", NULL);
+          imv_command_exec(imv->commands, "select_rel 1", imv);
           break;
         case SDLK_EQUALS:
         case SDLK_PLUS:
@@ -502,25 +528,25 @@ static void handle_event(struct imv *imv, SDL_Event *event)
           }
           break;
         case SDLK_j:
-          imv_command_exec(imv->commands, "pan 0 -50", NULL);
+          imv_command_exec(imv->commands, "pan 0 -50", imv);
           break;
         case SDLK_k:
-          imv_command_exec(imv->commands, "pan 0 50", NULL);
+          imv_command_exec(imv->commands, "pan 0 50", imv);
           break;
         case SDLK_h:
-          imv_command_exec(imv->commands, "pan 50 0", NULL);
+          imv_command_exec(imv->commands, "pan 50 0", imv);
           break;
         case SDLK_l:
-          imv_command_exec(imv->commands, "pan -50 0", NULL);
+          imv_command_exec(imv->commands, "pan -50 0", imv);
           break;
         case SDLK_x:
           if(!event->key.repeat) {
-            imv_command_exec(imv->commands, "remove", NULL);
+            imv_command_exec(imv->commands, "remove", imv);
           }
           break;
         case SDLK_f:
           if(!event->key.repeat) {
-            imv_command_exec(imv->commands, "fullscreen", NULL);
+            imv_command_exec(imv->commands, "fullscreen", imv);
           }
           break;
         case SDLK_PERIOD:
@@ -538,7 +564,7 @@ static void handle_event(struct imv *imv, SDL_Event *event)
           break;
         case SDLK_d:
           if(!event->key.repeat) {
-            imv_command_exec(imv->commands, "overlay", NULL);
+            imv_command_exec(imv->commands, "overlay", imv);
           }
           break;
         case SDLK_t:
@@ -633,6 +659,77 @@ static void render_window(struct imv *imv)
 
   /* redraw complete, unset the flag */
   imv->need_redraw = false;
+}
+
+void command_quit(struct imv_list *args, void *data)
+{
+  (void)args;
+  struct imv *imv = data;
+  imv->quit = 1;
+}
+
+void command_pan(struct imv_list *args, void *data)
+{
+  struct imv *imv = data;
+  if(args->len != 3) {
+    return;
+  }
+
+  long int x = strtol(args->items[1], NULL, 10);
+  long int y = strtol(args->items[2], NULL, 10);
+
+  imv_viewport_move(imv->view, x, y);
+}
+
+void command_select_rel(struct imv_list *args, void *data)
+{
+  struct imv *imv = data;
+  if(args->len != 2) {
+    return;
+  }
+
+  long int index = strtol(args->items[1], NULL, 10);
+  imv_navigator_select_rel(imv->navigator, index);
+
+  imv->slideshow_time_elapsed = 0;
+}
+
+void command_select_abs(struct imv_list *args, void *data)
+{
+  (void)args;
+  (void)data;
+}
+
+void command_zoom(struct imv_list *args, void *data)
+{
+  (void)args;
+  (void)data;
+}
+
+void command_remove(struct imv_list *args, void *data)
+{
+  (void)args;
+  struct imv *imv = data;
+  char* path = strdup(imv_navigator_selection(imv->navigator));
+  imv_navigator_remove(imv->navigator, path);
+  free(path);
+
+  imv->slideshow_time_elapsed = 0;
+}
+
+void command_fullscreen(struct imv_list *args, void *data)
+{
+  (void)args;
+  struct imv *imv = data;
+  imv_viewport_toggle_fullscreen(imv->view);
+}
+
+void command_overlay(struct imv_list *args, void *data)
+{
+  (void)args;
+  struct imv *imv = data;
+  imv->overlay_enabled = !imv->overlay_enabled;
+  imv->need_redraw = true;
 }
 
 /* vim:set ts=2 sts=2 sw=2 et: */
