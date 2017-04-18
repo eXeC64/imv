@@ -103,7 +103,7 @@ struct imv *imv_create(void)
   imv->background_color.r = imv->background_color.g = imv->background_color.b = 0;
   imv->slideshow_image_duration = 0;
   imv->slideshow_time_elapsed = 0;
-  imv->font_name = "Monospace:24";
+  imv->font_name = strdup("Monospace:24");
   imv->navigator = imv_navigator_create();
   imv->loader = imv_loader_create();
   imv->commands = imv_commands_create();
