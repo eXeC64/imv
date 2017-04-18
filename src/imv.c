@@ -246,11 +246,90 @@ bool imv_run(struct imv *imv)
 
   imv->quit = 0;
 
+  /* cache current image's dimensions */
+  int iw = 0;
+  int ih = 0;
+
   while(!imv->quit) {
 
     SDL_Event e;
     while(!imv->quit && SDL_PollEvent(&e)) {
       handle_event(imv, &e);
+    }
+
+    /* if we're quitting, don't bother drawing any more images */
+    if(imv->quit) {
+      break;
+    }
+
+    /* check if an image failed to load, if so, remove it from our image list */
+    char *err_path = imv_loader_get_error(imv->loader);
+    if(err_path) {
+      imv_navigator_remove(imv->navigator, err_path);
+
+      /* special case: the image came from stdin */
+      /* if (strncmp(err_path, "-", 2) == 0) { */
+      /*   free(stdin_buffer); */
+      /*   stdin_buffer_size = 0; */
+      /*   if (stdin_error != 0) { */
+      /*     errno = stdin_error; */
+      /*     perror("Failed to load image from standard input"); */
+      /*     errno = 0; */
+      /*   } */
+      /* } */
+      free(err_path);
+    }
+
+    /* Check if navigator wrapped around paths lists */
+    if(!imv->cycle_input && imv_navigator_wrapped(imv->navigator)) {
+      break;
+    }
+
+    /* if the user has changed image, start loading the new one */
+    if(imv_navigator_poll_changed(imv->navigator)) {
+      const char *current_path = imv_navigator_selection(imv->navigator);
+      if(!current_path) {
+        /* if(!imv->stdin_list) { */
+          fprintf(stderr, "No input files left. Exiting.\n");
+          imv->quit = 1;
+        /* } */
+        continue;
+      }
+
+      char title[1024];
+      snprintf(title, sizeof(title), "imv - [%i/%i] [LOADING] %s [%s]",
+          imv->navigator->cur_path + 1, imv->navigator->num_paths, current_path,
+          scaling_label[imv->scaling_mode]);
+      imv_viewport_set_title(imv->view, title);
+
+      imv_loader_load(imv->loader, current_path, "", 0 /*stdin_buffer, stdin_buffer_size*/);
+      imv->view->playing = 1;
+    }
+
+
+    /* check if a new image is available to display */
+    FIBITMAP *bmp;
+    int is_new_image;
+    if(imv_loader_get_image(imv->loader, &bmp, &is_new_image)) {
+      imv_texture_set_image(imv->texture, bmp);
+      iw = FreeImage_GetWidth(bmp);
+      ih = FreeImage_GetHeight(bmp);
+      FreeImage_Unload(bmp);
+      imv->need_redraw = 1;
+      imv->need_rescale += is_new_image;
+    }
+
+    if(imv->need_rescale) {
+      int ww, wh;
+      SDL_GetWindowSize(imv->window, &ww, &wh);
+
+      imv->need_rescale = 0;
+      if(imv->scaling_mode == SCALING_NONE ||
+          (imv->scaling_mode == SCALING_DOWN && ww > iw && wh > ih)) {
+        imv_viewport_scale_to_actual(imv->view, imv->texture);
+      } else {
+        imv_viewport_scale_to_window(imv->view, imv->texture);
+      }
     }
 
     if(imv->need_redraw) {
