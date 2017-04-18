@@ -236,8 +236,7 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
 
 void imv_add_path(struct imv *imv, const char *path)
 {
-  (void)imv;
-  (void)path;
+  imv_navigator_add(imv->navigator, path, imv->recursive_load);
 }
 
 bool imv_run(struct imv *imv)
