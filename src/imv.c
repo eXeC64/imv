@@ -79,8 +79,11 @@ struct imv {
   SDL_Renderer *renderer;
   TTF_Font *font;
   SDL_Texture *background_texture;
+  bool sdl_init;
+  bool ttf_init;
 };
 
+static bool setup_window(struct imv *imv);
 static void handle_event(struct imv *imv, SDL_Event *event);
 static void render_window(struct imv *imv);
 
@@ -110,6 +113,8 @@ struct imv *imv_create(void)
   imv->renderer = NULL;
   imv->font = NULL;
   imv->background_texture = NULL;
+  imv->sdl_init = false;
+  imv->ttf_init = false;
   return imv;
 }
 
@@ -121,6 +126,24 @@ void imv_free(struct imv *imv)
   imv_commands_free(imv->commands);
   if(imv->input_buffer) {
     free(imv->input_buffer);
+  }
+  if(imv->renderer) {
+    SDL_DestroyRenderer(imv->renderer);
+  }
+  if(imv->window) {
+    SDL_DestroyWindow(imv->window);
+  }
+  if(imv->background_texture) {
+    SDL_DestroyTexture(imv->background_texture);
+  }
+  if(imv->font) {
+    TTF_CloseFont(imv->font);
+  }
+  if(imv->ttf_init) {
+    TTF_Quit();
+  }
+  if(imv->sdl_init) {
+    SDL_Quit();
   }
   free(imv);
 }
@@ -217,8 +240,11 @@ void imv_add_path(struct imv *imv, const char *path)
   (void)path;
 }
 
-int imv_run(struct imv *imv)
+bool imv_run(struct imv *imv)
 {
+  if(!setup_window(imv))
+    return false;
+
   imv->quit = 0;
 
   while(!imv->quit) {
@@ -238,6 +264,70 @@ int imv_run(struct imv *imv)
   }
 
   return 0;
+}
+
+static bool setup_window(struct imv *imv)
+{
+  if(SDL_Init(SDL_INIT_VIDEO) != 0) {
+    fprintf(stderr, "SDL Failed to Init: %s\n", SDL_GetError());
+    return false;
+  }
+  imv->sdl_init = true;
+
+  /* width and height arbitrarily chosen. Perhaps there's a smarter way to
+   * set this */
+  const int width = 1280;
+  const int height = 720;
+
+  imv->window = SDL_CreateWindow(
+        "imv",
+        SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED,
+        width, height,
+        SDL_WINDOW_RESIZABLE);
+
+  if(!imv->window) {
+    fprintf(stderr, "SDL Failed to create window: %s\n", SDL_GetError());
+    return false;
+  }
+
+  /* we'll use SDL's built-in renderer, hardware accelerated if possible */
+  imv->renderer = SDL_CreateRenderer(imv->window, -1, 0);
+  if(!imv->renderer) {
+    fprintf(stderr, "SDL Failed to create renderer: %s\n", SDL_GetError());
+    return false;
+  }
+
+  /* use the appropriate resampling method */
+  SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,
+    imv->nearest_neighbour ? "0" : "1");
+
+  /* construct a chequered background texture */
+  if(imv->background_type == BACKGROUND_CHEQUERED) {
+    imv->background_texture = create_chequered(imv->renderer);
+  }
+
+  /* set up the required fonts and surfaces for displaying the overlay */
+  TTF_Init();
+  imv->ttf_init = true;
+  imv->font = load_font(imv->font_name);
+  if(!imv->font) {
+    fprintf(stderr, "Error loading font: %s\n", TTF_GetError());
+    return false;
+  }
+
+  imv->texture = imv_texture_create(imv->renderer);
+  imv->view = imv_viewport_create(imv->window);
+
+  /* put us in fullscren mode to begin with if requested */
+  if(imv->fullscreen) {
+    imv_viewport_toggle_fullscreen(imv->view);
+  }
+
+  /* start outside of command mode */
+  SDL_StopTextInput();
+
+  return true;
 }
 
 static void handle_event(struct imv *imv, SDL_Event *event)

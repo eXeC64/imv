@@ -29,7 +29,7 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv);
 
 void imv_add_path(struct imv *imv, const char *path);
 
-int imv_run(struct imv *imv);
+bool imv_run(struct imv *imv);
 
 #endif
 
