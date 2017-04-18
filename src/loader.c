@@ -57,7 +57,9 @@ struct imv_loader *imv_loader_create(void)
 void imv_loader_free(struct imv_loader *ldr)
 {
   /* wait for any existing bg thread to finish */
-  pthread_join(ldr->bg_thread, NULL);
+  if(ldr->bg_thread) {
+    pthread_join(ldr->bg_thread, NULL);
+  }
   pthread_mutex_destroy(&ldr->lock);
 
   if(ldr->bmp) {
