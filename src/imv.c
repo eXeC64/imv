@@ -296,7 +296,7 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
   return true;
 }
 
-void imv_check_stdin_for_paths(struct imv *imv)
+static void check_stdin_for_paths(struct imv *imv)
 {
   /* check stdin to see if we've been given any new paths to load */
   if(poll(&imv->stdin_fd, 1, 10) != 1 || imv->stdin_fd.revents & (POLLERR|POLLNVAL)) {
@@ -473,7 +473,7 @@ bool imv_run(struct imv *imv)
 
     if(imv->paths_from_stdin) {
       /* check stdin for any more paths */
-      imv_check_stdin_for_paths(imv);
+      check_stdin_for_paths(imv);
     } else {
       /* sleep a little bit so we don't waste CPU time */
       SDL_Delay(10);
