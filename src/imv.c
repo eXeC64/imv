@@ -263,6 +263,11 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
   /* if no paths are given as args, expect them from stdin */
   if(argc == 0) {
     imv->paths_from_stdin = true;
+  } else {
+    /* otherwise, add the paths */
+    for(int i = 0; i < argc; ++i) {
+      imv_add_path(imv, argv[i]);
+    }
   }
 
   if(imv->paths_from_stdin) {
