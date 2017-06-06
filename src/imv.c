@@ -421,6 +421,12 @@ bool imv_run(struct imv *imv)
       }
     }
 
+
+    /* check if the viewport needs a redraw */
+    if(imv_viewport_needs_redraw(imv->view)) {
+      imv->need_redraw = true;
+    }
+
     if(imv->need_redraw) {
       render_window(imv);
       SDL_RenderPresent(imv->renderer);
