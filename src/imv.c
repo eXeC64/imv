@@ -339,6 +339,10 @@ bool imv_run(struct imv *imv)
   int iw = 0;
   int ih = 0;
 
+  /* time keeping */
+  unsigned int last_time = SDL_GetTicks();
+  unsigned int current_time;
+
   while(!imv->quit) {
 
     SDL_Event e;
@@ -420,6 +424,36 @@ bool imv_run(struct imv *imv)
         imv_viewport_scale_to_window(imv->view, imv->texture);
       }
     }
+
+    /* tell the loader time has passed (for gifs) */
+    current_time = SDL_GetTicks();
+
+    /* if we're playing an animated gif, tell the loader how much time has
+     * passed */
+    if(imv->view->playing) {
+      unsigned int dt = current_time - last_time;
+      /* We cap the delta-time to 100 ms so that if imv is asleep for several
+       * seconds or more (e.g. suspended), upon waking up it doesn't try to
+       * catch up all the time it missed by playing through the gif quickly. */
+      if(dt > 100) {
+        dt = 100;
+      }
+      imv_loader_time_passed(imv->loader, dt / 1000.0);
+    }
+
+    /* handle slideshow */
+    if(imv->slideshow_image_duration != 0) {
+      unsigned int dt = current_time - last_time;
+
+      imv->slideshow_time_elapsed += dt;
+      imv->need_redraw = true; /* need to update display */
+      if(imv->slideshow_time_elapsed >= imv->slideshow_image_duration) {
+        imv_navigator_select_rel(imv->navigator, 1);
+        imv->slideshow_time_elapsed = 0;
+      }
+    }
+
+    last_time = current_time;
 
 
     /* check if the viewport needs a redraw */
