@@ -43,8 +43,8 @@ enum scaling_mode {
 
 static const char *scaling_label[] = {
   "actual size",
-  "best fit",
-  "perfect fit"
+  "shrink to fit",
+  "scale to fit"
 };
 
 enum background_type {
@@ -110,7 +110,7 @@ struct imv *imv_create(void)
   imv->need_redraw = true;
   imv->need_rescale = true;
   imv->recursive_load = false;
-  imv->scaling_mode = SCALING_NONE;
+  imv->scaling_mode = SCALING_FULL;
   imv->cycle_input = true;
   imv->list_at_exit = false;
   imv->paths_from_stdin = false;
