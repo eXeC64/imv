@@ -333,7 +333,7 @@ bool imv_run(struct imv *imv)
   if(!setup_window(imv))
     return false;
 
-  imv->quit = 0;
+  imv->quit = false;
 
   /* cache current image's dimensions */
   int iw = 0;
@@ -392,7 +392,7 @@ bool imv_run(struct imv *imv)
       imv_viewport_set_title(imv->view, title);
 
       imv_loader_load(imv->loader, current_path, "", 0 /*stdin_buffer, stdin_buffer_size*/);
-      imv->view->playing = 1;
+      imv->view->playing = true;
     }
 
 
@@ -404,7 +404,7 @@ bool imv_run(struct imv *imv)
       iw = FreeImage_GetWidth(bmp);
       ih = FreeImage_GetHeight(bmp);
       FreeImage_Unload(bmp);
-      imv->need_redraw = 1;
+      imv->need_redraw = true;
       imv->need_rescale += is_new_image;
     }
 
@@ -412,7 +412,7 @@ bool imv_run(struct imv *imv)
       int ww, wh;
       SDL_GetWindowSize(imv->window, &ww, &wh);
 
-      imv->need_rescale = 0;
+      imv->need_rescale = false;
       if(imv->scaling_mode == SCALING_NONE ||
           (imv->scaling_mode == SCALING_DOWN && ww > iw && wh > ih)) {
         imv_viewport_scale_to_actual(imv->view, imv->texture);
@@ -441,7 +441,7 @@ bool imv_run(struct imv *imv)
     }
   }
 
-  return 0;
+  return false;
 }
 
 static bool setup_window(struct imv *imv)
@@ -740,7 +740,7 @@ void command_quit(struct imv_list *args, void *data)
 {
   (void)args;
   struct imv *imv = data;
-  imv->quit = 1;
+  imv->quit = true;
 }
 
 void command_pan(struct imv_list *args, void *data)
