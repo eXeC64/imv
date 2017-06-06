@@ -19,10 +19,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <getopt.h>
 #include <limits.h>
+#include <poll.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <unistd.h>
 
 #include "commands.h"
 #include "list.h"
@@ -61,6 +63,7 @@ struct imv {
   bool recursive_load;
   bool cycle_input;
   bool list_at_exit;
+  bool paths_from_stdin;
   enum scaling_mode scaling_mode;
   enum background_type background_type;
   struct { unsigned char r, g, b; } background_color;
@@ -74,6 +77,7 @@ struct imv {
   struct imv_viewport *view;
   char *input_buffer;
   char *starting_path;
+  struct pollfd stdin_fd;
 
   SDL_Window *window;
   SDL_Renderer *renderer;
@@ -109,6 +113,7 @@ struct imv *imv_create(void)
   imv->scaling_mode = SCALING_NONE;
   imv->cycle_input = true;
   imv->list_at_exit = false;
+  imv->paths_from_stdin = false;
   imv->background_color.r = imv->background_color.g = imv->background_color.b = 0;
   imv->slideshow_image_duration = 0;
   imv->slideshow_time_elapsed = 0;
@@ -255,8 +260,67 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
   argc -= optind;
   argv += optind;
 
-  /* TODO parse paths ? */
+  /* if no paths are given as args, expect them from stdin */
+  if(argc == 0) {
+    imv->paths_from_stdin = true;
+  }
+
+  if(imv->paths_from_stdin) {
+    imv->stdin_fd.fd = STDIN_FILENO;
+    imv->stdin_fd.events = POLLIN;
+    fprintf(stderr, "Reading paths from stdin...");
+
+    char buf[PATH_MAX];
+    char *stdin_ok;
+    while((stdin_ok = fgets(buf, sizeof(buf), stdin)) != NULL) {
+      size_t len = strlen(buf);
+      if(buf[len-1] == '\n') {
+        buf[--len] = 0;
+      }
+      if(len > 0) {
+        imv_add_path(imv, buf);
+        break;
+      }
+    }
+    if(!stdin_ok) {
+      fprintf(stderr, " no input!\n");
+      return false;
+    }
+    fprintf(stderr, "\n");
+  }
   return true;
+}
+
+void imv_check_stdin_for_paths(struct imv *imv)
+{
+  /* check stdin to see if we've been given any new paths to load */
+  if(poll(&imv->stdin_fd, 1, 10) != 1 || imv->stdin_fd.revents & (POLLERR|POLLNVAL)) {
+    fprintf(stderr, "error polling stdin");
+    imv->quit = true;
+    return;
+  }
+
+  if(imv->stdin_fd.revents & (POLLIN|POLLHUP)) {
+    char buf[PATH_MAX];
+    if(fgets(buf, sizeof(buf), stdin) == NULL && ferror(stdin)) {
+      clearerr(stdin);
+      return;
+    }
+    if(feof(stdin)) {
+      imv->paths_from_stdin = false;
+      fprintf(stderr, "done with stdin\n");
+      return;
+    }
+
+    size_t len = strlen(buf);
+    if(buf[len-1] == '\n') {
+      buf[--len] = 0;
+    }
+    if(len > 0) {
+      imv_add_path(imv, buf);
+      imv->need_redraw = true;
+    }
+  }
 }
 
 void imv_add_path(struct imv *imv, const char *path)
@@ -314,10 +378,10 @@ bool imv_run(struct imv *imv)
     if(imv_navigator_poll_changed(imv->navigator)) {
       const char *current_path = imv_navigator_selection(imv->navigator);
       if(!current_path) {
-        /* if(!imv->stdin_list) { */
+        if(!imv->paths_from_stdin) {
           fprintf(stderr, "No input files left. Exiting.\n");
-          imv->quit = 1;
-        /* } */
+          imv->quit = true;
+        }
         continue;
       }
 
@@ -362,8 +426,13 @@ bool imv_run(struct imv *imv)
       SDL_RenderPresent(imv->renderer);
     }
 
-    /* sleep a little bit so we don't waste CPU time */
-    SDL_Delay(10);
+    if(imv->paths_from_stdin) {
+      /* check stdin for any more paths */
+      imv_check_stdin_for_paths(imv);
+    } else {
+      /* sleep a little bit so we don't waste CPU time */
+      SDL_Delay(10);
+    }
   }
 
   return 0;
