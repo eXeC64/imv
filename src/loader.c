@@ -98,6 +98,7 @@ void imv_loader_load(struct imv_loader *ldr, const char *path,
     ldr->buffer_size = buffer_size;
   } else if (ldr->fi_buffer != NULL) {
     FreeImage_CloseMemory(ldr->fi_buffer);
+    ldr->fi_buffer = NULL;
   }
   pthread_create(&ldr->bg_thread, NULL, &bg_new_img, ldr);
   pthread_mutex_unlock(&ldr->lock);
@@ -191,6 +192,7 @@ static void *bg_new_img(void *data)
     if (from_stdin) {
       pthread_mutex_lock(&ldr->lock);
       FreeImage_CloseMemory(ldr->fi_buffer);
+      ldr->fi_buffer = NULL;
       pthread_mutex_unlock(&ldr->lock);
     }
     error_occurred(ldr);

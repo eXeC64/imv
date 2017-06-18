@@ -75,6 +75,8 @@ struct imv {
   struct imv_commands *commands;
   struct imv_texture *texture;
   struct imv_viewport *view;
+  void *stdin_image_data;
+  size_t stdin_image_data_len;
   char *input_buffer;
   char *starting_path;
   struct pollfd stdin_fd;
@@ -121,6 +123,8 @@ struct imv *imv_create(void)
   imv->navigator = imv_navigator_create();
   imv->loader = imv_loader_create();
   imv->commands = imv_commands_create();
+  imv->stdin_image_data = NULL;
+  imv->stdin_image_data_len = 0;
   imv->input_buffer = NULL;
   imv->starting_path = NULL;
   imv->window = NULL;
@@ -154,6 +158,9 @@ void imv_free(struct imv *imv)
   imv_navigator_free(imv->navigator);
   imv_loader_free(imv->loader);
   imv_commands_free(imv->commands);
+  if(imv->stdin_image_data) {
+    free(imv->stdin_image_data);
+  }
   if(imv->input_buffer) {
     free(imv->input_buffer);
   }
@@ -265,7 +272,23 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
     imv->paths_from_stdin = true;
   } else {
     /* otherwise, add the paths */
+    bool data_from_stdin = false;
     for(int i = 0; i < argc; ++i) {
+
+      /* Special case: '-' denotes reading image data from stdin */
+      if(!strcmp("-", argv[i])) {
+        if(imv->paths_from_stdin) {
+          fprintf(stderr, "Can't read paths AND image data from stdin. Aborting.\n");
+          return false;
+        } else if(data_from_stdin) {
+          fprintf(stderr, "Can't read image data from stdin twice. Aborting.\n");
+          return false;
+        }
+        data_from_stdin = true;
+
+        imv->stdin_image_data_len = read_from_stdin(&imv->stdin_image_data);
+      }
+
       imv_add_path(imv, argv[i]);
     }
   }
@@ -366,15 +389,14 @@ bool imv_run(struct imv *imv)
       imv_navigator_remove(imv->navigator, err_path);
 
       /* special case: the image came from stdin */
-      /* if (strncmp(err_path, "-", 2) == 0) { */
-      /*   free(stdin_buffer); */
-      /*   stdin_buffer_size = 0; */
-      /*   if (stdin_error != 0) { */
-      /*     errno = stdin_error; */
-      /*     perror("Failed to load image from standard input"); */
-      /*     errno = 0; */
-      /*   } */
-      /* } */
+      if(strncmp(err_path, "-", 2) == 0) {
+        if(imv->stdin_image_data) {
+          free(imv->stdin_image_data);
+          imv->stdin_image_data = NULL;
+          imv->stdin_image_data_len = 0;
+        }
+        fprintf(stderr, "Failed to load image from stdin.\n");
+      }
       free(err_path);
     }
 
@@ -400,7 +422,8 @@ bool imv_run(struct imv *imv)
           scaling_label[imv->scaling_mode]);
       imv_viewport_set_title(imv->view, title);
 
-      imv_loader_load(imv->loader, current_path, "", 0 /*stdin_buffer, stdin_buffer_size*/);
+      imv_loader_load(imv->loader, current_path,
+          imv->stdin_image_data, imv->stdin_image_data_len);
       imv->view->playing = true;
     }
 
