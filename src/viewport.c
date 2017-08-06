@@ -57,12 +57,29 @@ void imv_viewport_scale_to_actual(struct imv_viewport *view, const struct imv_te
   imv_viewport_center(view, tex);
 }
 
-void imv_viewport_move(struct imv_viewport *view, int x, int y)
+void imv_viewport_move(struct imv_viewport *view, int x, int y,
+    const struct imv_texture *tex)
 {
   view->x += x;
   view->y += y;
   view->redraw = 1;
   view->locked = 1;
+  int w = (int)((double)tex->width * view->scale);
+  int h = (int)((double)tex->height * view->scale);
+  int ww, wh;
+  SDL_GetWindowSize(view->window, &ww, &wh);
+  if (view->x < -w) {
+    view->x = -w;
+  }
+  if (view->x > ww) {
+    view->x = ww;
+  }
+  if (view->y < -h) {
+    view->y = -h;
+  }
+  if (view->y > wh) {
+    view->y = wh;
+  }
 }
 
 void imv_viewport_zoom(struct imv_viewport *view, const struct imv_texture *tex, enum imv_zoom_source src, int amount)

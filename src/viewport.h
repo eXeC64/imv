@@ -52,8 +52,10 @@ void imv_viewport_toggle_playing(struct imv_viewport *view);
 /* Reset the viewport to its initial settings */
 void imv_viewport_reset(struct imv_viewport *view);
 
-/* Pan the view by the given amounts */
-void imv_viewport_move(struct imv_viewport *view, int x, int y);
+/* Pan the view by the given amounts without letting the texture get too far
+ * off-screen */
+void imv_viewport_move(struct imv_viewport *view, int x, int y,
+    const struct imv_texture *tex);
 
 /* Zoom the view by the given amount. imv_texture* is used to get the image
  * dimensions */
