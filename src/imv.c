@@ -722,7 +722,7 @@ static void handle_event(struct imv *imv, SDL_Event *event)
       break;
     case SDL_MOUSEMOTION:
       if(event->motion.state & SDL_BUTTON_LMASK) {
-        imv_viewport_move(imv->view, event->motion.xrel, event->motion.yrel);
+        imv_viewport_move(imv->view, event->motion.xrel, event->motion.yrel, imv->texture);
       }
       SDL_ShowCursor(SDL_ENABLE);
       break;
@@ -815,7 +815,7 @@ void command_pan(struct imv_list *args, void *data)
   long int x = strtol(args->items[1], NULL, 10);
   long int y = strtol(args->items[2], NULL, 10);
 
-  imv_viewport_move(imv->view, x, y);
+  imv_viewport_move(imv->view, x, y, imv->texture);
 }
 
 void command_select_rel(struct imv_list *args, void *data)
