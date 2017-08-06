@@ -15,26 +15,34 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include "imv.h"
+#ifndef LIST_H
+#define LIST_H
 
-int main(int argc, char** argv)
-{
-  struct imv *imv = imv_create();
+#include <stdlib.h>
+#include <string.h>
 
-  if(!imv) {
-    return 1;
-  }
+struct imv_list {
+  size_t len;
+  size_t cap;
+  void **items;
+};
 
-  if(!imv_parse_args(imv, argc, argv)) {
-    imv_free(imv);
-    return 1;
-  }
+struct imv_list *imv_list_create(void);
 
-  int ret = imv_run(imv);
+void imv_list_free(struct imv_list *list);
 
-  imv_free(imv);
+void imv_list_deep_free(struct imv_list *list);
 
-  return ret;
-}
+void imv_list_append(struct imv_list *list, void *item);
+
+void imv_list_grow(struct imv_list *list, size_t min_size);
+
+void imv_list_remove(struct imv_list *list, size_t index);
+
+void imv_list_insert(struct imv_list *list, size_t index, void *item);
+
+struct imv_list *imv_split_string(const char *string, char delim);
+
+#endif
 
 /* vim:set ts=2 sts=2 sw=2 et: */

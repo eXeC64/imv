@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 size_t read_from_stdin(void **buffer) {
   size_t len = 0;
   ssize_t r;
-  size_t step = 1024; /* Arbitrary value of 1 KiB */
+  size_t step = 4096; /* Arbitrary value of 4 KiB */
   void *p;
 
   errno = 0; /* clear errno */
@@ -152,6 +152,5 @@ void imv_printf(SDL_Renderer *renderer, TTF_Font *font, int x, int y,
   SDL_FreeSurface(surf);
   va_end(args);
 }
-
 
 /* vim:set ts=2 sts=2 sw=2 et: */

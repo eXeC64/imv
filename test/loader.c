@@ -10,24 +10,25 @@
 static void test_jpeg_rotation(void **state)
 {
   (void)state;
-  struct imv_loader ldr;
+  struct imv_loader *ldr = imv_loader_create();
   void *retval;
   char *error;
   unsigned int width;
 
-  imv_init_loader(&ldr);
 
-  imv_loader_load(&ldr, "test/orientation.jpg", NULL, 0);
-  pthread_join(ldr.bg_thread, &retval);
+  imv_loader_load(ldr, "test/orientation.jpg", NULL, 0);
+  pthread_join(ldr->bg_thread, &retval);
 
-  error = imv_loader_get_error(&ldr);
+  error = imv_loader_get_error(ldr);
   assert_false(error);
 
   assert_false(retval == PTHREAD_CANCELED);
-  assert_false(ldr.out_bmp == NULL);
+  assert_false(ldr->out_bmp == NULL);
 
-  width = FreeImage_GetWidth(ldr.out_bmp);
+  width = FreeImage_GetWidth(ldr->out_bmp);
   assert_true(width == 1);
+
+  imv_loader_free(ldr);
 }
 
 int main(void)

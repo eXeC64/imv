@@ -27,16 +27,18 @@ struct imv_navigator {
   int cur_path;
   char **paths;
   time_t *mtimes;
+  time_t *ctimes;
   int last_move_direction;
   int changed;
   int wrapped;
+  int poll_countdown;
 };
 
-/* Initialises an instance of imv_navigator */
-void imv_navigator_init(struct imv_navigator *nav);
+/* Creates an instance of imv_navigator */
+struct imv_navigator *imv_navigator_create(void);
 
-/* Cleans up all resources owned by a imv_navigator instance */
-void imv_navigator_destroy(struct imv_navigator *nav);
+/* Cleans up an imv_navigator instance */
+void imv_navigator_free(struct imv_navigator *nav);
 
 /* Adds the given path to the navigator's internal list.
  * If a directory is given, all files within that directory are added.
@@ -65,7 +67,7 @@ int imv_navigator_find_path(struct imv_navigator *nav, const char *path);
 
 /* Returns 1 if either the currently selected path or underlying file has
  * changed since last called */
-int imv_navigator_poll_changed(struct imv_navigator *nav, const int nopoll);
+int imv_navigator_poll_changed(struct imv_navigator *nav);
 
 /* Check whether navigator wrapped around paths list */
 int imv_navigator_wrapped(struct imv_navigator *nav);

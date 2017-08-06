@@ -17,19 +17,20 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "viewport.h"
 
-void imv_init_viewport(struct imv_viewport *view, SDL_Window *window)
+struct imv_viewport *imv_viewport_create(SDL_Window *window)
 {
+  struct imv_viewport *view = malloc(sizeof(struct imv_viewport));
   view->window = window;
   view->scale = 1;
   view->x = view->y = view->fullscreen = view->redraw = 0;
   view->playing = 1;
   view->locked = 0;
+  return view;
 }
 
-void imv_destroy_viewport(struct imv_viewport *view)
+void imv_viewport_free(struct imv_viewport *view)
 {
-  view->window = NULL;
-  return;
+  free(view);
 }
 
 void imv_viewport_toggle_fullscreen(struct imv_viewport *view)

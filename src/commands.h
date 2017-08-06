@@ -15,26 +15,21 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include "imv.h"
+#ifndef COMMANDS_H
+#define COMMANDS_H
 
-int main(int argc, char** argv)
-{
-  struct imv *imv = imv_create();
+struct imv_list;
 
-  if(!imv) {
-    return 1;
-  }
+struct imv_commands {
+  struct imv_list *command_list;
+};
 
-  if(!imv_parse_args(imv, argc, argv)) {
-    imv_free(imv);
-    return 1;
-  }
+struct imv_commands *imv_commands_create(void);
+void imv_commands_free(struct imv_commands *cmds);
+void imv_command_register(struct imv_commands *cmds, const char *command, void (*handler)());
+void imv_command_alias(struct imv_commands *cmds, const char *command, const char *alias);
+int imv_command_exec(struct imv_commands *cmds, const char *command, void *data);
 
-  int ret = imv_run(imv);
-
-  imv_free(imv);
-
-  return ret;
-}
+#endif
 
 /* vim:set ts=2 sts=2 sw=2 et: */

@@ -17,8 +17,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "texture.h"
 
-void imv_init_texture(struct imv_texture *tex, SDL_Renderer *r)
+struct imv_texture *imv_texture_create(SDL_Renderer *r)
 {
+  struct imv_texture *tex = malloc(sizeof(struct imv_texture));
   memset(tex, 0, sizeof(struct imv_texture));
   tex->renderer = r;
 
@@ -26,9 +27,10 @@ void imv_init_texture(struct imv_texture *tex, SDL_Renderer *r)
   SDL_GetRendererInfo(r, &ri);
   tex->chunk_width = ri.max_texture_width != 0 ? ri.max_texture_width : 4096;
   tex->chunk_height = ri.max_texture_height != 0 ? ri.max_texture_height : 4096;
+  return tex;
 }
 
-void imv_destroy_texture(struct imv_texture *tex)
+void imv_texture_free(struct imv_texture *tex)
 {
   if(tex->num_chunks > 0) {
     for(int i = 0; i < tex->num_chunks; ++i) {
@@ -39,6 +41,7 @@ void imv_destroy_texture(struct imv_texture *tex)
     tex->chunks = NULL;
     tex->renderer = NULL;
   }
+  free(tex);
 }
 
 int imv_texture_set_image(struct imv_texture *tex, FIBITMAP *image)

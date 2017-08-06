@@ -15,26 +15,22 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include "imv.h"
+#ifndef IMV_H
+#define IMV_H
 
-int main(int argc, char** argv)
-{
-  struct imv *imv = imv_create();
+#include <stdbool.h>
 
-  if(!imv) {
-    return 1;
-  }
+struct imv;
 
-  if(!imv_parse_args(imv, argc, argv)) {
-    imv_free(imv);
-    return 1;
-  }
+struct imv *imv_create(void);
+void imv_free(struct imv *imv);
 
-  int ret = imv_run(imv);
+bool imv_parse_args(struct imv *imv, int argc, char **argv);
 
-  imv_free(imv);
+void imv_add_path(struct imv *imv, const char *path);
 
-  return ret;
-}
+bool imv_run(struct imv *imv);
+
+#endif
 
 /* vim:set ts=2 sts=2 sw=2 et: */

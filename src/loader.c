@@ -44,18 +44,22 @@ static int is_thread_cancelled(void)
   return sigismember(&sigmask, SIGUSR1);
 }
 
-void imv_init_loader(struct imv_loader *ldr)
+struct imv_loader *imv_loader_create(void)
 {
+  struct imv_loader *ldr = malloc(sizeof(struct imv_loader));
   memset(ldr, 0, sizeof(struct imv_loader));
   pthread_mutex_init(&ldr->lock, NULL);
   /* ignore this signal in case we accidentally receive it */
   block_usr1_signal();
+  return ldr;
 }
 
-void imv_destroy_loader(struct imv_loader *ldr)
+void imv_loader_free(struct imv_loader *ldr)
 {
   /* wait for any existing bg thread to finish */
-  pthread_join(ldr->bg_thread, NULL);
+  if(ldr->bg_thread) {
+    pthread_join(ldr->bg_thread, NULL);
+  }
   pthread_mutex_destroy(&ldr->lock);
 
   if(ldr->bmp) {
@@ -70,6 +74,7 @@ void imv_destroy_loader(struct imv_loader *ldr)
   if(ldr->path) {
     free(ldr->path);
   }
+  free(ldr);
 }
 
 void imv_loader_load(struct imv_loader *ldr, const char *path,
@@ -93,6 +98,7 @@ void imv_loader_load(struct imv_loader *ldr, const char *path,
     ldr->buffer_size = buffer_size;
   } else if (ldr->fi_buffer != NULL) {
     FreeImage_CloseMemory(ldr->fi_buffer);
+    ldr->fi_buffer = NULL;
   }
   pthread_create(&ldr->bg_thread, NULL, &bg_new_img, ldr);
   pthread_mutex_unlock(&ldr->lock);
@@ -186,6 +192,7 @@ static void *bg_new_img(void *data)
     if (from_stdin) {
       pthread_mutex_lock(&ldr->lock);
       FreeImage_CloseMemory(ldr->fi_buffer);
+      ldr->fi_buffer = NULL;
       pthread_mutex_unlock(&ldr->lock);
     }
     error_occurred(ldr);

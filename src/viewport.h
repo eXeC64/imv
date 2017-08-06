@@ -37,11 +37,11 @@ enum imv_zoom_source {
   IMV_ZOOM_KEYBOARD
 };
 
-/* Initialises an instance of imv_viewport */
-void imv_init_viewport(struct imv_viewport *view, SDL_Window *window);
+/* Creates an instance of imv_viewport */
+struct imv_viewport *imv_viewport_create(SDL_Window *window);
 
-/* Cleans up all resources owned by a imv_viewport instance */
-void imv_destroy_viewport(struct imv_viewport *view);
+/* Cleans up an imv_viewport instance */
+void imv_viewport_free(struct imv_viewport *view);
 
 /* Toggle their viewport's fullscreen mode. Triggers a redraw */
 void imv_viewport_toggle_fullscreen(struct imv_viewport *view);
