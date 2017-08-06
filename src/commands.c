@@ -45,7 +45,7 @@ void imv_commands_free(struct imv_commands *cmds)
   free(cmds);
 }
 
-void imv_command_register(struct imv_commands *cmds, const char *command, void (*handler)())
+void imv_command_register(struct imv_commands *cmds, const char *command, void (*handler)(struct imv_list*, void*))
 {
   struct command *cmd = malloc(sizeof(struct command));
   cmd->command = strdup(command);
