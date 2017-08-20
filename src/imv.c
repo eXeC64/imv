@@ -503,6 +503,11 @@ bool imv_run(struct imv *imv)
     }
   }
 
+  if(imv->list_at_exit) {
+    for(int i = 0; i < imv_navigator_length(imv->navigator); ++i)
+      puts(imv_navigator_at(imv->navigator, i));
+  }
+
   return false;
 }
 

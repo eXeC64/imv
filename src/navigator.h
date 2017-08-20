@@ -72,6 +72,13 @@ int imv_navigator_poll_changed(struct imv_navigator *nav);
 /* Check whether navigator wrapped around paths list */
 int imv_navigator_wrapped(struct imv_navigator *nav);
 
+/* Return how many paths in navigator */
+int imv_navigator_length(struct imv_navigator *nav);
+
+/* Return a path for a given index */
+char *imv_navigator_at(struct imv_navigator *nav, int index);
+
+
 #endif
 
 

@@ -259,5 +259,17 @@ int imv_navigator_wrapped(struct imv_navigator *nav)
   return nav->wrapped;
 }
 
+int imv_navigator_length(struct imv_navigator *nav)
+{
+  return nav->num_paths;
+}
+
+char *imv_navigator_at(struct imv_navigator *nav, int index)
+{
+  if(index >= 0 && index < nav->num_paths) {
+    return nav->paths[index];
+  }
+  return NULL;
+}
 
 /* vim:set ts=2 sts=2 sw=2 et: */
