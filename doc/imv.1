@@ -1,4 +1,4 @@
-.Dd December 30, 2015
+.Dd August 22, 2017
 .Dt IMV 1
 .Os
 .Sh NAME
@@ -57,13 +57,13 @@ may be expressed as a number or as a path of an image.
 .It Fl r
 Recursively search input paths for files.
 .It Fl S
-.Dq perfect fit 
-mode: upscale or downscale image to fit window.
+.Dq scale to fit
+mode: grow or shrink image to fit window.
 This is the default.
 .It Fl s
-.Dq best fit
-mode: downscale image to fit window.
-Images that are smaller then window are shown in actual size.
+.Dq shrink to fit
+mode: shrink image to fit window.
+Images that are smaller then window are shown at actual size.
 .It Fl t Ar seconds 
 Set the slideshow delay in seconds.
 Fractional numbers are accepted.
@@ -72,7 +72,7 @@ Setting this to zero disables slideshow mode, which is the default.
 Use nearest neighbour resampling.
 Recommended for pixel art.
 .It Fl x
-Exit when reaching end of file list.
+Quit after the final image.
 .El
 .Ss Reading from standard input
 When run with argument
