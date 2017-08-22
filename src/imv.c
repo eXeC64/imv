@@ -356,12 +356,13 @@ void imv_add_path(struct imv *imv, const char *path)
   imv_navigator_add(imv->navigator, path, imv->recursive_load);
 }
 
-bool imv_run(struct imv *imv)
+int imv_run(struct imv *imv)
 {
-  if(!setup_window(imv))
-    return false;
+  if(imv->quit)
+    return 0;
 
-  imv->quit = false;
+  if(!setup_window(imv))
+    return 1;
 
   /* cache current image's dimensions */
   int iw = 0;
@@ -508,7 +509,7 @@ bool imv_run(struct imv *imv)
       puts(imv_navigator_at(imv->navigator, i));
   }
 
-  return false;
+  return 0;
 }
 
 static bool setup_window(struct imv *imv)
