@@ -1,7 +1,7 @@
 #ifndef IMV_LOADER_H
 #define IMV_LOADER_H
 
-/* Copyright (c) 2015 imv authors
+/* Copyright (c) imv authors
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
