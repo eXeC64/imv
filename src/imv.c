@@ -17,14 +17,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "imv.h"
 
+#include <errno.h>
 #include <getopt.h>
 #include <limits.h>
 #include <poll.h>
-#include <stdlib.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
-#include <unistd.h>
 
 #include "commands.h"
 #include "list.h"
@@ -363,6 +365,23 @@ int imv_run(struct imv *imv)
 
   if(!setup_window(imv))
     return 1;
+
+  if(imv->starting_path) {
+    int index = imv_navigator_find_path(imv->navigator, imv->starting_path);
+    if(index == -1) {
+      index = (int) strtol(imv->starting_path, NULL, 10);
+      index -= 1; /* input is 1-indexed, internally we're 0 indexed */
+      if(errno == EINVAL) {
+        index = -1;
+      }
+    }
+
+    if(index >= 0) {
+      imv_navigator_select_str(imv->navigator, index);
+    } else {
+      fprintf(stderr, "Invalid starting image: %s\n", imv->starting_path);
+    }
+  }
 
   /* cache current image's dimensions */
   int iw = 0;
