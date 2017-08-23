@@ -752,6 +752,17 @@ static void handle_event(struct imv *imv, SDL_Event *event)
       SDL_ShowCursor(SDL_ENABLE);
       break;
     case SDL_WINDOWEVENT:
+      /* For some reason SDL passes events to us that occurred before we
+       * gained focus, and passes them *after* the focus gained event.
+       * Due to behavioural quirks from such events, whenever we gain focus
+       * we have to clear the event queue. It's hacky, but works without
+       * any visible side effects.
+       */
+      if(event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
+        SDL_PumpEvents();
+        SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+      }
+
       imv_viewport_update(imv->view, imv->texture);
       break;
   }
