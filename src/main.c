@@ -25,6 +25,11 @@ int main(int argc, char** argv)
     return 1;
   }
 
+  if(!imv_load_config(imv)) {
+    imv_free(imv);
+    return 1;
+  }
+
   if(!imv_parse_args(imv, argc, argv)) {
     imv_free(imv);
     return 1;

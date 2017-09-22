@@ -24,11 +24,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <wordexp.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 
 #include "commands.h"
+#include "ini.h"
 #include "list.h"
 #include "loader.h"
 #include "texture.h"
@@ -89,6 +91,11 @@ struct imv {
   SDL_Texture *background_texture;
   bool sdl_init;
   bool ttf_init;
+};
+
+enum config_section {
+  CFG_OPTIONS,
+  CFG_BINDS
 };
 
 void command_quit(struct imv_list *args, void *data);
@@ -187,12 +194,56 @@ void imv_free(struct imv *imv)
   free(imv);
 }
 
+static bool parse_bg(struct imv *imv, const char *bg)
+{
+  if(strcmp("checks", bg) == 0) {
+    imv->background_type = BACKGROUND_CHEQUERED;
+  } else {
+    imv->background_type = BACKGROUND_SOLID;
+    if(*bg == '#')
+      ++bg;
+    char *ep;
+    uint32_t n = strtoul(bg, &ep, 16);
+    if(*ep != '\0' || ep - bg != 6 || n > 0xFFFFFF) {
+      fprintf(stderr, "Invalid hex color: '%s'\n", bg);
+      return false;
+    }
+    imv->background_color.b = n & 0xFF;
+    imv->background_color.g = (n >> 8) & 0xFF;
+    imv->background_color.r = (n >> 16);
+  }
+  return true;
+}
+
+static bool parse_slideshow_duration(struct imv *imv, const char *duration)
+{
+  char *decimal;
+  imv->slideshow_image_duration = strtoul(duration, &decimal, 10);
+  imv->slideshow_image_duration *= 1000;
+  if (*decimal == '.') {
+    char *ep;
+    long delay = strtoul(++decimal, &ep, 10);
+    for (int i = 3 - (ep - decimal); i; i--) {
+      delay *= 10;
+    }
+    if (delay < 1000) {
+      imv->slideshow_image_duration += delay;
+    } else {
+      imv->slideshow_image_duration = ULONG_MAX;
+    }
+  }
+  if (imv->slideshow_image_duration == ULONG_MAX) {
+    fprintf(stderr, "Wrong slideshow delay '%s'. Aborting.\n", optarg);
+    return false;
+  }
+  return true;
+}
+
 bool imv_parse_args(struct imv *imv, int argc, char **argv)
 {
   /* Do not print getopt errors */
   opterr = 0;
 
-  char *argp, *ep = *argv;
   int o;
 
   while((o = getopt(argc, argv, "frasSudxhln:b:e:t:")) != -1) {
@@ -226,37 +277,12 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
         imv->quit = true;
         return true;
       case 'b':
-        if(strcmp("checks", optarg) == 0) {
-          imv->background_type = BACKGROUND_CHEQUERED;
-        } else {
-          imv->background_type = BACKGROUND_SOLID;
-          argp = (*optarg == '#') ? optarg + 1 : optarg;
-          uint32_t n = strtoul(argp, &ep, 16);
-          if(*ep != '\0' || ep - argp != 6 || n > 0xFFFFFF) {
-            fprintf(stderr, "Invalid hex color: '%s'\n", optarg);
-            return false;
-          }
-          imv->background_color.b = n & 0xFF;
-          imv->background_color.g = (n >> 8) & 0xFF;
-          imv->background_color.r = (n >> 16);
+        if(!parse_bg(imv, optarg)) {
+          return false;
         }
         break;
       case 't':
-        imv->slideshow_image_duration = strtoul(optarg, &argp, 10);
-        imv->slideshow_image_duration *= 1000;
-        if (*argp == '.') {
-          long delay = strtoul(++argp, &ep, 10);
-          for (int i = 3 - (ep - argp); i; i--) {
-            delay *= 10;
-          }
-          if (delay < 1000) {
-            imv->slideshow_image_duration += delay;
-          } else {
-            imv->slideshow_image_duration = ULONG_MAX;
-          }
-        }
-        if (imv->slideshow_image_duration == ULONG_MAX) {
-          fprintf(stderr, "Wrong slideshow delay '%s'. Aborting.\n", optarg);
+        if(!parse_slideshow_duration(imv, optarg)) {
           return false;
         }
         break;
@@ -409,7 +435,7 @@ int imv_run(struct imv *imv)
       imv_navigator_remove(imv->navigator, err_path);
 
       /* special case: the image came from stdin */
-      if(strncmp(err_path, "-", 2) == 0) {
+      if(strcmp(err_path, "-") == 0) {
         if(imv->stdin_image_data) {
           free(imv->stdin_image_data);
           imv->stdin_image_data = NULL;
@@ -832,6 +858,110 @@ static void render_window(struct imv *imv)
 
   /* redraw complete, unset the flag */
   imv->need_redraw = false;
+}
+
+static char *get_config_path(void)
+{
+  const char *config_paths[] = {
+    "$HOME/.imv_config",
+    "$HOME/.imv/config",
+    "$XDG_CONFIG_HOME/imv/config",
+  };
+
+  for(size_t i = 0; i < sizeof(config_paths) / sizeof(char*); ++i) {
+    wordexp_t word;
+    if(wordexp(config_paths[i], &word, 0) == 0) {
+      char *path = strdup(word.we_wordv[0]);
+      wordfree(&word);
+
+      if(!path || access(path, R_OK) == -1) {
+        free(path);
+        continue;
+      }
+
+      return path;
+    }
+  }
+  return NULL;
+}
+
+static bool parse_bool(const char *str)
+{
+  return (
+    !strcmp(str, "1") ||
+    !strcmp(str, "yes") ||
+    !strcmp(str, "true") ||
+    !strcmp(str, "on")
+  );
+}
+
+bool imv_load_config(struct imv *imv)
+{
+  const char *path = get_config_path();
+  if(!path) {
+    return true;
+  }
+
+  FILE *f = fopen(path, "r");
+  if (!f) {
+    fprintf(stderr, "Unable to open config file: %s\n", path);
+    return false;
+  }
+
+  enum config_section sect = CFG_OPTIONS;
+  int type;
+  do {
+    char key[128], value[128];
+    type = parse_ini_file(f, &key[0], sizeof(key), &value[0], sizeof(value));
+
+    if(type == INI_SECTION) {
+      if(!strcmp(key, "binds")) {
+        sect = CFG_BINDS;
+      } else {
+        fprintf(stderr, "Unknown config section: %s\n", key);
+        return false;
+      }
+    } else if(type == INI_VALUE) {
+      if(sect == CFG_OPTIONS) {
+        if(!strcmp(key, "fullscreen")) {
+          imv->fullscreen = parse_bool(value);
+        } else if(!strcmp(key, "overlay")) {
+          imv->overlay_enabled = parse_bool(value);
+        } else if(!strcmp(key, "sampling")) {
+          imv->nearest_neighbour = !strcmp(value, "nearest_neighbour");
+        } else if(!strcmp(key, "recursive")) {
+          imv->recursive_load = parse_bool(value);
+        } else if(!strcmp(key, "cycle_input")) {
+          imv->cycle_input = parse_bool(value);
+        } else if(!strcmp(key, "list_at_exit")) {
+          imv->list_at_exit = parse_bool(value);
+        } else if(!strcmp(key, "scaling")) {
+          if(!strcmp(value, "none")) {
+            imv->scaling_mode = SCALING_NONE;
+          } else if(!strcmp(value, "shrink")) {
+            imv->scaling_mode = SCALING_DOWN;
+          } else if(!strcmp(value, "full")) {
+            imv->scaling_mode = SCALING_FULL;
+          }
+        } else if(!strcmp(key, "background")) {
+          if(!parse_bg(imv, value)) {
+            return false;
+          }
+        } else if(!strcmp(key, "slideshow")) {
+          if(!parse_slideshow_duration(imv, value)) {
+            return false;
+          }
+        } else if(!strcmp(key, "overlay_font")) {
+          free(imv->font_name);
+          imv->font_name = strdup(value);
+        } else {
+          fprintf(stderr, "Ignoring unknown option: %s\n", key);
+        }
+      }
+    }
+  } while(type);
+
+  return true;
 }
 
 void command_quit(struct imv_list *args, void *data)
