@@ -106,6 +106,7 @@ void command_zoom(struct imv_list *args, void *data);
 void command_remove(struct imv_list *args, void *data);
 void command_fullscreen(struct imv_list *args, void *data);
 void command_overlay(struct imv_list *args, void *data);
+void command_exec(struct imv_list *args, void *data);
 
 static bool setup_window(struct imv *imv);
 static void handle_event(struct imv *imv, SDL_Event *event);
@@ -151,6 +152,7 @@ struct imv *imv_create(void)
   imv_command_register(imv->commands, "remove", &command_remove);
   imv_command_register(imv->commands, "fullscreen", &command_fullscreen);
   imv_command_register(imv->commands, "overlay", &command_overlay);
+  imv_command_register(imv->commands, "exec", &command_exec);
 
   imv_command_alias(imv->commands, "q", "quit");
   imv_command_alias(imv->commands, "next", "select_rel 1");
@@ -1033,6 +1035,21 @@ void command_overlay(struct imv_list *args, void *data)
   struct imv *imv = data;
   imv->overlay_enabled = !imv->overlay_enabled;
   imv->need_redraw = true;
+}
+
+void command_exec(struct imv_list *args, void *data)
+{
+  (void)data;
+  char *cmd = calloc(4096, 1);
+  for(size_t i = 0; i < args->len; ++i) {
+    strcat(cmd, args->items[i]);
+
+    if(i + 1 != args->len) {
+      strcat(cmd, " ");
+    }
+  }
+  system(cmd);
+  free(cmd);
 }
 
 /* vim:set ts=2 sts=2 sw=2 et: */
