@@ -98,15 +98,15 @@ enum config_section {
   CFG_BINDS
 };
 
-void command_quit(struct imv_list *args, void *data);
-void command_pan(struct imv_list *args, void *data);
-void command_select_rel(struct imv_list *args, void *data);
-void command_select_abs(struct imv_list *args, void *data);
-void command_zoom(struct imv_list *args, void *data);
-void command_remove(struct imv_list *args, void *data);
-void command_fullscreen(struct imv_list *args, void *data);
-void command_overlay(struct imv_list *args, void *data);
-void command_exec(struct imv_list *args, void *data);
+void command_quit(struct imv_list *args, const char *argstr, void *data);
+void command_pan(struct imv_list *args, const char *argstr, void *data);
+void command_select_rel(struct imv_list *args, const char *argstr, void *data);
+void command_select_abs(struct imv_list *args, const char *argstr, void *data);
+void command_zoom(struct imv_list *args, const char *argstr, void *data);
+void command_remove(struct imv_list *args, const char *argstr, void *data);
+void command_fullscreen(struct imv_list *args, const char *argstr, void *data);
+void command_overlay(struct imv_list *args, const char *argstr, void *data);
+void command_exec(struct imv_list *args, const char *argstr, void *data);
 
 static bool setup_window(struct imv *imv);
 static void handle_event(struct imv *imv, SDL_Event *event);
@@ -966,15 +966,17 @@ bool imv_load_config(struct imv *imv)
   return true;
 }
 
-void command_quit(struct imv_list *args, void *data)
+void command_quit(struct imv_list *args, const char *argstr, void *data)
 {
   (void)args;
+  (void)argstr;
   struct imv *imv = data;
   imv->quit = true;
 }
 
-void command_pan(struct imv_list *args, void *data)
+void command_pan(struct imv_list *args, const char *argstr, void *data)
 {
+  (void)argstr;
   struct imv *imv = data;
   if(args->len != 3) {
     return;
@@ -986,8 +988,9 @@ void command_pan(struct imv_list *args, void *data)
   imv_viewport_move(imv->view, x, y, imv->texture);
 }
 
-void command_select_rel(struct imv_list *args, void *data)
+void command_select_rel(struct imv_list *args, const char *argstr, void *data)
 {
+  (void)argstr;
   struct imv *imv = data;
   if(args->len != 2) {
     return;
@@ -999,21 +1002,24 @@ void command_select_rel(struct imv_list *args, void *data)
   imv->slideshow_time_elapsed = 0;
 }
 
-void command_select_abs(struct imv_list *args, void *data)
+void command_select_abs(struct imv_list *args, const char *argstr, void *data)
 {
   (void)args;
+  (void)argstr;
   (void)data;
 }
 
-void command_zoom(struct imv_list *args, void *data)
+void command_zoom(struct imv_list *args, const char *argstr, void *data)
 {
   (void)args;
+  (void)argstr;
   (void)data;
 }
 
-void command_remove(struct imv_list *args, void *data)
+void command_remove(struct imv_list *args, const char *argstr, void *data)
 {
   (void)args;
+  (void)argstr;
   struct imv *imv = data;
   char* path = strdup(imv_navigator_selection(imv->navigator));
   imv_navigator_remove(imv->navigator, path);
@@ -1022,34 +1028,28 @@ void command_remove(struct imv_list *args, void *data)
   imv->slideshow_time_elapsed = 0;
 }
 
-void command_fullscreen(struct imv_list *args, void *data)
+void command_fullscreen(struct imv_list *args, const char *argstr, void *data)
 {
   (void)args;
+  (void)argstr;
   struct imv *imv = data;
   imv_viewport_toggle_fullscreen(imv->view);
 }
 
-void command_overlay(struct imv_list *args, void *data)
+void command_overlay(struct imv_list *args, const char *argstr, void *data)
 {
   (void)args;
+  (void)argstr;
   struct imv *imv = data;
   imv->overlay_enabled = !imv->overlay_enabled;
   imv->need_redraw = true;
 }
 
-void command_exec(struct imv_list *args, void *data)
+void command_exec(struct imv_list *args, const char *argstr, void *data)
 {
+  (void)args;
   (void)data;
-  char *cmd = calloc(4096, 1);
-  for(size_t i = 0; i < args->len; ++i) {
-    strcat(cmd, args->items[i]);
-
-    if(i + 1 != args->len) {
-      strcat(cmd, " ");
-    }
-  }
-  system(cmd);
-  free(cmd);
+  system(argstr);
 }
 
 /* vim:set ts=2 sts=2 sw=2 et: */

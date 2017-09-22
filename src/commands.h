@@ -26,7 +26,7 @@ struct imv_commands {
 
 struct imv_commands *imv_commands_create(void);
 void imv_commands_free(struct imv_commands *cmds);
-void imv_command_register(struct imv_commands *cmds, const char *command, void (*handler)(struct imv_list*, void*));
+void imv_command_register(struct imv_commands *cmds, const char *command, void (*handler)(struct imv_list*, const char*, void*));
 void imv_command_alias(struct imv_commands *cmds, const char *command, const char *alias);
 int imv_command_exec(struct imv_commands *cmds, const char *command, void *data);
 
