@@ -1048,7 +1048,8 @@ void command_overlay(struct imv_list *args, const char *argstr, void *data)
 void command_exec(struct imv_list *args, const char *argstr, void *data)
 {
   (void)args;
-  (void)data;
+  struct imv *imv = data;
+  setenv("imv_path", imv_navigator_selection(imv->navigator), 1);
   system(argstr);
 }
 
