@@ -9,15 +9,15 @@ static void test_split_string(void **state)
 {
   (void)state;
 
-  struct imv_list *list;
+  struct list *list;
 
-  list = imv_split_string("word", ' ');
+  list = list_from_string("word", ' ');
   assert_true(list);
   assert_true(list->len == 1);
   assert_false(strcmp(list->items[0], "word"));
-  imv_list_deep_free(list);
+  list_deep_free(list);
 
-  list = imv_split_string("hello world this is a test", ' ');
+  list = list_from_string("hello world this is a test", ' ');
   assert_true(list);
   assert_true(list->len == 6);
   assert_false(strcmp(list->items[0], "hello"));
@@ -26,15 +26,15 @@ static void test_split_string(void **state)
   assert_false(strcmp(list->items[3], "is"));
   assert_false(strcmp(list->items[4], "a"));
   assert_false(strcmp(list->items[5], "test"));
-  imv_list_deep_free(list);
+  list_deep_free(list);
 
-  list = imv_split_string("  odd  whitespace test  ", ' ');
+  list = list_from_string("  odd  whitespace test  ", ' ');
   assert_true(list);
   assert_true(list->len == 3);
   assert_false(strcmp(list->items[0], "odd"));
   assert_false(strcmp(list->items[1], "whitespace"));
   assert_false(strcmp(list->items[2], "test"));
-  imv_list_deep_free(list);
+  list_deep_free(list);
 }
 
 int main(void)

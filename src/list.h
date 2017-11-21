@@ -21,27 +21,27 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <stdlib.h>
 #include <string.h>
 
-struct imv_list {
+struct list {
   size_t len;
   size_t cap;
   void **items;
 };
 
-struct imv_list *imv_list_create(void);
+struct list *list_create(void);
 
-void imv_list_free(struct imv_list *list);
+void list_free(struct list *list);
 
-void imv_list_deep_free(struct imv_list *list);
+void list_deep_free(struct list *list);
 
-void imv_list_append(struct imv_list *list, void *item);
+void list_append(struct list *list, void *item);
 
-void imv_list_grow(struct imv_list *list, size_t min_size);
+void list_grow(struct list *list, size_t min_size);
 
-void imv_list_remove(struct imv_list *list, size_t index);
+void list_remove(struct list *list, size_t index);
 
-void imv_list_insert(struct imv_list *list, size_t index, void *item);
+void list_insert(struct list *list, size_t index, void *item);
 
-struct imv_list *imv_split_string(const char *string, char delim);
+struct list *list_from_string(const char *string, char delim);
 
 #endif
 

@@ -98,15 +98,15 @@ enum config_section {
   CFG_BINDS
 };
 
-void command_quit(struct imv_list *args, const char *argstr, void *data);
-void command_pan(struct imv_list *args, const char *argstr, void *data);
-void command_select_rel(struct imv_list *args, const char *argstr, void *data);
-void command_select_abs(struct imv_list *args, const char *argstr, void *data);
-void command_zoom(struct imv_list *args, const char *argstr, void *data);
-void command_remove(struct imv_list *args, const char *argstr, void *data);
-void command_fullscreen(struct imv_list *args, const char *argstr, void *data);
-void command_overlay(struct imv_list *args, const char *argstr, void *data);
-void command_exec(struct imv_list *args, const char *argstr, void *data);
+void command_quit(struct list *args, const char *argstr, void *data);
+void command_pan(struct list *args, const char *argstr, void *data);
+void command_select_rel(struct list *args, const char *argstr, void *data);
+void command_select_abs(struct list *args, const char *argstr, void *data);
+void command_zoom(struct list *args, const char *argstr, void *data);
+void command_remove(struct list *args, const char *argstr, void *data);
+void command_fullscreen(struct list *args, const char *argstr, void *data);
+void command_overlay(struct list *args, const char *argstr, void *data);
+void command_exec(struct list *args, const char *argstr, void *data);
 
 static bool setup_window(struct imv *imv);
 static void handle_event(struct imv *imv, SDL_Event *event);
@@ -966,7 +966,7 @@ bool imv_load_config(struct imv *imv)
   return true;
 }
 
-void command_quit(struct imv_list *args, const char *argstr, void *data)
+void command_quit(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
@@ -974,7 +974,7 @@ void command_quit(struct imv_list *args, const char *argstr, void *data)
   imv->quit = true;
 }
 
-void command_pan(struct imv_list *args, const char *argstr, void *data)
+void command_pan(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
   struct imv *imv = data;
@@ -988,7 +988,7 @@ void command_pan(struct imv_list *args, const char *argstr, void *data)
   imv_viewport_move(imv->view, x, y, imv->texture);
 }
 
-void command_select_rel(struct imv_list *args, const char *argstr, void *data)
+void command_select_rel(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
   struct imv *imv = data;
@@ -1002,21 +1002,21 @@ void command_select_rel(struct imv_list *args, const char *argstr, void *data)
   imv->slideshow_time_elapsed = 0;
 }
 
-void command_select_abs(struct imv_list *args, const char *argstr, void *data)
+void command_select_abs(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
   (void)data;
 }
 
-void command_zoom(struct imv_list *args, const char *argstr, void *data)
+void command_zoom(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
   (void)data;
 }
 
-void command_remove(struct imv_list *args, const char *argstr, void *data)
+void command_remove(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
@@ -1028,7 +1028,7 @@ void command_remove(struct imv_list *args, const char *argstr, void *data)
   imv->slideshow_time_elapsed = 0;
 }
 
-void command_fullscreen(struct imv_list *args, const char *argstr, void *data)
+void command_fullscreen(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
@@ -1036,7 +1036,7 @@ void command_fullscreen(struct imv_list *args, const char *argstr, void *data)
   imv_viewport_toggle_fullscreen(imv->view);
 }
 
-void command_overlay(struct imv_list *args, const char *argstr, void *data)
+void command_overlay(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
@@ -1045,7 +1045,7 @@ void command_overlay(struct imv_list *args, const char *argstr, void *data)
   imv->need_redraw = true;
 }
 
-void command_exec(struct imv_list *args, const char *argstr, void *data)
+void command_exec(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   struct imv *imv = data;

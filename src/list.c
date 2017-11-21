@@ -17,35 +17,35 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "list.h"
 
-struct imv_list *imv_list_create(void)
+struct list *list_create(void)
 {
-  struct imv_list *list = malloc(sizeof(struct imv_list));
+  struct list *list = malloc(sizeof(struct list));
   list->len = 0;
   list->cap = 64;
   list->items = malloc(sizeof(void*) * list->cap);
   return list;
 }
 
-void imv_list_free(struct imv_list *list)
+void list_free(struct list *list)
 {
   free(list->items);
 }
 
-void imv_list_deep_free(struct imv_list *list)
+void list_deep_free(struct list *list)
 {
   for(size_t i = 0; i < list->len; ++i) {
     free(list->items[i]);
   }
-  imv_list_free(list);
+  list_free(list);
 }
 
-void imv_list_append(struct imv_list *list, void *item)
+void list_append(struct list *list, void *item)
 {
-  imv_list_grow(list, list->len + 1);
+  list_grow(list, list->len + 1);
   list->items[list->len++] = item;
 }
 
-void imv_list_grow(struct imv_list *list, size_t min_size)
+void list_grow(struct list *list, size_t min_size)
 {
   if(list->cap >= min_size) {
     return;
@@ -58,7 +58,7 @@ void imv_list_grow(struct imv_list *list, size_t min_size)
   list->items = realloc(list->items, sizeof(void*) * list->cap);
 }
 
-void imv_list_remove(struct imv_list *list, size_t index)
+void list_remove(struct list *list, size_t index)
 {
   if(index >= list->len) {
     return;
@@ -69,9 +69,9 @@ void imv_list_remove(struct imv_list *list, size_t index)
   list->len -= 1;
 }
 
-void imv_list_insert(struct imv_list *list, size_t index, void *item)
+void list_insert(struct list *list, size_t index, void *item)
 {
-  imv_list_grow(list, list->len + 1);
+  list_grow(list, list->len + 1);
 
   if(index > list->len) {
     index = list->len;
@@ -82,9 +82,9 @@ void imv_list_insert(struct imv_list *list, size_t index, void *item)
   list->len += 1;
 }
 
-struct imv_list *imv_split_string(const char *string, char delim)
+struct list *list_from_string(const char *string, char delim)
 {
-  struct imv_list *list = imv_list_create();
+  struct list *list = list_create();
 
   const char *base = string;
 
@@ -100,7 +100,7 @@ struct imv_list *imv_split_string(const char *string, char delim)
 
     if(*base && base != end) {
       char *item = strndup(base, end - base);
-      imv_list_append(list, item);
+      list_append(list, item);
       base = end;
     }
   }

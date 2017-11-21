@@ -20,14 +20,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 struct command {
   char* command;
-  void (*handler)(struct imv_list *args, const char *argstr, void *data);
+  void (*handler)(struct list *args, const char *argstr, void *data);
   char* alias;
 };
 
 struct imv_commands *imv_commands_create(void)
 {
   struct imv_commands *cmds = malloc(sizeof(struct imv_commands));
-  cmds->command_list = imv_list_create();
+  cmds->command_list = list_create();
   return cmds;
 }
 
@@ -41,17 +41,17 @@ void imv_commands_free(struct imv_commands *cmds)
     }
     free(cmd);
   }
-  imv_list_free(cmds->command_list);
+  list_free(cmds->command_list);
   free(cmds);
 }
 
-void imv_command_register(struct imv_commands *cmds, const char *command, void (*handler)(struct imv_list*, const char*, void*))
+void imv_command_register(struct imv_commands *cmds, const char *command, void (*handler)(struct list*, const char*, void*))
 {
   struct command *cmd = malloc(sizeof(struct command));
   cmd->command = strdup(command);
   cmd->handler = handler;
   cmd->alias = NULL;
-  imv_list_append(cmds->command_list, cmd);
+  list_append(cmds->command_list, cmd);
 }
 
 void imv_command_alias(struct imv_commands *cmds, const char *command, const char *alias)
@@ -60,12 +60,12 @@ void imv_command_alias(struct imv_commands *cmds, const char *command, const cha
   cmd->command = strdup(command);
   cmd->handler = NULL;
   cmd->alias = strdup(alias);
-  imv_list_append(cmds->command_list, cmd);
+  list_append(cmds->command_list, cmd);
 }
 
 int imv_command_exec(struct imv_commands *cmds, const char *command, void *data)
 {
-  struct imv_list *args = imv_split_string(command, ' ');
+  struct list *args = list_from_string(command, ' ');
   int ret = 1;
 
   if(args->len > 0) {
@@ -85,7 +85,7 @@ int imv_command_exec(struct imv_commands *cmds, const char *command, void *data)
     }
   }
 
-  imv_list_deep_free(args);
+  list_deep_free(args);
   return ret;
 }
 
