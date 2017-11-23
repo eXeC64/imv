@@ -263,13 +263,6 @@ struct list *imv_bind_parse_keys(const char *keys)
         list_deep_free(list);
         return NULL;
       }
-    } else {
-      /* Just a regular character */
-      char *item = malloc(2);
-      item[0] = *keys;
-      item[1] = 0;
-      list_append(list, item);
-      ++keys;
     }
   }
 
