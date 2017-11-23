@@ -924,9 +924,17 @@ bool imv_load_config(struct imv *imv)
         } else if(!strcmp(key, "overlay_font")) {
           free(imv->font_name);
           imv->font_name = strdup(value);
+        } else if(!strcmp(key, "default_binds")) {
+          const bool default_binds = parse_bool(value);
+          if(!default_binds) {
+            /* clear out any default binds if requested */
+            imv_binds_clear(imv->binds);
+          }
         } else {
           fprintf(stderr, "Ignoring unknown option: %s\n", key);
         }
+      } else if(sect == CFG_BINDS) {
+        add_bind(imv, key, value);
       }
     }
   } while(type);

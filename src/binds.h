@@ -22,6 +22,9 @@ void imv_binds_free(struct imv_binds *binds);
 /* Create a key binding */
 enum bind_result imv_binds_add(struct imv_binds *binds, const struct list *keys, const char *cmd);
 
+/* Remove all key bindings */
+void imv_binds_clear(struct imv_binds *binds);
+
 /* Fetch the list of keys pressed so far */
 const struct list *imv_bind_input_buffer(struct imv_binds *binds);
 

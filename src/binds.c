@@ -121,6 +121,12 @@ enum bind_result imv_binds_add(struct imv_binds *binds, const struct list *keys,
   return result;
 }
 
+void imv_binds_clear(struct imv_binds *binds)
+{
+  destroy_bind_node(&binds->bind_tree);
+  init_bind_node(&binds->bind_tree);
+}
+
 enum lookup_result {
   LOOKUP_PARTIAL,
   LOOKUP_INVALID,
