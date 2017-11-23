@@ -43,6 +43,12 @@ void list_insert(struct list *list, size_t index, void *item);
 
 struct list *list_from_string(const char *string, char delim);
 
+int list_find(
+    struct list *list,
+    int (*cmp)(const void *item, const void *key),
+    const void *key
+);
+
 #endif
 
 /* vim:set ts=2 sts=2 sw=2 et: */

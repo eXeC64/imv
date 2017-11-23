@@ -108,4 +108,14 @@ struct list *list_from_string(const char *string, char delim)
   return list;
 }
 
+int list_find(struct list *list, int (*cmp)(const void *, const void *), const void *key)
+{
+  for(size_t i = 0; i < list->len; ++i) {
+    if(!cmp(list->items[i], key)) {
+      return (int)i;
+    }
+  }
+  return -1;
+}
+
 /* vim:set ts=2 sts=2 sw=2 et: */
