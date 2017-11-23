@@ -29,6 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 
+#include "binds.h"
 #include "commands.h"
 #include "ini.h"
 #include "list.h"
@@ -74,6 +75,7 @@ struct imv {
   unsigned long slideshow_image_duration;
   unsigned long slideshow_time_elapsed;
   char *font_name;
+  struct imv_binds *binds;
   struct imv_navigator *navigator;
   struct imv_loader *loader;
   struct imv_commands *commands;
@@ -112,6 +114,16 @@ static bool setup_window(struct imv *imv);
 static void handle_event(struct imv *imv, SDL_Event *event);
 static void render_window(struct imv *imv);
 
+static void add_bind(struct imv *imv, const char *keys, const char *command)
+{
+  struct list *list = imv_bind_parse_keys(keys);
+  if(!list) {
+    return;
+  }
+
+  imv_binds_add(imv->binds, list, command);
+}
+
 struct imv *imv_create(void)
 {
   struct imv *imv = malloc(sizeof(struct imv));
@@ -130,6 +142,7 @@ struct imv *imv_create(void)
   imv->slideshow_image_duration = 0;
   imv->slideshow_time_elapsed = 0;
   imv->font_name = strdup("Monospace:24");
+  imv->binds = imv_binds_create();
   imv->navigator = imv_navigator_create();
   imv->loader = imv_loader_create();
   imv->commands = imv_commands_create();
@@ -160,12 +173,26 @@ struct imv *imv_create(void)
   imv_command_alias(imv->commands, "n", "select_rel 1");
   imv_command_alias(imv->commands, "p", "select_rel -1");
 
+  add_bind(imv, "Q", "quit");
+  add_bind(imv, "<Left>", "select_rel -1");
+  add_bind(imv, "[", "select_rel -1");
+  add_bind(imv, "<Right>", "select_rel 1");
+  add_bind(imv, "]", "select_rel 1");
+  add_bind(imv, "J", "pan 0 -50");
+  add_bind(imv, "K", "pan 0 50");
+  add_bind(imv, "H", "pan 50 0");
+  add_bind(imv, "L", "pan -50 0");
+  add_bind(imv, "X", "remove");
+  add_bind(imv, "F", "fullscreen");
+  add_bind(imv, "D", "overlay");
+
   return imv;
 }
 
 void imv_free(struct imv *imv)
 {
   free(imv->font_name);
+  imv_binds_free(imv->binds);
   imv_navigator_free(imv->navigator);
   imv_loader_free(imv->loader);
   imv_commands_free(imv->commands);
@@ -672,18 +699,6 @@ static void handle_event(struct imv *imv, SDL_Event *event)
             imv->need_redraw = true;
           }
           break;
-        case SDLK_q:
-          imv->quit = true;
-          imv_command_exec(imv->commands, "quit", imv);
-          break;
-        case SDLK_LEFTBRACKET:
-        case SDLK_LEFT:
-          imv_command_exec(imv->commands, "select_rel -1", imv);
-          break;
-        case SDLK_RIGHTBRACKET:
-        case SDLK_RIGHT:
-          imv_command_exec(imv->commands, "select_rel 1", imv);
-          break;
         case SDLK_EQUALS:
         case SDLK_PLUS:
         case SDLK_i:
@@ -717,28 +732,6 @@ static void handle_event(struct imv *imv, SDL_Event *event)
             imv_viewport_center(imv->view, imv->texture);
           }
           break;
-        case SDLK_j:
-          imv_command_exec(imv->commands, "pan 0 -50", imv);
-          break;
-        case SDLK_k:
-          imv_command_exec(imv->commands, "pan 0 50", imv);
-          break;
-        case SDLK_h:
-          imv_command_exec(imv->commands, "pan 50 0", imv);
-          break;
-        case SDLK_l:
-          imv_command_exec(imv->commands, "pan -50 0", imv);
-          break;
-        case SDLK_x:
-          if(!event->key.repeat) {
-            imv_command_exec(imv->commands, "remove", imv);
-          }
-          break;
-        case SDLK_f:
-          if(!event->key.repeat) {
-            imv_command_exec(imv->commands, "fullscreen", imv);
-          }
-          break;
         case SDLK_PERIOD:
           imv_loader_load_next_frame(imv->loader);
           break;
@@ -752,11 +745,6 @@ static void handle_event(struct imv *imv, SDL_Event *event)
             puts(imv_navigator_selection(imv->navigator));
           }
           break;
-        case SDLK_d:
-          if(!event->key.repeat) {
-            imv_command_exec(imv->commands, "overlay", imv);
-          }
-          break;
         case SDLK_t:
           if(event->key.keysym.mod & (KMOD_SHIFT|KMOD_CAPS)) {
             if(imv->slideshow_image_duration >= 1000) {
@@ -767,6 +755,12 @@ static void handle_event(struct imv *imv, SDL_Event *event)
           }
           imv->need_redraw = true;
           break;
+        default: { /* braces to allow const char *cmd definition */
+          const char *cmd = imv_bind_handle_event(imv->binds, event);
+          if(cmd) {
+            imv_command_exec(imv->commands, cmd, imv);
+          }
+        }
       }
       break;
     case SDL_MOUSEWHEEL:
