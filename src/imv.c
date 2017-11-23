@@ -836,6 +836,8 @@ static char *get_config_path(void)
     "$HOME/.imv_config",
     "$HOME/.imv/config",
     "$XDG_CONFIG_HOME/imv/config",
+    "/usr/local/etc/imv_config",
+    "/etc/imv_config",
   };
 
   for(size_t i = 0; i < sizeof(config_paths) / sizeof(char*); ++i) {
