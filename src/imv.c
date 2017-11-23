@@ -109,6 +109,12 @@ void command_remove(struct list *args, const char *argstr, void *data);
 void command_fullscreen(struct list *args, const char *argstr, void *data);
 void command_overlay(struct list *args, const char *argstr, void *data);
 void command_exec(struct list *args, const char *argstr, void *data);
+void command_center(struct list *args, const char *argstr, void *data);
+void command_reset(struct list *args, const char *argstr, void *data);
+void command_next_frame(struct list *args, const char *argstr, void *data);
+void command_toggle_playing(struct list *args, const char *argstr, void *data);
+void command_set_scaling_mode(struct list *args, const char *argstr, void *data);
+void command_set_slideshow_duration(struct list *args, const char *argstr, void *data);
 
 static bool setup_window(struct imv *imv);
 static void handle_event(struct imv *imv, SDL_Event *event);
@@ -166,6 +172,12 @@ struct imv *imv_create(void)
   imv_command_register(imv->commands, "fullscreen", &command_fullscreen);
   imv_command_register(imv->commands, "overlay", &command_overlay);
   imv_command_register(imv->commands, "exec", &command_exec);
+  imv_command_register(imv->commands, "center", &command_center);
+  imv_command_register(imv->commands, "reset", &command_reset);
+  imv_command_register(imv->commands, "next_frame", &command_next_frame);
+  imv_command_register(imv->commands, "toggle_playing", &command_toggle_playing);
+  imv_command_register(imv->commands, "scaling_mode", &command_set_scaling_mode);
+  imv_command_register(imv->commands, "slideshow_duration", &command_set_slideshow_duration);
 
   imv_command_alias(imv->commands, "q", "quit");
   imv_command_alias(imv->commands, "next", "select_rel 1");
@@ -178,6 +190,8 @@ struct imv *imv_create(void)
   add_bind(imv, "[", "select_rel -1");
   add_bind(imv, "<Right>", "select_rel 1");
   add_bind(imv, "]", "select_rel 1");
+  add_bind(imv, "GG", "select_abs 0");
+  add_bind(imv, "<Shift+G>", "select_abs -1");
   add_bind(imv, "J", "pan 0 -50");
   add_bind(imv, "K", "pan 0 50");
   add_bind(imv, "H", "pan 50 0");
@@ -185,6 +199,22 @@ struct imv *imv_create(void)
   add_bind(imv, "X", "remove");
   add_bind(imv, "F", "fullscreen");
   add_bind(imv, "D", "overlay");
+  add_bind(imv, "P", "exec echo $imv_path");
+  add_bind(imv, "<Equals>", "zoom 1");
+  add_bind(imv, "<Up>", "zoom 1");
+  add_bind(imv, "+", "zoom 1");
+  add_bind(imv, "I", "zoom 1");
+  add_bind(imv, "<Down>", "zoom -1");
+  add_bind(imv, "-", "zoom -1");
+  add_bind(imv, "O", "zoom -1");
+  add_bind(imv, "C", "center");
+  add_bind(imv, "S", "scaling_mode next");
+  add_bind(imv, "A", "zoom actual");
+  add_bind(imv, "R", "reset");
+  add_bind(imv, ".", "next_frame");
+  add_bind(imv, "<Space>", "toggle_playing");
+  add_bind(imv, "T", "slideshow_duration +1");
+  add_bind(imv, "<Shift+T>", "slideshow_duration -1");
 
   return imv;
 }
@@ -699,62 +729,6 @@ static void handle_event(struct imv *imv, SDL_Event *event)
             imv->need_redraw = true;
           }
           break;
-        case SDLK_EQUALS:
-        case SDLK_PLUS:
-        case SDLK_i:
-        case SDLK_UP:
-          imv_viewport_zoom(imv->view, imv->texture, IMV_ZOOM_KEYBOARD, 1);
-          break;
-        case SDLK_MINUS:
-        case SDLK_o:
-        case SDLK_DOWN:
-          imv_viewport_zoom(imv->view, imv->texture, IMV_ZOOM_KEYBOARD, -1);
-          break;
-        case SDLK_s:
-          if(!event->key.repeat) {
-            imv->scaling_mode++;
-            imv->scaling_mode %= SCALING_MODE_COUNT;
-          }
-        /* FALLTHROUGH */
-        case SDLK_r:
-          if(!event->key.repeat) {
-            imv->need_rescale = true;
-            imv->need_redraw = true;
-          }
-          break;
-        case SDLK_a:
-          if(!event->key.repeat) {
-            imv_viewport_scale_to_actual(imv->view, imv->texture);
-          }
-          break;
-        case SDLK_c:
-          if(!event->key.repeat) {
-            imv_viewport_center(imv->view, imv->texture);
-          }
-          break;
-        case SDLK_PERIOD:
-          imv_loader_load_next_frame(imv->loader);
-          break;
-        case SDLK_SPACE:
-          if(!event->key.repeat) {
-            imv_viewport_toggle_playing(imv->view);
-          }
-          break;
-        case SDLK_p:
-          if(!event->key.repeat) {
-            puts(imv_navigator_selection(imv->navigator));
-          }
-          break;
-        case SDLK_t:
-          if(event->key.keysym.mod & (KMOD_SHIFT|KMOD_CAPS)) {
-            if(imv->slideshow_image_duration >= 1000) {
-              imv->slideshow_image_duration -= 1000;
-            }
-          } else {
-            imv->slideshow_image_duration += 1000;
-          }
-          imv->need_redraw = true;
-          break;
         default: { /* braces to allow const char *cmd definition */
           const char *cmd = imv_bind_handle_event(imv->binds, event);
           if(cmd) {
@@ -998,16 +972,31 @@ void command_select_rel(struct list *args, const char *argstr, void *data)
 
 void command_select_abs(struct list *args, const char *argstr, void *data)
 {
-  (void)args;
   (void)argstr;
-  (void)data;
+  struct imv *imv = data;
+  if(args->len != 2) {
+    return;
+  }
+
+  long int index = strtol(args->items[1], NULL, 10);
+  imv_navigator_select_abs(imv->navigator, index);
+
+  imv->slideshow_time_elapsed = 0;
 }
 
 void command_zoom(struct list *args, const char *argstr, void *data)
 {
-  (void)args;
   (void)argstr;
-  (void)data;
+  struct imv *imv = data;
+  if(args->len == 2) {
+    const char *str = args->items[1];
+    if(!strcmp(str, "actual")) {
+      imv_viewport_scale_to_actual(imv->view, imv->texture);
+    } else {
+      long int amount = strtol(args->items[1], NULL, 10);
+      imv_viewport_zoom(imv->view, imv->texture, IMV_ZOOM_KEYBOARD, amount);
+    }
+  }
 }
 
 void command_remove(struct list *args, const char *argstr, void *data)
@@ -1045,6 +1034,87 @@ void command_exec(struct list *args, const char *argstr, void *data)
   struct imv *imv = data;
   setenv("imv_path", imv_navigator_selection(imv->navigator), 1);
   system(argstr);
+}
+
+void command_center(struct list *args, const char *argstr, void *data)
+{
+  (void)args;
+  (void)argstr;
+  struct imv *imv = data;
+  imv_viewport_center(imv->view, imv->texture);
+}
+
+void command_reset(struct list *args, const char *argstr, void *data)
+{
+  (void)args;
+  (void)argstr;
+  struct imv *imv = data;
+  imv->need_rescale = true;
+  imv->need_redraw = true;
+}
+
+void command_next_frame(struct list *args, const char *argstr, void *data)
+{
+  (void)args;
+  (void)argstr;
+  struct imv *imv = data;
+  imv_loader_load_next_frame(imv->loader);
+}
+
+void command_toggle_playing(struct list *args, const char *argstr, void *data)
+{
+  (void)args;
+  (void)argstr;
+  struct imv *imv = data;
+  imv_viewport_toggle_playing(imv->view);
+}
+
+void command_set_scaling_mode(struct list *args, const char *argstr, void *data)
+{
+  (void)args;
+  (void)argstr;
+  struct imv *imv = data;
+
+  if(args->len != 2) {
+    return;
+  }
+
+  const char *mode = args->items[1];
+
+  if(!strcmp(mode, "next")) {
+    imv->scaling_mode++;
+    imv->scaling_mode %= SCALING_MODE_COUNT;
+  } else if(!strcmp(mode, "none")) {
+    imv->scaling_mode = SCALING_NONE;
+  } else if(!strcmp(mode, "shrink")) {
+    imv->scaling_mode = SCALING_DOWN;
+  } else if(!strcmp(mode, "full")) {
+    imv->scaling_mode = SCALING_FULL;
+  } else {
+    /* no changes, don't bother to redraw */
+    return;
+  }
+
+  imv->need_rescale = true;
+  imv->need_redraw = true;
+}
+
+void command_set_slideshow_duration(struct list *args, const char *argstr, void *data)
+{
+  (void)argstr;
+  struct imv *imv = data;
+  if(args->len == 2) {
+    long int delta = 1000 * strtol(args->items[1], NULL, 10);
+
+    /* Ensure we can't go below 0 */
+    if(delta < 0 && (size_t)abs(delta) > imv->slideshow_image_duration) {
+      imv->slideshow_image_duration = 0;
+    } else {
+      imv->slideshow_image_duration += delta;
+    }
+
+    imv->need_redraw = true;
+  }
 }
 
 /* vim:set ts=2 sts=2 sw=2 et: */

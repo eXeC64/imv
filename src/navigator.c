@@ -130,7 +130,7 @@ const char *imv_navigator_selection(struct imv_navigator *nav)
 
 void imv_navigator_select_rel(struct imv_navigator *nav, int direction)
 {
-  int prev_path = nav->cur_path;
+  const int prev_path = nav->cur_path;
   if(nav->num_paths == 0) {
     return;
   }
@@ -156,6 +156,29 @@ void imv_navigator_select_rel(struct imv_navigator *nav, int direction)
   nav->last_move_direction = direction;
   nav->changed = prev_path != nav->cur_path;
   return;
+}
+
+void imv_navigator_select_abs(struct imv_navigator *nav, int index)
+{
+  const int prev_path = nav->cur_path;
+  /* allow -1 to indicate the last image */
+  if(index < 0) {
+    index += nav->num_paths;
+
+    /* but if they go farther back than the first image, stick to first image */
+    if(index < 0) {
+      index = 0;
+    }
+  }
+
+  /* stick to last image if we go beyond it */
+  if(index >= nav->num_paths) {
+    index = nav->num_paths - 1;
+  }
+
+  nav->cur_path = index;
+  nav->changed = prev_path != nav->cur_path;
+  nav->last_move_direction = (index >= prev_path) ? 1 : -1;
 }
 
 void imv_navigator_remove(struct imv_navigator *nav, const char *path)
