@@ -4,6 +4,7 @@ PREFIX ?= /usr
 BINPREFIX ?= $(PREFIX)/bin
 MANPREFIX ?= $(PREFIX)/share/man
 DATAPREFIX ?= $(PREFIX)/share
+CONFIGPREFIX ?= /etc
 
 CFLAGS ?= -W -Wall -pedantic -Wmissing-prototypes
 CFLAGS += -std=c99
@@ -52,8 +53,10 @@ install: $(TARGET)
 	install -D -m 0755 $(TARGET) $(DESTDIR)$(BINPREFIX)/imv
 	install -D -m 0644 doc/imv.1 $(DESTDIR)$(MANPREFIX)/man1/imv.1
 	install -D -m 0644 files/imv.desktop $(DESTDIR)$(DATAPREFIX)/applications/imv.desktop
+	install -D -m 0644 files/imv_config $(DESTDIR)$(CONFIGPREFIX)/imv_config
 
 uninstall:
 	$(RM) $(DESTDIR)$(BINPREFIX)/imv
 	$(RM) $(DESTDIR)$(MANPREFIX)/man1/imv.1
 	$(RM) $(DESTDIR)$(DATAPREFIX)/applications/imv.desktop
+	@echo "$(DESTDIR)$(CONFIGPREFIX)/imv_config has not been removed. Please remove it manually."
