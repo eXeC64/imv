@@ -85,7 +85,6 @@ struct imv {
   size_t stdin_image_data_len;
   char *input_buffer;
   char *starting_path;
-  struct pollfd stdin_fd;
 
   SDL_Window *window;
   SDL_Renderer *renderer;
