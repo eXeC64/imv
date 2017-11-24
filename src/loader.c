@@ -65,9 +65,6 @@ void imv_loader_free(struct imv_loader *ldr)
   if(ldr->bmp) {
     FreeImage_Unload(ldr->bmp);
   }
-  if(ldr->out_bmp) {
-    FreeImage_Unload(ldr->out_bmp);
-  }
   if(ldr->mbmp) {
     FreeImage_CloseMultiBitmap(ldr->mbmp, 0);
   }
@@ -104,22 +101,9 @@ void imv_loader_load(struct imv_loader *ldr, const char *path,
   pthread_mutex_unlock(&ldr->lock);
 }
 
-int imv_loader_get_image(struct imv_loader *ldr, FIBITMAP **out_bmp,
-                         int *out_is_new_image)
+void imv_loader_set_event_types(struct imv_loader *ldr, unsigned int new_image)
 {
-  int ret = 0;
-  pthread_mutex_lock(&ldr->lock);
-
-  if(ldr->out_bmp) {
-    *out_bmp = ldr->out_bmp;
-    ldr->out_bmp = NULL;
-    *out_is_new_image = ldr->out_is_new_image;
-    ldr->out_is_new_image = 0;
-    ret = 1;
-  }
-
-  pthread_mutex_unlock(&ldr->lock);
-  return ret;
+  ldr->new_image_event = new_image;
 }
 
 char *imv_loader_get_error(struct imv_loader *ldr)
@@ -297,17 +281,21 @@ static void *bg_new_img(void *data)
 
   ldr->mbmp = mbmp;
   ldr->bmp = bmp;
-  if(ldr->out_bmp) {
-    FreeImage_Unload(ldr->out_bmp);
-  }
-  ldr->out_bmp = FreeImage_Clone(bmp);
-  ldr->out_is_new_image = 1;
+
   ldr->width = width;
   ldr->height = height;
   ldr->cur_frame = 0;
   ldr->next_frame = 1;
   ldr->num_frames = num_frames;
   ldr->frame_time = (double)raw_frame_time * 0.0001;
+
+  /* return the image via SDL event queue */
+  SDL_Event event;
+  SDL_zero(event);
+  event.type = ldr->new_image_event;
+  event.user.data1 = FreeImage_Clone(bmp);
+  event.user.code = 1; /* is a new image */
+  SDL_PushEvent(&event);
 
   pthread_mutex_unlock(&ldr->lock);
   return NULL;
@@ -407,10 +395,12 @@ static void *bg_next_frame(void *data)
       break;
   }
 
-  if(ldr->out_bmp) {
-    FreeImage_Unload(ldr->out_bmp);
-  }
-  ldr->out_bmp = FreeImage_Clone(ldr->bmp);
+  SDL_Event event;
+  SDL_zero(event);
+  event.type = ldr->new_image_event;
+  event.user.data1 = FreeImage_Clone(ldr->bmp);
+  event.user.code = 0; /* not a new image */
+  SDL_PushEvent(&event);
 
   pthread_mutex_unlock(&ldr->lock);
   return NULL;

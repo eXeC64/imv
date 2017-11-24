@@ -31,8 +31,6 @@ struct imv_loader {
   BYTE *buffer;
   size_t buffer_size;
   FIMEMORY *fi_buffer;
-  FIBITMAP *out_bmp;
-  int out_is_new_image;
   char *out_err;
   FIMULTIBITMAP *mbmp;
   FIBITMAP *bmp;
@@ -42,6 +40,7 @@ struct imv_loader {
   int next_frame;
   int num_frames;
   double frame_time;
+  unsigned int new_image_event;
 };
 
 /* Creates an instance of imv_loader */
@@ -54,12 +53,8 @@ void imv_loader_free(struct imv_loader *ldr);
 void imv_loader_load(struct imv_loader *ldr, const char *path,
                      const void *buffer, const size_t buffer_size);
 
-/* Returns 1 if image data is available. 0 if not. Caller is responsible for
- * cleaning up the data returned. Each image is only returned once.
- * out_is_frame indicates whether the returned image is a new image, or just
- * a new frame of an existing one. */
-int imv_loader_get_image(struct imv_loader *ldr, FIBITMAP **out_bmp,
-                         int *out_is_frame);
+/* Set the custom event types for returning data */
+void imv_loader_set_event_types(struct imv_loader *ldr, unsigned int new_image);
 
 /* If a file failed to load, return the path to that file. Otherwise returns
  * NULL. Only returns the path once. Caller is responsible for cleaning up the

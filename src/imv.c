@@ -93,6 +93,13 @@ struct imv {
   SDL_Texture *background_texture;
   bool sdl_init;
   bool ttf_init;
+  struct {
+    unsigned int NEW_IMAGE;
+  } events;
+  struct {
+    int width;
+    int height;
+  } current_image;
 };
 
 enum config_section {
@@ -469,8 +476,8 @@ int imv_run(struct imv *imv)
   }
 
   /* cache current image's dimensions */
-  int iw = 0;
-  int ih = 0;
+  imv->current_image.width = 0;
+  imv->current_image.height = 0;
 
   /* time keeping */
   unsigned int last_time = SDL_GetTicks();
@@ -532,26 +539,15 @@ int imv_run(struct imv *imv)
       imv->view->playing = true;
     }
 
-
-    /* check if a new image is available to display */
-    FIBITMAP *bmp;
-    int is_new_image;
-    if(imv_loader_get_image(imv->loader, &bmp, &is_new_image)) {
-      imv_texture_set_image(imv->texture, bmp);
-      iw = FreeImage_GetWidth(bmp);
-      ih = FreeImage_GetHeight(bmp);
-      FreeImage_Unload(bmp);
-      imv->need_redraw = true;
-      imv->need_rescale += is_new_image;
-    }
-
     if(imv->need_rescale) {
       int ww, wh;
       SDL_GetWindowSize(imv->window, &ww, &wh);
 
       imv->need_rescale = false;
       if(imv->scaling_mode == SCALING_NONE ||
-          (imv->scaling_mode == SCALING_DOWN && ww > iw && wh > ih)) {
+          (imv->scaling_mode == SCALING_DOWN
+           && ww > imv->current_image.width
+           && wh > imv->current_image.height)) {
         imv_viewport_scale_to_actual(imv->view, imv->texture);
       } else {
         imv_viewport_scale_to_window(imv->view, imv->texture);
@@ -622,6 +618,13 @@ static bool setup_window(struct imv *imv)
     fprintf(stderr, "SDL Failed to Init: %s\n", SDL_GetError());
     return false;
   }
+
+  /* register custom events */
+  imv->events.NEW_IMAGE = SDL_RegisterEvents(1);
+
+  /* tell the loader which event ids it should use */
+  imv_loader_set_event_types(imv->loader, imv->events.NEW_IMAGE);
+
   imv->sdl_init = true;
 
   /* width and height arbitrarily chosen. Perhaps there's a smarter way to
@@ -683,6 +686,19 @@ static bool setup_window(struct imv *imv)
 static void handle_event(struct imv *imv, SDL_Event *event)
 {
   const int command_buffer_len = 1024;
+
+  if(event->type == imv->events.NEW_IMAGE) {
+    /* new image to display */
+    FIBITMAP *bmp = event->user.data1;
+    imv_texture_set_image(imv->texture, bmp);
+    imv->current_image.width = FreeImage_GetWidth(bmp);
+    imv->current_image.height = FreeImage_GetHeight(bmp);
+    FreeImage_Unload(bmp);
+    imv->need_redraw = true;
+    imv->need_rescale |= event->user.code;
+    return;
+  }
+
   switch(event->type) {
     case SDL_QUIT:
       imv_command_exec(imv->commands, "quit", imv);
