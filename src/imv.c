@@ -1117,7 +1117,7 @@ void command_set_slideshow_duration(struct list *args, const char *argstr, void 
     long int delta = 1000 * strtol(args->items[1], NULL, 10);
 
     /* Ensure we can't go below 0 */
-    if(delta < 0 && (size_t)abs(delta) > imv->slideshow_image_duration) {
+    if(delta < 0 && (size_t)labs(delta) > imv->slideshow_image_duration) {
       imv->slideshow_image_duration = 0;
     } else {
       imv->slideshow_image_duration += delta;
