@@ -599,8 +599,18 @@ int imv_run(struct imv *imv)
       /* check stdin for any more paths */
       check_stdin_for_paths(imv);
     } else {
-      /* sleep a little bit so we don't waste CPU time */
-      SDL_Delay(10);
+      /* sleep until we have something to do */
+      unsigned int timeout = 1000; /* sleep up to a second */
+
+      /* if we need to display the next frame of an animation soon we should
+       * limit our sleep until the next frame is due */
+      const double next_frame_in = imv_loader_time_left(imv->loader);
+      if(next_frame_in > 0.0) {
+        timeout = (unsigned int)(next_frame_in * 1000.0);
+      }
+
+      /* go to sleep until an input event, etc. or the timeout expires */
+      SDL_WaitEventTimeout(NULL, timeout);
     }
   }
 

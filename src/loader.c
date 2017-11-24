@@ -137,15 +137,22 @@ void imv_loader_time_passed(struct imv_loader *ldr, double dt)
   pthread_mutex_lock(&ldr->lock);
   if(ldr->num_frames > 1) {
     ldr->frame_time -= dt;
-    if(ldr->frame_time < 0) {
+    if(ldr->frame_time < 0.0) {
       get_frame = 1;
     }
+  } else {
+    ldr->frame_time = 0.0;
   }
   pthread_mutex_unlock(&ldr->lock);
 
   if(get_frame) {
     imv_loader_load_next_frame(ldr);
   }
+}
+
+double imv_loader_time_left(struct imv_loader *ldr)
+{
+  return ldr->frame_time;
 }
 
 static void *bg_new_img(void *data)
@@ -187,7 +194,7 @@ static void *bg_new_img(void *data)
   FIMULTIBITMAP *mbmp = NULL;
   FIBITMAP *bmp = NULL;
   int width, height;
-  int raw_frame_time = 100; /* default to 100 */
+  int raw_frame_time = 0;
 
   if(fmt == FIF_GIF) {
     if(from_stdin) {
@@ -219,6 +226,8 @@ static void *bg_new_img(void *data)
     FreeImage_GetMetadata(FIMD_ANIMATION, frame, "FrameTime", &tag);
     if(FreeImage_GetTagValue(tag)) {
       raw_frame_time = *(int*)FreeImage_GetTagValue(tag);
+    } else {
+      raw_frame_time = 100; /* default value for gifs */
     }
     FreeImage_UnlockPage(mbmp, frame, 0);
 

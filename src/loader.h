@@ -69,6 +69,9 @@ void imv_loader_load_next_frame(struct imv_loader *ldr);
  * the loader will automatically load the next frame when it is due. */
 void imv_loader_time_passed(struct imv_loader *ldr, double dt);
 
+/* Ask the loader how long we can sleep for until the next frame */
+double imv_loader_time_left(struct imv_loader *ldr);
+
 #endif
 
 
