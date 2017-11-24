@@ -513,8 +513,10 @@ int imv_run(struct imv *imv)
       }
 
       char title[1024];
-      snprintf(title, sizeof(title), "imv - [%i/%i] [LOADING] %s [%s]",
-          imv->navigator->cur_path + 1, imv->navigator->num_paths, current_path,
+      const size_t index_cur = imv_navigator_index(imv->navigator);
+      const size_t index_len = imv_navigator_length(imv->navigator);
+      snprintf(title, sizeof(title), "imv - [%zu/%zu] [LOADING] %s [%s]",
+          index_cur + 1, index_len, current_path,
           scaling_label[imv->scaling_mode]);
       imv_viewport_set_title(imv->view, title);
 
@@ -599,7 +601,7 @@ int imv_run(struct imv *imv)
   }
 
   if(imv->list_at_exit) {
-    for(int i = 0; i < imv_navigator_length(imv->navigator); ++i)
+    for(size_t i = 0; i < imv_navigator_length(imv->navigator); ++i)
       puts(imv_navigator_at(imv->navigator, i));
   }
 
@@ -800,8 +802,10 @@ static void render_window(struct imv *imv)
 
   /* update window title */
   const char *current_path = imv_navigator_selection(imv->navigator);
-  int len = snprintf(title, sizeof(title), "imv - [%i/%i] [%ix%i] [%.2f%%] %s [%s]",
-      imv->navigator->cur_path + 1, imv->navigator->num_paths, imv->texture->width, imv->texture->height,
+  const size_t index_cur = imv_navigator_index(imv->navigator);
+  const size_t index_len = imv_navigator_length(imv->navigator);
+  int len = snprintf(title, sizeof(title), "imv - [%zu/%zu] [%ix%i] [%.2f%%] %s [%s]",
+      index_cur + 1, index_len, imv->texture->width, imv->texture->height,
       100.0 * imv->view->scale,
       current_path, scaling_label[imv->scaling_mode]);
   if(imv->slideshow_image_duration >= 1000) {

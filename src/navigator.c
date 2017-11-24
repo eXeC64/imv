@@ -23,6 +23,19 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
+
+struct imv_navigator {
+  int num_paths;
+  int cur_path;
+  char **paths;
+  time_t *mtimes;
+  time_t *ctimes;
+  int last_move_direction;
+  int changed;
+  int wrapped;
+  int poll_countdown;
+};
 
 struct imv_navigator *imv_navigator_create(void)
 {
@@ -57,11 +70,13 @@ void imv_navigator_free(struct imv_navigator *nav)
 static int add_item(struct imv_navigator *nav, const char *path,
                      time_t mtime)
 {
-  if(nav->num_paths % BUFFER_SIZE == 0) {
+  const size_t buf_size = 512;
+
+  if(nav->num_paths % buf_size == 0) {
     char **new_paths;
     time_t *new_mtimes;
     time_t *new_ctimes;
-    size_t new_size = nav->num_paths + BUFFER_SIZE;
+    size_t new_size = nav->num_paths + buf_size;
     new_paths = realloc(nav->paths, sizeof(char*) * new_size);
     new_mtimes = realloc(nav->mtimes, sizeof(time_t) * new_size);
     new_ctimes = realloc(nav->ctimes, sizeof(time_t) * new_size);
@@ -126,6 +141,11 @@ const char *imv_navigator_selection(struct imv_navigator *nav)
     return NULL;
   }
   return nav->paths[nav->cur_path];
+}
+
+size_t imv_navigator_index(struct imv_navigator *nav)
+{
+  return (size_t)nav->cur_path;
 }
 
 void imv_navigator_select_rel(struct imv_navigator *nav, int direction)
@@ -282,9 +302,9 @@ int imv_navigator_wrapped(struct imv_navigator *nav)
   return nav->wrapped;
 }
 
-int imv_navigator_length(struct imv_navigator *nav)
+size_t imv_navigator_length(struct imv_navigator *nav)
 {
-  return nav->num_paths;
+  return (size_t)nav->num_paths;
 }
 
 char *imv_navigator_at(struct imv_navigator *nav, int index)

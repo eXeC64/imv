@@ -31,7 +31,7 @@ static void test_navigator_add_remove(void **state)
   assert_false(imv_navigator_add(nav, FILENAME4, 0));
   assert_false(imv_navigator_add(nav, FILENAME5, 0));
   assert_false(imv_navigator_add(nav, FILENAME6, 0));
-  assert_int_equal(nav->num_paths, 6);
+  assert_int_equal(imv_navigator_length(nav), 6);
 
   /* Check poll_changed */
   assert_true(imv_navigator_poll_changed(nav));
@@ -43,7 +43,7 @@ static void test_navigator_add_remove(void **state)
   imv_navigator_select_rel(nav, 1);
   assert_string_equal(imv_navigator_selection(nav), FILENAME2);
   imv_navigator_remove(nav, FILENAME2);
-  assert_int_equal(nav->num_paths, 5);
+  assert_int_equal(imv_navigator_length(nav), 5);
   assert_string_equal(imv_navigator_selection(nav), FILENAME3);
 
   /* Move left and remove current file (#1); should get to #6 */

@@ -1,8 +1,6 @@
 #ifndef IMV_NAVIGATOR_H
 #define IMV_NAVIGATOR_H
 
-#include <time.h>
-
 /* Copyright (c) imv authors
 
 This program is free software; you can redistribute it and/or
@@ -20,19 +18,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#define BUFFER_SIZE 512
-
-struct imv_navigator {
-  int num_paths;
-  int cur_path;
-  char **paths;
-  time_t *mtimes;
-  time_t *ctimes;
-  int last_move_direction;
-  int changed;
-  int wrapped;
-  int poll_countdown;
-};
+#include <unistd.h>
 
 /* Creates an instance of imv_navigator */
 struct imv_navigator *imv_navigator_create(void);
@@ -51,6 +37,9 @@ int imv_navigator_add(struct imv_navigator *nav, const char *path,
 /* Returns a read-only reference to the current path. The pointer is only
  * guaranteed to be valid until the next call to an imv_navigator method. */
 const char *imv_navigator_selection(struct imv_navigator *nav);
+
+/* Returns the index of the currently selected path */
+size_t imv_navigator_index(struct imv_navigator *nav);
 
 /* Change the currently selected path. dir = -1 for previous, 1 for next. */
 void imv_navigator_select_rel(struct imv_navigator *nav, int dir);
@@ -76,7 +65,7 @@ int imv_navigator_poll_changed(struct imv_navigator *nav);
 int imv_navigator_wrapped(struct imv_navigator *nav);
 
 /* Return how many paths in navigator */
-int imv_navigator_length(struct imv_navigator *nav);
+size_t imv_navigator_length(struct imv_navigator *nav);
 
 /* Return a path for a given index */
 char *imv_navigator_at(struct imv_navigator *nav, int index);
