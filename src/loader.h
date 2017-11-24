@@ -18,30 +18,9 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include <FreeImage.h>
-#include <SDL2/SDL.h>
-#include <pthread.h>
+#include <unistd.h>
 
-struct imv_texture;
-
-struct imv_loader {
-  pthread_mutex_t lock;
-  pthread_t bg_thread;
-  char *path;
-  BYTE *buffer;
-  size_t buffer_size;
-  FIMEMORY *fi_buffer;
-  FIMULTIBITMAP *mbmp;
-  FIBITMAP *bmp;
-  int width;
-  int height;
-  int cur_frame;
-  int next_frame;
-  int num_frames;
-  double frame_time;
-  unsigned int new_image_event;
-  unsigned int bad_image_event;
-};
+struct imv_loader;
 
 /* Creates an instance of imv_loader */
 struct imv_loader *imv_loader_create(void);

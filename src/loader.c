@@ -29,6 +29,25 @@ static void *bg_new_img(void *data);
 static void *bg_next_frame(void *data);
 static void error_occurred(struct imv_loader *ldr);
 
+struct imv_loader {
+  pthread_mutex_t lock;
+  pthread_t bg_thread;
+  char *path;
+  BYTE *buffer;
+  size_t buffer_size;
+  FIMEMORY *fi_buffer;
+  FIMULTIBITMAP *mbmp;
+  FIBITMAP *bmp;
+  int width;
+  int height;
+  int cur_frame;
+  int next_frame;
+  int num_frames;
+  double frame_time;
+  unsigned int new_image_event;
+  unsigned int bad_image_event;
+};
+
 static void block_usr1_signal(void)
 {
   sigset_t sigmask;
