@@ -11,23 +11,30 @@ static void test_jpeg_rotation(void **state)
 {
   (void)state;
   struct imv_loader *ldr = imv_loader_create();
-  void *retval;
-  char *error;
-  unsigned int width;
 
+  assert_false(SDL_Init(SDL_INIT_VIDEO));
+  unsigned int NEW_IMAGE = SDL_RegisterEvents(1);
+  unsigned int BAD_IMAGE = SDL_RegisterEvents(1);
+  imv_loader_set_event_types(ldr, NEW_IMAGE, BAD_IMAGE);
 
   imv_loader_load(ldr, "test/orientation.jpg", NULL, 0);
-  pthread_join(ldr->bg_thread, &retval);
 
-  error = imv_loader_get_error(ldr);
-  assert_false(error);
+  FIBITMAP *bmp = NULL;
+  SDL_Event event;
+  while(SDL_WaitEvent(&event)) {
+    assert_false(event.type == BAD_IMAGE);
 
-  assert_false(retval == PTHREAD_CANCELED);
-  assert_false(ldr->out_bmp == NULL);
+    if(event.type == NEW_IMAGE) {
+      bmp = event.user.data1;
+      break;
+    }
+  }
 
-  width = FreeImage_GetWidth(ldr->out_bmp);
+  assert_false(bmp == NULL);
+  unsigned int width = FreeImage_GetWidth(bmp);
   assert_true(width == 1);
 
+  FreeImage_Unload(bmp);
   imv_loader_free(ldr);
 }
 
