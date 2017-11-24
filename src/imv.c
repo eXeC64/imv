@@ -95,6 +95,7 @@ struct imv {
   bool ttf_init;
   struct {
     unsigned int NEW_IMAGE;
+    unsigned int BAD_IMAGE;
   } events;
   struct {
     int width;
@@ -495,23 +496,6 @@ int imv_run(struct imv *imv)
       break;
     }
 
-    /* check if an image failed to load, if so, remove it from our image list */
-    char *err_path = imv_loader_get_error(imv->loader);
-    if(err_path) {
-      imv_navigator_remove(imv->navigator, err_path);
-
-      /* special case: the image came from stdin */
-      if(strcmp(err_path, "-") == 0) {
-        if(imv->stdin_image_data) {
-          free(imv->stdin_image_data);
-          imv->stdin_image_data = NULL;
-          imv->stdin_image_data_len = 0;
-        }
-        fprintf(stderr, "Failed to load image from stdin.\n");
-      }
-      free(err_path);
-    }
-
     /* Check if navigator wrapped around paths lists */
     if(!imv->cycle_input && imv_navigator_wrapped(imv->navigator)) {
       break;
@@ -631,9 +615,12 @@ static bool setup_window(struct imv *imv)
 
   /* register custom events */
   imv->events.NEW_IMAGE = SDL_RegisterEvents(1);
+  imv->events.BAD_IMAGE = SDL_RegisterEvents(1);
 
   /* tell the loader which event ids it should use */
-  imv_loader_set_event_types(imv->loader, imv->events.NEW_IMAGE);
+  imv_loader_set_event_types(imv->loader,
+      imv->events.NEW_IMAGE,
+      imv->events.BAD_IMAGE);
 
   imv->sdl_init = true;
 
@@ -707,6 +694,21 @@ static void handle_event(struct imv *imv, SDL_Event *event)
     imv->need_redraw = true;
     imv->need_rescale |= event->user.code;
     return;
+  } else if(event->type == imv->events.BAD_IMAGE) {
+    /* an image failed to load, remove it from our image list */
+    char *err_path = event->user.data1;
+    imv_navigator_remove(imv->navigator, err_path);
+
+    /* special case: the image came from stdin */
+    if(strcmp(err_path, "-") == 0) {
+      if(imv->stdin_image_data) {
+        free(imv->stdin_image_data);
+        imv->stdin_image_data = NULL;
+        imv->stdin_image_data_len = 0;
+      }
+      fprintf(stderr, "Failed to load image from stdin.\n");
+    }
+    free(err_path);
   }
 
   switch(event->type) {

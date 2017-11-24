@@ -101,23 +101,12 @@ void imv_loader_load(struct imv_loader *ldr, const char *path,
   pthread_mutex_unlock(&ldr->lock);
 }
 
-void imv_loader_set_event_types(struct imv_loader *ldr, unsigned int new_image)
+void imv_loader_set_event_types(struct imv_loader *ldr,
+    unsigned int new_image,
+    unsigned int bad_image)
 {
   ldr->new_image_event = new_image;
-}
-
-char *imv_loader_get_error(struct imv_loader *ldr)
-{
-  char *err = NULL;
-  pthread_mutex_lock(&ldr->lock);
-
-  if(ldr->out_err) {
-    err = ldr->out_err;
-    ldr->out_err = NULL;
-  }
-
-  pthread_mutex_unlock(&ldr->lock);
-  return err;
+  ldr->bad_image_event = bad_image;
 }
 
 void imv_loader_load_next_frame(struct imv_loader *ldr)
@@ -418,11 +407,14 @@ static void *bg_next_frame(void *data)
 static void error_occurred(struct imv_loader *ldr)
 {
   pthread_mutex_lock(&ldr->lock);
-  if(ldr->out_err) {
-    free(ldr->out_err);
-  }
-  ldr->out_err = strdup(ldr->path);
+  char *err_path = strdup(ldr->path);
   pthread_mutex_unlock(&ldr->lock);
+
+  SDL_Event event;
+  SDL_zero(event);
+  event.type = ldr->bad_image_event;
+  event.user.data1 = err_path;
+  SDL_PushEvent(&event);
 }
 
 
