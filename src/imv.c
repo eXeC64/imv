@@ -96,6 +96,7 @@ struct imv {
   struct {
     unsigned int NEW_IMAGE;
     unsigned int BAD_IMAGE;
+    unsigned int NEW_PATH;
   } events;
   struct {
     int width;
@@ -306,6 +307,30 @@ static bool parse_slideshow_duration(struct imv *imv, const char *duration)
   return true;
 }
 
+static int load_paths_from_stdin(void *data)
+{
+  struct imv *imv = data;
+
+  fprintf(stderr, "Reading paths from stdin...");
+
+  char buf[PATH_MAX];
+  while(fgets(buf, sizeof(buf), stdin) != NULL) {
+    size_t len = strlen(buf);
+    if(buf[len-1] == '\n') {
+      buf[--len] = 0;
+    }
+    if(len > 0) {
+      /* return the path via SDL event queue */
+      SDL_Event event;
+      SDL_zero(event);
+      event.type = imv->events.NEW_PATH;
+      event.user.data1 = strdup(buf);
+      SDL_PushEvent(&event);
+    }
+  }
+  return 0;
+}
+
 bool imv_parse_args(struct imv *imv, int argc, char **argv)
 {
   /* Do not print getopt errors */
@@ -388,62 +413,7 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
     }
   }
 
-  if(imv->paths_from_stdin) {
-    imv->stdin_fd.fd = STDIN_FILENO;
-    imv->stdin_fd.events = POLLIN;
-    fprintf(stderr, "Reading paths from stdin...");
-
-    char buf[PATH_MAX];
-    char *stdin_ok;
-    while((stdin_ok = fgets(buf, sizeof(buf), stdin)) != NULL) {
-      size_t len = strlen(buf);
-      if(buf[len-1] == '\n') {
-        buf[--len] = 0;
-      }
-      if(len > 0) {
-        imv_add_path(imv, buf);
-        break;
-      }
-    }
-    if(!stdin_ok) {
-      fprintf(stderr, " no input!\n");
-      return false;
-    }
-    fprintf(stderr, "\n");
-  }
   return true;
-}
-
-static void check_stdin_for_paths(struct imv *imv)
-{
-  /* check stdin to see if we've been given any new paths to load */
-  if(poll(&imv->stdin_fd, 1, 10) != 1 || imv->stdin_fd.revents & (POLLERR|POLLNVAL)) {
-    fprintf(stderr, "error polling stdin");
-    imv->quit = true;
-    return;
-  }
-
-  if(imv->stdin_fd.revents & (POLLIN|POLLHUP)) {
-    char buf[PATH_MAX];
-    if(fgets(buf, sizeof(buf), stdin) == NULL && ferror(stdin)) {
-      clearerr(stdin);
-      return;
-    }
-    if(feof(stdin)) {
-      imv->paths_from_stdin = false;
-      fprintf(stderr, "done with stdin\n");
-      return;
-    }
-
-    size_t len = strlen(buf);
-    if(buf[len-1] == '\n') {
-      buf[--len] = 0;
-    }
-    if(len > 0) {
-      imv_add_path(imv, buf);
-      imv->need_redraw = true;
-    }
-  }
 }
 
 void imv_add_path(struct imv *imv, const char *path)
@@ -458,6 +428,14 @@ int imv_run(struct imv *imv)
 
   if(!setup_window(imv))
     return 1;
+
+  /* if loading paths from stdin, kick off a thread to do that - we'll receive
+   * events back via SDL */
+  if(imv->paths_from_stdin) {
+    SDL_Thread *thread;
+    thread = SDL_CreateThread(load_paths_from_stdin, "load_paths_from_stdin", imv);
+    SDL_DetachThread(thread);
+  }
 
   if(imv->starting_path) {
     int index = imv_navigator_find_path(imv->navigator, imv->starting_path);
@@ -581,23 +559,18 @@ int imv_run(struct imv *imv)
       SDL_RenderPresent(imv->renderer);
     }
 
-    if(imv->paths_from_stdin) {
-      /* check stdin for any more paths */
-      check_stdin_for_paths(imv);
-    } else {
-      /* sleep until we have something to do */
-      unsigned int timeout = 1000; /* sleep up to a second */
+    /* sleep until we have something to do */
+    unsigned int timeout = 1000; /* sleep up to a second */
 
-      /* if we need to display the next frame of an animation soon we should
-       * limit our sleep until the next frame is due */
-      const double next_frame_in = imv_loader_time_left(imv->loader);
-      if(next_frame_in > 0.0) {
-        timeout = (unsigned int)(next_frame_in * 1000.0);
-      }
-
-      /* go to sleep until an input event, etc. or the timeout expires */
-      SDL_WaitEventTimeout(NULL, timeout);
+    /* if we need to display the next frame of an animation soon we should
+      * limit our sleep until the next frame is due */
+    const double next_frame_in = imv_loader_time_left(imv->loader);
+    if(next_frame_in > 0.0) {
+      timeout = (unsigned int)(next_frame_in * 1000.0);
     }
+
+    /* go to sleep until an input event, etc. or the timeout expires */
+    SDL_WaitEventTimeout(NULL, timeout);
   }
 
   if(imv->list_at_exit) {
@@ -618,6 +591,7 @@ static bool setup_window(struct imv *imv)
   /* register custom events */
   imv->events.NEW_IMAGE = SDL_RegisterEvents(1);
   imv->events.BAD_IMAGE = SDL_RegisterEvents(1);
+  imv->events.NEW_PATH = SDL_RegisterEvents(1);
 
   /* tell the loader which event ids it should use */
   imv_loader_set_event_types(imv->loader,
@@ -711,6 +685,10 @@ static void handle_event(struct imv *imv, SDL_Event *event)
       fprintf(stderr, "Failed to load image from stdin.\n");
     }
     free(err_path);
+  } else if(event->type == imv->events.NEW_PATH) {
+    /* received a new path from the stdin reading thread */
+    imv_add_path(imv, event->user.data1);
+    free(event->user.data1);
   }
 
   switch(event->type) {
