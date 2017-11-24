@@ -3,6 +3,7 @@
 #include <setjmp.h>
 #include <cmocka.h>
 #include <unistd.h>
+#include <SDL2/SDL.h>
 #include <FreeImage.h>
 #include <pthread.h>
 #include "loader.h"
