@@ -1,5 +1,5 @@
-#ifndef IMV_TEXTURE_H
-#define IMV_TEXTURE_H
+#ifndef IMV_IMAGE_H
+#define IMV_IMAGE_H
 
 #include <SDL2/SDL.h>
 #include <FreeImage.h>
