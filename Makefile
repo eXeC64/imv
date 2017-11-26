@@ -40,7 +40,7 @@ $(BUILDDIR):
 $(BUILDDIR)/%.o: src/%.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
-$(BUILDDIR)/test_%: test/%.c src/%.c
+$(BUILDDIR)/test_%: test/%.c $(filter-out src/main.c, $(wildcard src/*.c))
 	$(CC) -o $@ -Isrc $(TFLAGS) $^ $(LDFLAGS) $(TLIBS)
 
 check: $(BUILDDIR) $(TESTS)

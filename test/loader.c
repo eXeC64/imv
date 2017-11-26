@@ -4,9 +4,9 @@
 #include <cmocka.h>
 #include <unistd.h>
 #include <SDL2/SDL.h>
-#include <FreeImage.h>
 #include <pthread.h>
 #include "loader.h"
+#include "bitmap.h"
 
 static void test_jpeg_rotation(void **state)
 {
@@ -20,7 +20,7 @@ static void test_jpeg_rotation(void **state)
 
   imv_loader_load(ldr, "test/orientation.jpg", NULL, 0);
 
-  FIBITMAP *bmp = NULL;
+  struct imv_bitmap *bmp = NULL;
   SDL_Event event;
   while(SDL_WaitEvent(&event)) {
     assert_false(event.type == BAD_IMAGE);
@@ -32,10 +32,10 @@ static void test_jpeg_rotation(void **state)
   }
 
   assert_false(bmp == NULL);
-  unsigned int width = FreeImage_GetWidth(bmp);
+  unsigned int width = bmp->width;
   assert_true(width == 1);
 
-  FreeImage_Unload(bmp);
+  imv_bitmap_free(bmp);
   imv_loader_free(ldr);
 }
 
