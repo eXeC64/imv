@@ -765,7 +765,8 @@ static void render_window(struct imv *imv)
   const size_t index_cur = imv_navigator_index(imv->navigator);
   const size_t index_len = imv_navigator_length(imv->navigator);
   int len = snprintf(title, sizeof(title), "imv - [%zu/%zu] [%ix%i] [%.2f%%] %s [%s]",
-      index_cur + 1, index_len, imv->image->width, imv->image->height,
+      index_cur + 1, index_len,
+      imv_image_width(imv->image), imv_image_height(imv->image),
       100.0 * imv->view->scale,
       current_path, scaling_label[imv->scaling_mode]);
   if(imv->slideshow_image_duration >= 1000) {

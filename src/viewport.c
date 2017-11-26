@@ -47,8 +47,8 @@ void imv_viewport_move(struct imv_viewport *view, int x, int y,
   view->y += y;
   view->redraw = 1;
   view->locked = 1;
-  int w = (int)((double)image->width * view->scale);
-  int h = (int)((double)image->height * view->scale);
+  int w = (int)(imv_image_width(image) * view->scale);
+  int h = (int)(imv_image_height(image) * view->scale);
   int ww, wh;
   SDL_GetWindowSize(view->window, &ww, &wh);
   if (view->x < -w) {
@@ -71,24 +71,27 @@ void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *image,
   int x, y, ww, wh;
   SDL_GetWindowSize(view->window, &ww, &wh);
 
+  const int image_width = imv_image_width(image);
+  const int image_height = imv_image_height(image);
+
   /* x and y cordinates are relative to the image */
   if(src == IMV_ZOOM_MOUSE) {
     SDL_GetMouseState(&x, &y);
     x -= view->x;
     y -= view->y;
   } else {
-    x = view->scale * image->width / 2;
-    y = view->scale * image->height / 2;
+    x = view->scale * image_width / 2;
+    y = view->scale * image_height / 2;
   }
 
-  const int scaled_width = image->width * view->scale;
-  const int scaled_height = image->height * view->scale;
+  const int scaled_width = image_width * view->scale;
+  const int scaled_height = image_height * view->scale;
   const int ic_x = view->x + scaled_width/2;
   const int ic_y = view->y + scaled_height/2;
   const int wc_x = ww/2;
   const int wc_y = wh/2;
 
-  double delta_scale = 0.04 * ww * amount / image->width;
+  double delta_scale = 0.04 * ww * amount / image_width;
   view->scale += delta_scale;
 
   const double min_scale = 0.1;
@@ -130,8 +133,11 @@ void imv_viewport_center(struct imv_viewport *view, const struct imv_image *imag
   int ww, wh;
   SDL_GetWindowSize(view->window, &ww, &wh);
 
-  view->x = (ww - image->width * view->scale) / 2;
-  view->y = (wh - image->height * view->scale) / 2;
+  const int image_width = imv_image_width(image);
+  const int image_height = imv_image_height(image);
+
+  view->x = (ww - image_width * view->scale) / 2;
+  view->y = (wh - image_height * view->scale) / 2;
 
   view->locked = 1;
   view->redraw = 1;
@@ -142,15 +148,17 @@ void imv_viewport_scale_to_window(struct imv_viewport *view, const struct imv_im
   int ww, wh;
   SDL_GetWindowSize(view->window, &ww, &wh);
 
-  double window_aspect = (double)ww / (double)wh;
-  double image_aspect = (double)image->width / (double)image->height;
+  const int image_width = imv_image_width(image);
+  const int image_height = imv_image_height(image);
+  const double window_aspect = (double)ww / (double)wh;
+  const double image_aspect = (double)image_width / (double)image_height;
 
   if(window_aspect > image_aspect) {
     /* Image will become too tall before it becomes too wide */
-    view->scale = (double)wh / (double)image->height;
+    view->scale = (double)wh / (double)image_height;
   } else {
     /* Image will become too wide before it becomes too tall */
-    view->scale = (double)ww / (double)image->width;
+    view->scale = (double)ww / (double)image_width;
   }
 
   imv_viewport_center(view, image);

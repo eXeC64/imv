@@ -1,5 +1,19 @@
 #include "image.h"
 
+struct imv_image {
+  int width;              /* width of the image overall */
+  int height;             /* height of the image overall */
+  int num_chunks;         /* number of chunks allocated */
+  SDL_Texture **chunks;   /* array of chunks */
+  int num_chunks_wide;    /* number of chunks per row of the image */
+  int num_chunks_tall;    /* number of chunks per column of the image */
+  int chunk_width;        /* chunk width */
+  int chunk_height;       /* chunk height */
+  int last_chunk_width;   /* width of rightmost chunk */
+  int last_chunk_height;  /* height of bottommost chunk */
+  SDL_Renderer *renderer; /* SDL renderer to draw to */
+};
+
 struct imv_image *imv_image_create(SDL_Renderer *r)
 {
   struct imv_image *image = malloc(sizeof(struct imv_image));
@@ -128,5 +142,14 @@ void imv_image_draw(struct imv_image *image, int bx, int by, double scale)
   }
 }
 
+int imv_image_width(const struct imv_image *image)
+{
+  return image->width;
+}
+
+int imv_image_height(const struct imv_image *image)
+{
+  return image->height;
+}
 
 /* vim:set ts=2 sts=2 sw=2 et: */
