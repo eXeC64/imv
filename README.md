@@ -89,12 +89,6 @@ Tests
 
     $ make check
 
-Contact
--------
-
-There's an official irc channel for imv discussion and development on
-Freenode: `#imv`.
-
 License
 -------
 `imv` is published under the [GPLv2](LICENSE) license.
