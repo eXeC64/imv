@@ -41,10 +41,10 @@ void imv_image_free(struct imv_image *image)
   free(image);
 }
 
-int imv_image_set_bitmap(struct imv_image *image, FIBITMAP *bmp)
+int imv_image_set_bitmap(struct imv_image *image, struct imv_bitmap *bmp)
 {
-  image->width = FreeImage_GetWidth(bmp);
-  image->height = FreeImage_GetHeight(bmp);
+  image->width = bmp->width;
+  image->height = bmp->height;
 
   /* figure out how many chunks are needed, and create them */
   if(image->num_chunks > 0) {
@@ -100,21 +100,16 @@ int imv_image_set_bitmap(struct imv_image *image, FIBITMAP *bmp)
     return 1;
   }
 
-  BYTE* pixels = malloc(4 * image->width * image->height);
-  FreeImage_ConvertToRawBits(pixels, bmp, 4 * image->width, 32,
-      FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-
   for(int y = 0; y < image->num_chunks_tall; ++y) {
     for(int x = 0; x < image->num_chunks_wide; ++x) {
       ptrdiff_t offset = 4 * x * image->chunk_width +
         y * 4 * image->width * image->chunk_height;
-      BYTE* addr = pixels + offset;
+      unsigned char* addr = bmp->data + offset;
       SDL_UpdateTexture(image->chunks[x + y * image->num_chunks_wide],
           NULL, addr, 4 * image->width);
     }
   }
 
-  free(pixels);
   return 0;
 }
 

@@ -1,4 +1,5 @@
 #include "loader.h"
+#include "bitmap.h"
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,6 +46,17 @@ static int is_thread_cancelled(void)
   sigset_t sigmask;
   sigpending(&sigmask);
   return sigismember(&sigmask, SIGUSR1);
+}
+
+static struct imv_bitmap *to_imv_bitmap(FIBITMAP *in_bmp)
+{
+  struct imv_bitmap *bmp = malloc(sizeof(struct imv_bitmap));
+  bmp->width = FreeImage_GetWidth(in_bmp);
+  bmp->height = FreeImage_GetHeight(in_bmp);
+  bmp->data = malloc(4 * bmp->width * bmp->height);
+  FreeImage_ConvertToRawBits(bmp->data, in_bmp, 4 * bmp->width, 32,
+      FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+  return bmp;
 }
 
 struct imv_loader *imv_loader_create(void)
@@ -294,7 +306,7 @@ static void *bg_new_img(void *data)
   SDL_Event event;
   SDL_zero(event);
   event.type = ldr->new_image_event;
-  event.user.data1 = FreeImage_Clone(bmp);
+  event.user.data1 = to_imv_bitmap(bmp);
   event.user.code = 1; /* is a new image */
   SDL_PushEvent(&event);
 
@@ -399,7 +411,7 @@ static void *bg_next_frame(void *data)
   SDL_Event event;
   SDL_zero(event);
   event.type = ldr->new_image_event;
-  event.user.data1 = FreeImage_Clone(ldr->bmp);
+  event.user.data1 = to_imv_bitmap(ldr->bmp);
   event.user.code = 0; /* not a new image */
   SDL_PushEvent(&event);
 

@@ -644,11 +644,11 @@ static void handle_event(struct imv *imv, SDL_Event *event)
 
   if(event->type == imv->events.NEW_IMAGE) {
     /* new image to display */
-    FIBITMAP *bmp = event->user.data1;
+    struct imv_bitmap *bmp = event->user.data1;
     imv_image_set_bitmap(imv->image, bmp);
-    imv->current_image.width = FreeImage_GetWidth(bmp);
-    imv->current_image.height = FreeImage_GetHeight(bmp);
-    FreeImage_Unload(bmp);
+    imv->current_image.width = bmp->width;
+    imv->current_image.height = bmp->height;
+    imv_bitmap_free(bmp);
     imv->need_redraw = true;
     imv->need_rescale |= event->user.code;
     return;
