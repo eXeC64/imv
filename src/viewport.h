@@ -2,7 +2,7 @@
 #define IMV_VIEWPORT_H
 
 #include <SDL2/SDL.h>
-#include "texture.h"
+#include "image.h"
 
 struct imv_viewport {
   SDL_Window *window;
@@ -35,27 +35,27 @@ void imv_viewport_toggle_playing(struct imv_viewport *view);
 /* Reset the viewport to its initial settings */
 void imv_viewport_reset(struct imv_viewport *view);
 
-/* Pan the view by the given amounts without letting the texture get too far
+/* Pan the view by the given amounts without letting the image get too far
  * off-screen */
 void imv_viewport_move(struct imv_viewport *view, int x, int y,
-    const struct imv_texture *tex);
+    const struct imv_image *image);
 
-/* Zoom the view by the given amount. imv_texture* is used to get the image
+/* Zoom the view by the given amount. imv_image* is used to get the image
  * dimensions */
-void imv_viewport_zoom(struct imv_viewport *view, const struct imv_texture *tex,
+void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *image,
                        enum imv_zoom_source, int amount);
 
 /* Recenter the view to be in the middle of the image */
 void imv_viewport_center(struct imv_viewport *view,
-                         const struct imv_texture *tex);
+                         const struct imv_image *image);
 
 /* Scale the view so that the image appears at its actual resolution */
 void imv_viewport_scale_to_actual(struct imv_viewport *view,
-                                  const struct imv_texture *tex);
+                                  const struct imv_image *image);
 
 /* Scale the view so that the image fills the window */
 void imv_viewport_scale_to_window(struct imv_viewport *view,
-                                  const struct imv_texture *tex);
+                                  const struct imv_image *image);
 
 /* Tell the viewport that it needs to be redrawn */
 void imv_viewport_set_redraw(struct imv_viewport *view);
@@ -64,7 +64,7 @@ void imv_viewport_set_redraw(struct imv_viewport *view);
 void imv_viewport_set_title(struct imv_viewport *view, char *title);
 
 /* Tell the viewport the window or image has changed */
-void imv_viewport_update(struct imv_viewport *view, struct imv_texture *tex);
+void imv_viewport_update(struct imv_viewport *view, struct imv_image *image);
 
 /* Poll whether we need to redraw */
 int imv_viewport_needs_redraw(struct imv_viewport *view);

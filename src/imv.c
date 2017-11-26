@@ -17,7 +17,7 @@
 #include "ini.h"
 #include "list.h"
 #include "loader.h"
-#include "texture.h"
+#include "image.h"
 #include "navigator.h"
 #include "viewport.h"
 #include "util.h"
@@ -62,7 +62,7 @@ struct imv {
   struct imv_navigator *navigator;
   struct imv_loader *loader;
   struct imv_commands *commands;
-  struct imv_texture *texture;
+  struct imv_image *image;
   struct imv_viewport *view;
   void *stdin_image_data;
   size_t stdin_image_data_len;
@@ -72,7 +72,7 @@ struct imv {
   SDL_Window *window;
   SDL_Renderer *renderer;
   TTF_Font *font;
-  SDL_Texture *background_texture;
+  SDL_Texture *background_image;
   bool sdl_init;
   bool ttf_init;
   struct {
@@ -150,7 +150,7 @@ struct imv *imv_create(void)
   imv->window = NULL;
   imv->renderer = NULL;
   imv->font = NULL;
-  imv->background_texture = NULL;
+  imv->background_image = NULL;
   imv->sdl_init = false;
   imv->ttf_init = false;
 
@@ -229,8 +229,8 @@ void imv_free(struct imv *imv)
   if(imv->window) {
     SDL_DestroyWindow(imv->window);
   }
-  if(imv->background_texture) {
-    SDL_DestroyTexture(imv->background_texture);
+  if(imv->background_image) {
+    SDL_DestroyTexture(imv->background_image);
   }
   if(imv->font) {
     TTF_CloseFont(imv->font);
@@ -494,9 +494,9 @@ int imv_run(struct imv *imv)
           (imv->scaling_mode == SCALING_DOWN
            && ww > imv->current_image.width
            && wh > imv->current_image.height)) {
-        imv_viewport_scale_to_actual(imv->view, imv->texture);
+        imv_viewport_scale_to_actual(imv->view, imv->image);
       } else {
-        imv_viewport_scale_to_window(imv->view, imv->texture);
+        imv_viewport_scale_to_window(imv->view, imv->image);
       }
     }
 
@@ -610,9 +610,9 @@ static bool setup_window(struct imv *imv)
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,
     imv->nearest_neighbour ? "0" : "1");
 
-  /* construct a chequered background texture */
+  /* construct a chequered background image */
   if(imv->background_type == BACKGROUND_CHEQUERED) {
-    imv->background_texture = create_chequered(imv->renderer);
+    imv->background_image = create_chequered(imv->renderer);
   }
 
   /* set up the required fonts and surfaces for displaying the overlay */
@@ -624,7 +624,7 @@ static bool setup_window(struct imv *imv)
     return false;
   }
 
-  imv->texture = imv_texture_create(imv->renderer);
+  imv->image = imv_image_create(imv->renderer);
   imv->view = imv_viewport_create(imv->window);
 
   /* put us in fullscren mode to begin with if requested */
@@ -645,7 +645,7 @@ static void handle_event(struct imv *imv, SDL_Event *event)
   if(event->type == imv->events.NEW_IMAGE) {
     /* new image to display */
     FIBITMAP *bmp = event->user.data1;
-    imv_texture_set_image(imv->texture, bmp);
+    imv_image_set_bitmap(imv->image, bmp);
     imv->current_image.width = FreeImage_GetWidth(bmp);
     imv->current_image.height = FreeImage_GetHeight(bmp);
     FreeImage_Unload(bmp);
@@ -728,12 +728,12 @@ static void handle_event(struct imv *imv, SDL_Event *event)
       }
       break;
     case SDL_MOUSEWHEEL:
-      imv_viewport_zoom(imv->view, imv->texture, IMV_ZOOM_MOUSE, event->wheel.y);
+      imv_viewport_zoom(imv->view, imv->image, IMV_ZOOM_MOUSE, event->wheel.y);
       SDL_ShowCursor(SDL_ENABLE);
       break;
     case SDL_MOUSEMOTION:
       if(event->motion.state & SDL_BUTTON_LMASK) {
-        imv_viewport_move(imv->view, event->motion.xrel, event->motion.yrel, imv->texture);
+        imv_viewport_move(imv->view, event->motion.xrel, event->motion.yrel, imv->image);
       }
       SDL_ShowCursor(SDL_ENABLE);
       break;
@@ -749,7 +749,7 @@ static void handle_event(struct imv *imv, SDL_Event *event)
         SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
       }
 
-      imv_viewport_update(imv->view, imv->texture);
+      imv_viewport_update(imv->view, imv->image);
       break;
   }
 }
@@ -765,7 +765,7 @@ static void render_window(struct imv *imv)
   const size_t index_cur = imv_navigator_index(imv->navigator);
   const size_t index_len = imv_navigator_length(imv->navigator);
   int len = snprintf(title, sizeof(title), "imv - [%zu/%zu] [%ix%i] [%.2f%%] %s [%s]",
-      index_cur + 1, index_len, imv->texture->width, imv->texture->height,
+      index_cur + 1, index_len, imv->image->width, imv->image->height,
       100.0 * imv->view->scale,
       current_path, scaling_label[imv->scaling_mode]);
   if(imv->slideshow_image_duration >= 1000) {
@@ -786,18 +786,18 @@ static void render_window(struct imv *imv)
   } else {
     /* chequered background */
     int img_w, img_h;
-    SDL_QueryTexture(imv->background_texture, NULL, NULL, &img_w, &img_h);
-    /* tile the texture so it fills the window */
+    SDL_QueryTexture(imv->background_image, NULL, NULL, &img_w, &img_h);
+    /* tile the image so it fills the window */
     for(int y = 0; y < wh; y += img_h) {
       for(int x = 0; x < ww; x += img_w) {
         SDL_Rect dst_rect = {x,y,img_w,img_h};
-        SDL_RenderCopy(imv->renderer, imv->background_texture, NULL, &dst_rect);
+        SDL_RenderCopy(imv->renderer, imv->background_image, NULL, &dst_rect);
       }
     }
   }
 
-  /* draw our actual texture */
-  imv_texture_draw(imv->texture, imv->view->x, imv->view->y, imv->view->scale);
+  /* draw our actual image */
+  imv_image_draw(imv->image, imv->view->x, imv->view->y, imv->view->scale);
 
   /* if the overlay needs to be drawn, draw that too */
   if(imv->overlay_enabled && imv->font) {
@@ -955,7 +955,7 @@ void command_pan(struct list *args, const char *argstr, void *data)
   long int x = strtol(args->items[1], NULL, 10);
   long int y = strtol(args->items[2], NULL, 10);
 
-  imv_viewport_move(imv->view, x, y, imv->texture);
+  imv_viewport_move(imv->view, x, y, imv->image);
 }
 
 void command_select_rel(struct list *args, const char *argstr, void *data)
@@ -993,10 +993,10 @@ void command_zoom(struct list *args, const char *argstr, void *data)
   if(args->len == 2) {
     const char *str = args->items[1];
     if(!strcmp(str, "actual")) {
-      imv_viewport_scale_to_actual(imv->view, imv->texture);
+      imv_viewport_scale_to_actual(imv->view, imv->image);
     } else {
       long int amount = strtol(args->items[1], NULL, 10);
-      imv_viewport_zoom(imv->view, imv->texture, IMV_ZOOM_KEYBOARD, amount);
+      imv_viewport_zoom(imv->view, imv->image, IMV_ZOOM_KEYBOARD, amount);
     }
   }
 }
@@ -1043,7 +1043,7 @@ void command_center(struct list *args, const char *argstr, void *data)
   (void)args;
   (void)argstr;
   struct imv *imv = data;
-  imv_viewport_center(imv->view, imv->texture);
+  imv_viewport_center(imv->view, imv->image);
 }
 
 void command_reset(struct list *args, const char *argstr, void *data)

@@ -1,10 +1,11 @@
 #include "loader.h"
-#include "texture.h"
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 #include <signal.h>
+#include <SDL2/SDL.h>
+#include <FreeImage.h>
 
 static void block_usr1_signal(void);
 static int is_thread_cancelled(void);

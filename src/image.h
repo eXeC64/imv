@@ -4,9 +4,9 @@
 #include <SDL2/SDL.h>
 #include <FreeImage.h>
 
-struct imv_texture {
-  int width;              /* width of the texture overall */
-  int height;             /* height of the texture overall */
+struct imv_image {
+  int width;              /* width of the image overall */
+  int height;             /* height of the image overall */
   int num_chunks;         /* number of chunks allocated */
   SDL_Texture **chunks;   /* array of chunks */
   int num_chunks_wide;    /* number of chunks per row of the image */
@@ -19,17 +19,17 @@ struct imv_texture {
 };
 
 
-/* Creates an instance of imv_texture */
-struct imv_texture *imv_texture_create(SDL_Renderer *r);
+/* Creates an instance of imv_image */
+struct imv_image *imv_image_create(SDL_Renderer *r);
 
-/* Cleans up an imv_texture instance */
-void imv_texture_free(struct imv_texture *tex);
+/* Cleans up an imv_image instance */
+void imv_image_free(struct imv_image *image);
 
-/* Updates the texture to contain the data in the image parameter */
-int imv_texture_set_image(struct imv_texture *tex, FIBITMAP *image);
+/* Updates the image to contain the data in the bitmap parameter */
+int imv_image_set_bitmap(struct imv_image *image, FIBITMAP *bmp);
 
-/* Draw the texture at the given position with the given scale */
-void imv_texture_draw(struct imv_texture *tex, int x, int y, double scale);
+/* Draw the image at the given position with the given scale */
+void imv_image_draw(struct imv_image *image, int x, int y, double scale);
 
 #endif
 

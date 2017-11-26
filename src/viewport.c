@@ -32,23 +32,23 @@ void imv_viewport_toggle_playing(struct imv_viewport *view)
   view->playing = !view->playing;
 }
 
-void imv_viewport_scale_to_actual(struct imv_viewport *view, const struct imv_texture *tex)
+void imv_viewport_scale_to_actual(struct imv_viewport *view, const struct imv_image *image)
 {
   view->scale = 1;
   view->redraw = 1;
   view->locked = 1;
-  imv_viewport_center(view, tex);
+  imv_viewport_center(view, image);
 }
 
 void imv_viewport_move(struct imv_viewport *view, int x, int y,
-    const struct imv_texture *tex)
+    const struct imv_image *image)
 {
   view->x += x;
   view->y += y;
   view->redraw = 1;
   view->locked = 1;
-  int w = (int)((double)tex->width * view->scale);
-  int h = (int)((double)tex->height * view->scale);
+  int w = (int)((double)image->width * view->scale);
+  int h = (int)((double)image->height * view->scale);
   int ww, wh;
   SDL_GetWindowSize(view->window, &ww, &wh);
   if (view->x < -w) {
@@ -65,7 +65,7 @@ void imv_viewport_move(struct imv_viewport *view, int x, int y,
   }
 }
 
-void imv_viewport_zoom(struct imv_viewport *view, const struct imv_texture *tex, enum imv_zoom_source src, int amount)
+void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *image, enum imv_zoom_source src, int amount)
 {
   double prev_scale = view->scale;
   int x, y, ww, wh;
@@ -77,18 +77,18 @@ void imv_viewport_zoom(struct imv_viewport *view, const struct imv_texture *tex,
     x -= view->x;
     y -= view->y;
   } else {
-    x = view->scale * tex->width / 2;
-    y = view->scale * tex->height / 2;
+    x = view->scale * image->width / 2;
+    y = view->scale * image->height / 2;
   }
 
-  const int scaled_width = tex->width * view->scale;
-  const int scaled_height = tex->height * view->scale;
+  const int scaled_width = image->width * view->scale;
+  const int scaled_height = image->height * view->scale;
   const int ic_x = view->x + scaled_width/2;
   const int ic_y = view->y + scaled_height/2;
   const int wc_x = ww/2;
   const int wc_y = wh/2;
 
-  double delta_scale = 0.04 * ww * amount / tex->width;
+  double delta_scale = 0.04 * ww * amount / image->width;
   view->scale += delta_scale;
 
   const double min_scale = 0.1;
@@ -125,35 +125,35 @@ void imv_viewport_zoom(struct imv_viewport *view, const struct imv_texture *tex,
   view->locked = 1;
 }
 
-void imv_viewport_center(struct imv_viewport *view, const struct imv_texture *tex)
+void imv_viewport_center(struct imv_viewport *view, const struct imv_image *image)
 {
   int ww, wh;
   SDL_GetWindowSize(view->window, &ww, &wh);
 
-  view->x = (ww - tex->width * view->scale) / 2;
-  view->y = (wh - tex->height * view->scale) / 2;
+  view->x = (ww - image->width * view->scale) / 2;
+  view->y = (wh - image->height * view->scale) / 2;
 
   view->locked = 1;
   view->redraw = 1;
 }
 
-void imv_viewport_scale_to_window(struct imv_viewport *view, const struct imv_texture *tex)
+void imv_viewport_scale_to_window(struct imv_viewport *view, const struct imv_image *image)
 {
   int ww, wh;
   SDL_GetWindowSize(view->window, &ww, &wh);
 
   double window_aspect = (double)ww / (double)wh;
-  double image_aspect = (double)tex->width / (double)tex->height;
+  double image_aspect = (double)image->width / (double)image->height;
 
   if(window_aspect > image_aspect) {
     /* Image will become too tall before it becomes too wide */
-    view->scale = (double)wh / (double)tex->height;
+    view->scale = (double)wh / (double)image->height;
   } else {
     /* Image will become too wide before it becomes too tall */
-    view->scale = (double)ww / (double)tex->width;
+    view->scale = (double)ww / (double)image->width;
   }
 
-  imv_viewport_center(view, tex);
+  imv_viewport_center(view, image);
   view->locked = 0;
 }
 
@@ -167,15 +167,15 @@ void imv_viewport_set_title(struct imv_viewport *view, char* title)
   SDL_SetWindowTitle(view->window, title);
 }
 
-void imv_viewport_update(struct imv_viewport *view, struct imv_texture *tex)
+void imv_viewport_update(struct imv_viewport *view, struct imv_image *image)
 {
   view->redraw = 1;
   if(view->locked) {
     return;
   }
 
-  imv_viewport_center(view, tex);
-  imv_viewport_scale_to_window(view, tex);
+  imv_viewport_center(view, image);
+  imv_viewport_scale_to_window(view, image);
 }
 
 int imv_viewport_needs_redraw(struct imv_viewport *view)
