@@ -191,7 +191,7 @@ struct imv *imv_create(void)
   add_bind(imv, "<x>", "remove");
   add_bind(imv, "<f>", "fullscreen");
   add_bind(imv, "<d>", "overlay");
-  add_bind(imv, "<p>", "exec echo $imv_path");
+  add_bind(imv, "<p>", "exec echo $imv_current_file");
   add_bind(imv, "<Equals>", "zoom 1");
   add_bind(imv, "<Up>", "zoom 1");
   add_bind(imv, "<+>", "zoom 1");
@@ -1076,7 +1076,7 @@ void command_exec(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   struct imv *imv = data;
-  setenv("imv_path", imv_navigator_selection(imv->navigator), 1);
+  setenv("imv_current_file", imv_navigator_selection(imv->navigator), 1);
   system(argstr);
 }
 
