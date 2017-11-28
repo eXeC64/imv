@@ -224,7 +224,10 @@ const char *imv_bind_handle_event(struct imv_binds *binds, const SDL_Event *even
   }
 
   char buffer[128];
-  print_event(buffer, sizeof(buffer), event);
+  if (!print_event(buffer, sizeof(buffer), event)) {
+    /* invalid event - do nothing */
+    return NULL;
+  }
   list_append(binds->keys, strdup(buffer));
 
   const char *command = NULL;
