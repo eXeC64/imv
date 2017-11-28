@@ -18,7 +18,7 @@
 # cycle_input = false
 
 # Print all the images still open when we quit
-# list_at_exit = true
+# list_files_at_exit = true
 
 # Scaling mode, one of: none, shrink, and full
 # scaling_mode = none

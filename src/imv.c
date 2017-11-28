@@ -50,7 +50,7 @@ struct imv {
   bool need_rescale;
   bool recursive_load;
   bool cycle_input;
-  bool list_at_exit;
+  bool list_files_at_exit;
   bool paths_from_stdin;
   enum scaling_mode scaling_mode;
   enum background_type background_type;
@@ -140,7 +140,7 @@ struct imv *imv_create(void)
   imv->recursive_load = false;
   imv->scaling_mode = SCALING_FULL;
   imv->cycle_input = true;
-  imv->list_at_exit = false;
+  imv->list_files_at_exit = false;
   imv->paths_from_stdin = false;
   imv->background_color.r = imv->background_color.g = imv->background_color.b = 0;
   imv->slideshow_image_duration = 0;
@@ -331,7 +331,7 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
       case 'u': imv->nearest_neighbour = true;     break;
       case 'd': imv->overlay_enabled = true;       break;
       case 'x': imv->cycle_input = false;          break;
-      case 'l': imv->list_at_exit = true;          break;
+      case 'l': imv->list_files_at_exit = true;    break;
       case 'n': imv->starting_path = optarg;       break;
       case 'e': imv->font_name = strdup(optarg);   break;
       case 'h':
@@ -556,7 +556,7 @@ int imv_run(struct imv *imv)
     SDL_WaitEventTimeout(NULL, timeout);
   }
 
-  if(imv->list_at_exit) {
+  if(imv->list_files_at_exit) {
     for(size_t i = 0; i < imv_navigator_length(imv->navigator); ++i)
       puts(imv_navigator_at(imv->navigator, i));
   }
@@ -907,8 +907,8 @@ static int handle_ini_value(void *user, const char *section, const char *name,
       return 1;
     }
 
-    if(!strcmp(name, "list_at_exit")) {
-      imv->list_at_exit = parse_bool(value);
+    if(!strcmp(name, "list_files_at_exit")) {
+      imv->list_files_at_exit = parse_bool(value);
       return 1;
     }
 
