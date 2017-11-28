@@ -15,7 +15,7 @@
 # recursive = true
 
 # When we reach the end of the open images, don't go back to the start again
-# cycle_input = false
+# loop_input = false
 
 # Print all the images still open when we quit
 # list_files_at_exit = true

@@ -49,7 +49,7 @@ struct imv {
   bool need_redraw;
   bool need_rescale;
   bool recursive_load;
-  bool cycle_input;
+  bool loop_input;
   bool list_files_at_exit;
   bool paths_from_stdin;
   enum scaling_mode scaling_mode;
@@ -139,7 +139,7 @@ struct imv *imv_create(void)
   imv->need_rescale = true;
   imv->recursive_load = false;
   imv->scaling_mode = SCALING_FULL;
-  imv->cycle_input = true;
+  imv->loop_input = true;
   imv->list_files_at_exit = false;
   imv->paths_from_stdin = false;
   imv->background_color.r = imv->background_color.g = imv->background_color.b = 0;
@@ -330,7 +330,7 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
       case 'S': imv->scaling_mode = SCALING_FULL;  break;
       case 'u': imv->nearest_neighbour = true;     break;
       case 'd': imv->overlay_enabled = true;       break;
-      case 'x': imv->cycle_input = false;          break;
+      case 'x': imv->loop_input = false;           break;
       case 'l': imv->list_files_at_exit = true;    break;
       case 'n': imv->starting_path = optarg;       break;
       case 'e': imv->font_name = strdup(optarg);   break;
@@ -458,7 +458,7 @@ int imv_run(struct imv *imv)
     }
 
     /* Check if navigator wrapped around paths lists */
-    if(!imv->cycle_input && imv_navigator_wrapped(imv->navigator)) {
+    if(!imv->loop_input && imv_navigator_wrapped(imv->navigator)) {
       break;
     }
 
@@ -902,8 +902,8 @@ static int handle_ini_value(void *user, const char *section, const char *name,
       return 1;
     }
 
-    if(!strcmp(name, "cycle_input")) {
-      imv->cycle_input = parse_bool(value);
+    if(!strcmp(name, "loop_input")) {
+      imv->loop_input = parse_bool(value);
       return 1;
     }
 
