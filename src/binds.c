@@ -188,6 +188,7 @@ static int print_event(char *buf, size_t len, const SDL_Event *event)
 
   /* Try plain old character input */
   const char *keyname = SDL_GetKeyName(kevent->keysym.sym);
+  char singlekey[2] = {0};
 
   /* Because '<' and '>' have special meaning in our syntax, and '=', '[', and
    * ']' are restricted within ini files, we rename these.  */
@@ -201,6 +202,9 @@ static int print_event(char *buf, size_t len, const SDL_Event *event)
     keyname = "LeftSquareBracket";
   } else if(!strcmp(keyname, "]")) {
     keyname = "RightSquareBracket";
+  } else if(isalpha(*keyname)) {
+    singlekey[0] = tolower(*keyname);
+    keyname = &singlekey[0];
   }
 
   return snprintf(buf, len, "%s%s", prefix, keyname);

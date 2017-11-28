@@ -8,8 +8,8 @@
 # Start with overlay visible
 # overlay = true
 
-# Use nearest_neighbour interpolation for pixel art
-# sampling = nearest_neighbour
+# Method used for upscaling images. Can be 'linear' or 'nearest_neighbour'
+# upscaling_method = linear
 
 # Recurse into subdirectories when opening a path
 # recursive = true
@@ -21,58 +21,73 @@
 # list_at_exit = true
 
 # Scaling mode, one of: none, shrink, and full
-# scaling = none
+# scaling_mode = none
 
 # Background, either a hex colour code or 'checks'
 # background = 000000
 
 # Change to the next image automatically after 3 seconds
-# slideshow = 3
+# slideshow_duration = 3
 
 # Font to use for the overlay
 # overlay_font = Monospace:24
 
 # Disable imv's builtin binds so they don't conflict with the ones in this config
-default_binds = false
+suppress_default_binds = true
 
 [binds]
 
-Q = quit
+# Some keys have special names:
+# < -> Less
+# > -> Greater
+# [ -> LeftSquareBracket
+# ] -> RightSquareBracket
+# = -> Equals
+# Left arrow key -> Left
+# Up arrow key -> Up
+# Right arrow key -> Right
+# Down arrow key -> Down
+
+# Keys can have the modifiers 'Ctrl+' 'Meta+' and 'Shift+' in front of them,
+# in that order. Keys with special names, or with a modifier are enclosed in
+# '<' and '>'.
+
+q = quit
 
 # Image navigation
 <Left> = select_rel -1
 <LeftSquareBracket> = select_rel -1
 <Right> = select_rel 1
 <RightSquareBracket> = select_rel 1
-GG = select_abs 0
-<Shift+G> = select_abs -1
+gg = select_abs 0
+<Shift+g> = select_abs -1
 
 # Panning
-J = pan 0 -50
-K = pan 0 50
-H = pan 50 0
-L = pan -50 0
+j = pan 0 -50
+k = pan 0 50
+h = pan 50 0
+l = pan -50 0
 
 # Zooming
 <Up> = zoom 1
-I = zoom 1
+i = zoom 1
 <Down> = zoom -1
-O = zoom -1
+o = zoom -1
 
 # Other commands
-X = remove
-F = fullscreen
-D = overlay
-P = exec echo $imv_path
-C = center
-S = scaling_mode next
-A = zoom actual
-R = reset
+x = remove
+f = fullscreen
+d = overlay
+p = exec echo $imv_path
+c = center
+s = scaling_mode next
+a = zoom actual
+r = reset
 
 # Gif playback
 . = next_frame
 <Space> = toggle_playing
 
 # Slideshow control
-T = slideshow_duration +1
-<Shift+T> = slideshow_duration -1
+t = slideshow_duration +1
+<Shift+t> = slideshow_duration -1

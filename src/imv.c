@@ -183,36 +183,36 @@ struct imv *imv_create(void)
   imv_command_alias(imv->commands, "n", "select_rel 1");
   imv_command_alias(imv->commands, "p", "select_rel -1");
 
-  add_bind(imv, "<Q>", "quit");
+  add_bind(imv, "<q>", "quit");
   add_bind(imv, "<Left>", "select_rel -1");
-  add_bind(imv, "<[>", "select_rel -1");
+  add_bind(imv, "<LeftSquareBracket>", "select_rel -1");
   add_bind(imv, "<Right>", "select_rel 1");
-  add_bind(imv, "<]>", "select_rel 1");
-  add_bind(imv, "<G><G>", "select_abs 0");
-  add_bind(imv, "<Shift+G>", "select_abs -1");
-  add_bind(imv, "<J>", "pan 0 -50");
-  add_bind(imv, "<K>", "pan 0 50");
-  add_bind(imv, "<H>", "pan 50 0");
-  add_bind(imv, "<L>", "pan -50 0");
-  add_bind(imv, "<X>", "remove");
-  add_bind(imv, "<F>", "fullscreen");
-  add_bind(imv, "<D>", "overlay");
-  add_bind(imv, "<P>", "exec echo $imv_path");
+  add_bind(imv, "<RightSquareBracket>", "select_rel 1");
+  add_bind(imv, "<g><g>", "select_abs 0");
+  add_bind(imv, "<Shift+g>", "select_abs -1");
+  add_bind(imv, "<j>", "pan 0 -50");
+  add_bind(imv, "<k>", "pan 0 50");
+  add_bind(imv, "<h>", "pan 50 0");
+  add_bind(imv, "<l>", "pan -50 0");
+  add_bind(imv, "<x>", "remove");
+  add_bind(imv, "<f>", "fullscreen");
+  add_bind(imv, "<d>", "overlay");
+  add_bind(imv, "<p>", "exec echo $imv_path");
   add_bind(imv, "<Equals>", "zoom 1");
   add_bind(imv, "<Up>", "zoom 1");
   add_bind(imv, "<+>", "zoom 1");
-  add_bind(imv, "<I>", "zoom 1");
+  add_bind(imv, "<i>", "zoom 1");
   add_bind(imv, "<Down>", "zoom -1");
   add_bind(imv, "<->", "zoom -1");
-  add_bind(imv, "<O>", "zoom -1");
-  add_bind(imv, "<C>", "center");
-  add_bind(imv, "<S>", "scaling_mode next");
-  add_bind(imv, "<A>", "zoom actual");
-  add_bind(imv, "<R>", "reset");
+  add_bind(imv, "<o>", "zoom -1");
+  add_bind(imv, "<c>", "center");
+  add_bind(imv, "<s>", "scaling_mode next");
+  add_bind(imv, "<a>", "zoom actual");
+  add_bind(imv, "<r>", "reset");
   add_bind(imv, "<.>", "next_frame");
   add_bind(imv, "<Space>", "toggle_playing");
-  add_bind(imv, "<T>", "slideshow_duration +1");
-  add_bind(imv, "<Shift+T>", "slideshow_duration -1");
+  add_bind(imv, "<t>", "slideshow_duration +1");
+  add_bind(imv, "<Shift+t>", "slideshow_duration -1");
 
   return imv;
 }
@@ -290,7 +290,7 @@ static bool parse_slideshow_duration(struct imv *imv, const char *duration)
     }
   }
   if (imv->slideshow_image_duration == ULONG_MAX) {
-    fprintf(stderr, "Wrong slideshow delay '%s'. Aborting.\n", optarg);
+    fprintf(stderr, "Wrong slideshow duration '%s'. Aborting.\n", optarg);
     return false;
   }
   return true;
@@ -893,7 +893,7 @@ static int handle_ini_value(void *user, const char *section, const char *name,
       return 1;
     }
 
-    if(!strcmp(name, "sampling")) {
+    if(!strcmp(name, "upscaling_method")) {
       imv->nearest_neighbour = !strcmp(value, "nearest_neighbour");
       return 1;
     }
@@ -913,7 +913,7 @@ static int handle_ini_value(void *user, const char *section, const char *name,
       return 1;
     }
 
-    if(!strcmp(name, "scaling")) {
+    if(!strcmp(name, "scaling_mode")) {
       if(!strcmp(value, "none")) {
         imv->scaling_mode = SCALING_NONE;
       } else if(!strcmp(value, "shrink")) {
@@ -931,7 +931,7 @@ static int handle_ini_value(void *user, const char *section, const char *name,
       return 1;
     }
 
-    if(!strcmp(name, "slideshow")) {
+    if(!strcmp(name, "slideshow_duration")) {
       if(!parse_slideshow_duration(imv, value)) {
         return false;
       }
@@ -944,9 +944,9 @@ static int handle_ini_value(void *user, const char *section, const char *name,
       return 1;
     }
 
-    if(!strcmp(name, "default_binds")) {
-      const bool default_binds = parse_bool(value);
-      if(!default_binds) {
+    if(!strcmp(name, "suppress_default_binds")) {
+      const bool suppress_default_binds = parse_bool(value);
+      if(suppress_default_binds) {
         /* clear out any default binds if requested */
         imv_binds_clear(imv->binds);
       }
