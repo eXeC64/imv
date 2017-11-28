@@ -32,6 +32,9 @@
 # Font to use for the overlay
 # overlay_font = Monospace:24
 
+# Stay fullscreen when we lose focus
+# stay_fullscreen_on_focus_loss = true
+
 # Disable imv's builtin binds so they don't conflict with the ones in this config
 suppress_default_binds = true
 

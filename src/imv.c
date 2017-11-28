@@ -46,6 +46,7 @@ struct imv {
   bool fullscreen;
   bool overlay_enabled;
   bool nearest_neighbour;
+  bool stay_fullscreen_on_focus_loss;
   bool need_redraw;
   bool need_rescale;
   bool recursive_load;
@@ -135,6 +136,7 @@ struct imv *imv_create(void)
   imv->fullscreen = false;
   imv->overlay_enabled = false;
   imv->nearest_neighbour = false;
+  imv->stay_fullscreen_on_focus_loss = false;
   imv->need_redraw = true;
   imv->need_rescale = true;
   imv->recursive_load = false;
@@ -611,6 +613,10 @@ static bool setup_window(struct imv *imv)
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,
     imv->nearest_neighbour ? "0" : "1");
 
+  /* allow fullscreen to be maintained even when focus is lost */
+  SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS,
+      imv->stay_fullscreen_on_focus_loss ? "0" : "1");
+
   /* construct a chequered background image */
   if(imv->background_type == BACKGROUND_CHEQUERED) {
     imv->background_image = create_chequered(imv->renderer);
@@ -894,6 +900,11 @@ static int handle_ini_value(void *user, const char *section, const char *name,
 
     if(!strcmp(name, "upscaling_method")) {
       imv->nearest_neighbour = !strcmp(value, "nearest_neighbour");
+      return 1;
+    }
+
+    if(!strcmp(name, "stay_fullscreen_on_focus_loss")) {
+      imv->stay_fullscreen_on_focus_loss = parse_bool(value);
       return 1;
     }
 
