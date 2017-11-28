@@ -177,12 +177,6 @@ struct imv *imv_create(void)
   imv_command_register(imv->commands, "scaling_mode", &command_set_scaling_mode);
   imv_command_register(imv->commands, "slideshow_duration", &command_set_slideshow_duration);
 
-  imv_command_alias(imv->commands, "q", "quit");
-  imv_command_alias(imv->commands, "next", "select_rel 1");
-  imv_command_alias(imv->commands, "previous", "select_rel -1");
-  imv_command_alias(imv->commands, "n", "select_rel 1");
-  imv_command_alias(imv->commands, "p", "select_rel -1");
-
   add_bind(imv, "<q>", "quit");
   add_bind(imv, "<Left>", "select_rel -1");
   add_bind(imv, "<LeftSquareBracket>", "select_rel -1");
@@ -878,6 +872,11 @@ static int handle_ini_value(void *user, const char *section, const char *name,
       fprintf(stderr, "Config error: %s\n", err);
       return 0;
     }
+    return 1;
+  }
+
+  if (!strcmp(section, "aliases")) {
+    imv_command_alias(imv->commands, name, value);
     return 1;
   }
 

@@ -35,7 +35,16 @@
 # Disable imv's builtin binds so they don't conflict with the ones in this config
 suppress_default_binds = true
 
+[aliases]
+# Create some command aliases
+q = quit
+next = select_rel 1
+previous = select_rel -1
+n = select_rel 1
+p = select_rel -1
+
 [binds]
+# Add some custom key bindings to imv
 
 # Some keys have special names:
 # < -> Less
