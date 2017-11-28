@@ -189,15 +189,18 @@ static int print_event(char *buf, size_t len, const SDL_Event *event)
   /* Try plain old character input */
   const char *keyname = SDL_GetKeyName(kevent->keysym.sym);
 
-  /* Because '<' and '>' have special meaning in our syntax, and '=' is
-   * restricted within ini files, we rename these.
-   */
+  /* Because '<' and '>' have special meaning in our syntax, and '=', '[', and
+   * ']' are restricted within ini files, we rename these.  */
   if(!strcmp(keyname, "<")) {
     keyname = "Less";
   } else if(!strcmp(keyname, ">")) {
     keyname = "Greater";
   } else if(!strcmp(keyname, "=")) {
     keyname = "Equals";
+  } else if(!strcmp(keyname, "[")) {
+    keyname = "LeftSquareBracket";
+  } else if(!strcmp(keyname, "]")) {
+    keyname = "RightSquareBracket";
   }
 
   return snprintf(buf, len, "%s%s", prefix, keyname);
@@ -263,6 +266,13 @@ struct list *imv_bind_parse_keys(const char *keys)
         list_deep_free(list);
         return NULL;
       }
+    } else {
+      /* Just a regular character */
+      char *item = malloc(2);
+      item[0] = *keys;
+      item[1] = 0;
+      list_append(list, item);
+      ++keys;
     }
   }
 

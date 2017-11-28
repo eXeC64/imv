@@ -86,11 +86,6 @@ struct imv {
   } current_image;
 };
 
-enum config_section {
-  CFG_OPTIONS,
-  CFG_BINDS
-};
-
 void command_quit(struct list *args, const char *argstr, void *data);
 void command_pan(struct list *args, const char *argstr, void *data);
 void command_select_rel(struct list *args, const char *argstr, void *data);
@@ -111,14 +106,26 @@ static bool setup_window(struct imv *imv);
 static void handle_event(struct imv *imv, SDL_Event *event);
 static void render_window(struct imv *imv);
 
-static void add_bind(struct imv *imv, const char *keys, const char *command)
+static const char *add_bind(struct imv *imv, const char *keys, const char *command)
 {
   struct list *list = imv_bind_parse_keys(keys);
   if(!list) {
-    return;
+    return "Invalid key combination";
   }
 
-  imv_binds_add(imv->binds, list, command);
+  enum bind_result result = imv_binds_add(imv->binds, list, command);
+
+  if (result == BIND_SUCCESS) {
+    return NULL;
+  } else if (result == BIND_INVALID_KEYS) {
+    return "Invalid keys to bind to";
+  } else if (result == BIND_INVALID_COMMAND) {
+    return "No command given to bind to";
+  } else if (result == BIND_CONFLICTS) {
+    return "Key combination conflicts with existing bind";
+  }
+
+  return NULL;
 }
 
 struct imv *imv_create(void)
@@ -860,80 +867,115 @@ static bool parse_bool(const char *str)
   );
 }
 
+static int handle_ini_value(void *user, const char *section, const char *name,
+                            const char *value)
+{
+  struct imv *imv = user;
+
+  if (!strcmp(section, "binds")) {
+    const char *err = add_bind(imv, name, value);
+    if (err) {
+      fprintf(stderr, "Config error: %s\n", err);
+      return 0;
+    }
+    return 1;
+  }
+
+  if (!strcmp(section, "options")) {
+
+    if(!strcmp(name, "fullscreen")) {
+      imv->fullscreen = parse_bool(value);
+      return 1;
+    }
+
+    if(!strcmp(name, "overlay")) {
+      imv->overlay_enabled = parse_bool(value);
+      return 1;
+    }
+
+    if(!strcmp(name, "sampling")) {
+      imv->nearest_neighbour = !strcmp(value, "nearest_neighbour");
+      return 1;
+    }
+
+    if(!strcmp(name, "recursive")) {
+      imv->recursive_load = parse_bool(value);
+      return 1;
+    }
+
+    if(!strcmp(name, "cycle_input")) {
+      imv->cycle_input = parse_bool(value);
+      return 1;
+    }
+
+    if(!strcmp(name, "list_at_exit")) {
+      imv->list_at_exit = parse_bool(value);
+      return 1;
+    }
+
+    if(!strcmp(name, "scaling")) {
+      if(!strcmp(value, "none")) {
+        imv->scaling_mode = SCALING_NONE;
+      } else if(!strcmp(value, "shrink")) {
+        imv->scaling_mode = SCALING_DOWN;
+      } else if(!strcmp(value, "full")) {
+        imv->scaling_mode = SCALING_FULL;
+      }
+      return 1;
+    }
+
+    if(!strcmp(name, "background")) {
+      if(!parse_bg(imv, value)) {
+        return false;
+      }
+      return 1;
+    }
+
+    if(!strcmp(name, "slideshow")) {
+      if(!parse_slideshow_duration(imv, value)) {
+        return false;
+      }
+      return 1;
+    }
+
+    if(!strcmp(name, "overlay_font")) {
+      free(imv->font_name);
+      imv->font_name = strdup(value);
+      return 1;
+    }
+
+    if(!strcmp(name, "default_binds")) {
+      const bool default_binds = parse_bool(value);
+      if(!default_binds) {
+        /* clear out any default binds if requested */
+        imv_binds_clear(imv->binds);
+      }
+      return 1;
+    }
+
+    /* No matches so far */
+    fprintf(stderr, "Ignoring unknown option: %s\n", name);
+    return 1;
+  }
+  return 0;
+}
+
 bool imv_load_config(struct imv *imv)
 {
   const char *path = get_config_path();
   if(!path) {
+    /* no config, no problem - we have defaults */
     return true;
   }
 
-  FILE *f = fopen(path, "r");
-  if (!f) {
+  const int err = ini_parse(path, handle_ini_value, imv);
+  if (err == -1) {
     fprintf(stderr, "Unable to open config file: %s\n", path);
     return false;
+  } else if (err > 0) {
+    fprintf(stderr, "Error in config file: %s:%d\n", path, err);
+    return false;
   }
-
-  enum config_section sect = CFG_OPTIONS;
-  int type;
-  do {
-    char key[128], value[128];
-    type = parse_ini_file(f, &key[0], sizeof(key), &value[0], sizeof(value));
-
-    if(type == INI_SECTION) {
-      if(!strcmp(key, "binds")) {
-        sect = CFG_BINDS;
-      } else {
-        fprintf(stderr, "Unknown config section: %s\n", key);
-        return false;
-      }
-    } else if(type == INI_VALUE) {
-      if(sect == CFG_OPTIONS) {
-        if(!strcmp(key, "fullscreen")) {
-          imv->fullscreen = parse_bool(value);
-        } else if(!strcmp(key, "overlay")) {
-          imv->overlay_enabled = parse_bool(value);
-        } else if(!strcmp(key, "sampling")) {
-          imv->nearest_neighbour = !strcmp(value, "nearest_neighbour");
-        } else if(!strcmp(key, "recursive")) {
-          imv->recursive_load = parse_bool(value);
-        } else if(!strcmp(key, "cycle_input")) {
-          imv->cycle_input = parse_bool(value);
-        } else if(!strcmp(key, "list_at_exit")) {
-          imv->list_at_exit = parse_bool(value);
-        } else if(!strcmp(key, "scaling")) {
-          if(!strcmp(value, "none")) {
-            imv->scaling_mode = SCALING_NONE;
-          } else if(!strcmp(value, "shrink")) {
-            imv->scaling_mode = SCALING_DOWN;
-          } else if(!strcmp(value, "full")) {
-            imv->scaling_mode = SCALING_FULL;
-          }
-        } else if(!strcmp(key, "background")) {
-          if(!parse_bg(imv, value)) {
-            return false;
-          }
-        } else if(!strcmp(key, "slideshow")) {
-          if(!parse_slideshow_duration(imv, value)) {
-            return false;
-          }
-        } else if(!strcmp(key, "overlay_font")) {
-          free(imv->font_name);
-          imv->font_name = strdup(value);
-        } else if(!strcmp(key, "default_binds")) {
-          const bool default_binds = parse_bool(value);
-          if(!default_binds) {
-            /* clear out any default binds if requested */
-            imv_binds_clear(imv->binds);
-          }
-        } else {
-          fprintf(stderr, "Ignoring unknown option: %s\n", key);
-        }
-      } else if(sect == CFG_BINDS) {
-        add_bind(imv, key, value);
-      }
-    }
-  } while(type);
-
   return true;
 }
 

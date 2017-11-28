@@ -1,5 +1,7 @@
 # Default config for imv
 
+[options]
+
 # Start fullscreen
 # fullscreen = true
 
@@ -28,49 +30,49 @@
 # slideshow = 3
 
 # Font to use for the overlay
-# overlay_font = "Monospace:24"
+# overlay_font = Monospace:24
 
 # Disable imv's builtin binds so they don't conflict with the ones in this config
 default_binds = false
 
 [binds]
 
-<Q> = "quit"
+Q = quit
 
 # Image navigation
-<Left> = "select_rel -1"
-<[> = "select_rel -1"
-<Right> = "select_rel 1"
-<]> = "select_rel 1"
-<G><G> = "select_abs 0"
-<Shift+G> = "select_abs -1"
+<Left> = select_rel -1
+<LeftSquareBracket> = select_rel -1
+<Right> = select_rel 1
+<RightSquareBracket> = select_rel 1
+GG = select_abs 0
+<Shift+G> = select_abs -1
 
 # Panning
-<J> = "pan 0 -50"
-<K> = "pan 0 50"
-<H> = "pan 50 0"
-<L> = "pan -50 0"
+J = pan 0 -50
+K = pan 0 50
+H = pan 50 0
+L = pan -50 0
 
 # Zooming
-<Up> = "zoom 1"
-<I> = "zoom 1"
-<Down> = "zoom -1"
-<O> = "zoom -1"
+<Up> = zoom 1
+I = zoom 1
+<Down> = zoom -1
+O = zoom -1
 
 # Other commands
-<X> = "remove"
-<F> = "fullscreen"
-<D> = "overlay"
-<P> = "exec echo $imv_path"
-<C> = "center"
-<S> = "scaling_mode next"
-<A> = "zoom actual"
-<R> = "reset"
+X = remove
+F = fullscreen
+D = overlay
+P = exec echo $imv_path
+C = center
+S = scaling_mode next
+A = zoom actual
+R = reset
 
 # Gif playback
-<.> = "next_frame"
-<Space> = "toggle_playing"
+. = next_frame
+<Space> = toggle_playing
 
 # Slideshow control
-<T> = "slideshow_duration +1"
-<Shift+T> = "slideshow_duration -1"
+T = slideshow_duration +1
+<Shift+T> = slideshow_duration -1
