@@ -1228,8 +1228,6 @@ static size_t generate_env_text(struct imv *imv, char *buf, size_t buf_len, cons
 {
   update_env_vars(imv);
 
-  /* const char *format = "imv - [${imv_current_index}/${imv_file_count}] [${imv_width}x${imv_height}] [${imv_scale}%] $imv_current_file [$imv_scaling_mode]"; */
-
   size_t len = 0;
   wordexp_t word;
   if(wordexp(format, &word, 0) == 0) {
