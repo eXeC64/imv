@@ -107,6 +107,7 @@ void command_set_slideshow_duration(struct list *args, const char *argstr, void 
 static bool setup_window(struct imv *imv);
 static void handle_event(struct imv *imv, SDL_Event *event);
 static void render_window(struct imv *imv);
+static void update_env_vars(struct imv *imv);
 static size_t generate_title_text(struct imv *imv, char *buf, size_t len);
 static size_t generate_overlay_text(struct imv *imv, char *buf, size_t len);
 
@@ -1085,7 +1086,7 @@ void command_exec(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   struct imv *imv = data;
-  setenv("imv_current_file", imv_navigator_selection(imv->navigator), 1);
+  update_env_vars(imv);
   system(argstr);
 }
 
@@ -1168,6 +1169,11 @@ void command_set_slideshow_duration(struct list *args, const char *argstr, void 
 
     imv->need_redraw = true;
   }
+}
+
+static void update_env_vars(struct imv *imv)
+{
+  setenv("imv_current_file", imv_navigator_selection(imv->navigator), 1);
 }
 
 static size_t generate_title_text(struct imv *imv, char *buf, size_t buf_len)
