@@ -50,13 +50,17 @@ clean:
 	$(RM) -Rf $(BUILDDIR)
 
 install: $(TARGET)
+	a2x --no-xmllint --doctype manpage --format manpage doc/imv.1.txt
+	a2x --no-xmllint --doctype manpage --format manpage doc/imv.5.txt
 	install -D -m 0755 $(TARGET) $(DESTDIR)$(BINPREFIX)/imv
 	install -D -m 0644 doc/imv.1 $(DESTDIR)$(MANPREFIX)/man1/imv.1
+	install -D -m 0644 doc/imv.5 $(DESTDIR)$(MANPREFIX)/man5/imv.5
 	install -D -m 0644 files/imv.desktop $(DESTDIR)$(DATAPREFIX)/applications/imv.desktop
 	install -D -m 0644 files/imv_config $(DESTDIR)$(CONFIGPREFIX)/imv_config
 
 uninstall:
 	$(RM) $(DESTDIR)$(BINPREFIX)/imv
 	$(RM) $(DESTDIR)$(MANPREFIX)/man1/imv.1
+	$(RM) $(DESTDIR)$(MANPREFIX)/man5/imv.5
 	$(RM) $(DESTDIR)$(DATAPREFIX)/applications/imv.desktop
 	@echo "$(DESTDIR)$(CONFIGPREFIX)/imv_config has not been removed. Please remove it manually."

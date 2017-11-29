@@ -2,64 +2,11 @@
 
 [options]
 
-# Start fullscreen
-# fullscreen = true
-
-# Start with overlay visible
-# overlay = true
-
-# Method used for upscaling images. Can be 'linear' or 'nearest_neighbour'
-# upscaling_method = linear
-
-# Recurse into subdirectories when opening a path
-# recursive = true
-
-# When we reach the end of the open images, don't go back to the start again
-# loop_input = false
-
-# Print all the images still open when we quit
-# list_files_at_exit = true
-
-# Scaling mode, one of: none, shrink, and full
-# scaling_mode = none
-
-# Background, either a hex colour code or 'checks'
-# background = 000000
-
-# Change to the next image automatically after 3 seconds
-# slideshow_duration = 3
-
-# Font to use for the overlay
-# overlay_font = Monospace:24
-
-# Stay fullscreen when we lose focus
-# stay_fullscreen_on_focus_loss = true
-
-# Disable imv's builtin binds so they don't conflict with the ones in this config
+# Suppress built-in key bindings, and specify them explicitly in this
+# config file.
 suppress_default_binds = true
 
-# Set the text used for the title and overlay. Environment variables
-# can be used, as can $(command) shell expansion, etc.
-# imv exports details about its state and the current image through various
-# environment variables.
-
-# Available values:
-#   imv_current_file - path of currently opened image
-#   imv_scaling_mode - name of the current scaling mode
-#   imv_loading - 1 when a new image is loading, 0 otherwise
-#   imv_current_index - index of current image, from 1-N
-#   imv_file_count - total number of files
-#   imv_width - width of current image
-#   imv_height - height of current image
-#   imv_scale - scaling of current image in percent
-#   imv_slideshow_duration - number of seconds each image is shown for
-#   imv_slideshow_elapsed - how long the current image has been shown for
-
-# title_text = imv - [${imv_current_index}/${imv_file_count}] $imv_current_file
-# overlay_text = ${imv_width}x${imv_height} @$ {imv_scale}% [$imv_scaling_mode]
-
 [aliases]
-# Create some command aliases
 q = quit
 next = select_rel 1
 previous = select_rel -1
@@ -67,23 +14,6 @@ n = select_rel 1
 p = select_rel -1
 
 [binds]
-# Add some custom key bindings to imv
-
-# Some keys have special names:
-# < -> Less
-# > -> Greater
-# [ -> LeftSquareBracket
-# ] -> RightSquareBracket
-# = -> Equals
-# Left arrow key -> Left
-# Up arrow key -> Up
-# Right arrow key -> Right
-# Down arrow key -> Down
-
-# Keys can have the modifiers 'Ctrl+' 'Meta+' and 'Shift+' in front of them,
-# in that order. Keys with special names, or with a modifier are enclosed in
-# '<' and '>'.
-
 q = quit
 
 # Image navigation

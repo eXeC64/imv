@@ -1,0 +1,189 @@
+/////
+vim:set ts=4 sw=4 tw=82 noet:
+/////
+:quotes.~:
+
+imv (1)
+=======
+
+Name
+----
+imv - Image viewer for X11 and Wayland
+
+Description
+-----------
+
+imv is an image viewer for X11 and Wayland, aimed at users of tiling window
+managers. It supports a wide variety of image file formats, including animated
+gif files. imv will automatically reload the current image, if it is changed on
+disk.
+
+Synopsis
+--------
+'imv' [options] [paths...]
+
+Options
+-------
+
+*-h*::
+	Show help message and quit.
+
+*-r*::
+	Load directories recursively.
+
+*-a*::
+	Default to displaying images at actual size.
+
+*-s*::
+	Default to shrinking images to fit the window, but not expanding them.
+
+*-S*::
+	Default to scaling images to fit the window perfectly.
+
+*-u*::
+	Set scaling method to 'nearest neighbour'.
+
+*-d*::
+	Start with overlay visible.
+
+*-x*::
+	Disable looping of input paths.
+
+*-l*::
+	List open files at exit.
+
+*-n* <path|index>::
+	Start with the given path, or index selected.
+
+*-e* <font_name>::
+	Set the overlay's font name.
+
+*-b* <background>::
+	Set the background colour. Can either be a 6-digit hexadecimal colour code
+	or 'checks' to show a chequered background.
+
+*-t* <slideshow_duration>::
+	Start in slideshow mode, with each image shown for the given number of
+	seconds.
+
+Commands
+--------
+
+Commands can be entered by pressing *:*. imv supports the following commands:
+
+*quit*::
+	Quit imv.
+
+*pan* <x> <y>::
+	Pan the view by the given amounts.
+
+*select_rel* <offset>::
+	Select a different image. '1' is the next one, '-1' is the previous.
+
+*select_abs* <index>::
+	Select an image by index. '1' is the first image, '2' the second, etc.
+	The last image can be indexed as '-1', the second last as '-2'.
+
+*zoom* <amount|'actual'>::
+	Zoom into the image by the given amount. Negative values zoom out.
+	'actual' resets the zoom to 100%, showing the image at its actual size.
+
+*close*::
+	Close the currently selected image.
+
+*fullscreen*::
+	Toggle fullscreen.
+
+*overlay*::
+	Toggle the overlay.
+
+*exec* <command>::
+	Execute a shell command. imv provides various environment variables to the
+	command executed. These are documented in the 'Environment Variables'
+	section.
+
+*center*::
+	Recenter the selected image.
+
+*reset*::
+	Reset the view, centering the image and using the current scaling mode to
+	rescale it.
+
+*next_frame*::
+	If an animated gif is currently being displayed, load the next frame.
+
+*toggle_playing*::
+	Toggle playback of the current image if it is an animated gif.
+
+*scaling_mode* <none|shrink|full>::
+	Set the current scaling mode.
+
+*slideshow_duration* <amount>::
+	Change the slideshow duration by the given amount in seconds.
+
+Configuration
+-------------
+
+The path to a config file can be given via the *$imv_config* environment
+variable. If not found, imv will search for it in the following locations:
+
+- $HOME/.imv_config
+- $HOME/.imv/config
+- $XDG_CONFIG_HOME/imv/config (recommended)
+- /usr/local/etc/imv_config
+- /etc/imv_config
+
+A default config file is shipped with imv into /etc/imv_config
+
+For documentation on the config file format, see **imv**(5).
+
+Environment Variables
+---------------------
+
+When imv executes a command, it provides a number of environment variables,
+exposing imv's state. These environment variables are also available when
+customising the window's title, or the overlay text.
+
+*$imv_current_file*::
+	Path of currently selected image.
+
+*$imv_scaling_mode*::
+	Name of the current scaling mode.
+
+*$imv_loading*::
+	1 if a new image is loading, 0 otherwise.
+
+*$imv_current_index*::
+	Index of current image, from 1-N.
+
+*$imv_file_count*::
+	Total number of files.
+
+*$imv_width*::
+	Width of the current image.
+
+*$imv_height*::
+	Height of the current image.
+
+*$imv_scale*::
+	Scaling of current image in percent.
+
+*$imv_slideshow_duration*::
+	Number of seconds each image is shown for.
+
+*$imv_slideshow_elapsed*::
+	How long the current image has been shown for.
+
+Authors
+-------
+
+imv is written and maintained by Harry Jeffery <harry@exec64.co.uk>
+with contributions from other developers.
+
+Full source code and other information can be found at
+<https://github.com/eXeC64/imv>.
+
+See Also
+--------
+
+**imv**(5)

@@ -66,7 +66,8 @@ cycling through the list.
 Installation
 ------------
 
-`imv` depends on `pthreads`, `FontConfig`, `SDL2`, `SDL_TTF`, and `FreeImage`.
+`imv` depends on `pthreads`, `FontConfig`, `SDL2`, `SDL_TTF`, `FreeImage`,
+and `asciidoc`.
 
     $ make
     # make install

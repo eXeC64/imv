@@ -1,0 +1,234 @@
+/////
+vim:set ts=4 sw=4 tw=82 noet:
+/////
+:quotes.~:
+
+imv (5)
+=======
+
+Name
+----
+imv - imv configuration file
+
+Description
+-----------
+
+imv can be customised with this configuration file, changing its default
+behaviour, key bindings, and appearance.
+
+The imv configuration file is an ini-style file, with multiple 'key = value'
+settings, separated into several '[section]'s.
+
+Options
+-------
+
+The *[options]* section accepts the following settings:
+
+*background* = <hex-code|'checks'>::
+	Set the background in imv. Can either be a 6-digit hexadecimal colour code,
+	or 'checks' for a chequered background. Defaults to '000000'
+
+*fullscreen* = <true|false>::
+	Start imv fullscreen. Defaults to 'false'.
+
+*list_files_at_exit* = <true|false>::
+	Print open files to stdout at exit, each on a separate line.
+	Defaults to 'false'.
+
+*loop_input* = <true|false>::
+	Return to first image after viewing the last one. Defaults to 'true'.
+
+*overlay* = <true|false>::
+	Start with the overlay visible. Defaults to 'false'.
+
+*overlay_font* = <typeface:size>::
+	Use the specified font in the overlay. Defaults to 'Monospace:24'.
+
+*overlay_text* = <text>::
+	Use the given text as the overlay's text. The provided text is shell
+	expanded, so the output of commands can be used: '$(ls)' as can environment
+	variables, including the ones accessible to imv's 'exec' command.
+
+*recursively* = <true|false>::
+	Load input paths recursively. Defaults to 'false'.
+
+*scaling_mode* = <none|shrink|full>::
+	Set scaling mode to use. 'none' will show each image at its actual size.
+	'shrink' will scale down the image to fit inside the window. 'full' will
+	both scale up and scale down the image to fit perfectly inside the window.
+	Defaults to 'full'.
+
+*slideshow_duration* = <duration>::
+	Start imv in slideshow mode, and set the amount of time to show each image
+	for in seconds. Defaults to '0', i.e. no slideshow.
+
+*stay_fullscreen_on_focus_loss* = <true|false>::
+	Stay full screen even when imv loses focus. Defaults to 'false'.
+
+*suppess_default_binds* = <true|false>::
+	Disable imv's built-in binds so they don't conflict with custom ones.
+	Defaults to 'false'.
+
+*title_text* = <text>::
+	Use the given text as the window's title. The provided text is shell
+	expanded, so the output of commands can be used: '$(ls)' as can environment
+	variables, including the ones accessible to imv's 'exec' command.
+
+*upscaling_method* = <linear|nearest_neighbour>::
+	Use the specified method to upscale images. Defaults to 'linear'.
+
+Aliases
+-------
+
+The *[aliases]* section allows imv's commands to be aliases. For example:
+'q = quit' would add a 'q' command that simply executes the 'quit' command.
+And 'next = select_rel 1' would add a 'next' command to imv.
+
+Binds
+-----
+
+The *[binds]* section allows custom key bindings to be added to imv.
+
+Binds are in the format 'key combination = command'. A key combination can
+consist of multiple keys in succession.
+
+Single keys such as 'q' are just that: 'q = quit' will bind the 'q' key to the
+'quit' command.
+
+Modifier keys can be specified by prefixing them: 'Ctrl+q', 'Meta+f',
+'Shift+g'. If multiple modifier keys are desired, they are specified in the
+order 'Ctrl+Meta+Shift'. When a key's name is more than a single character,
+or a modifier is used it must be wrapped in '<' and '>', for example:
+'<Ctrl+q>'.
+
+Multiple keys in succession can be specified by listing them in order:
+'gg = select_abs 0' will bind two presses of the 'g' key to jump to the first
+image, and '<Ctrl+a>p = exec echo hi' will bind the key sequence of 'Ctrl+a'
+followed by 'p' to executing the shell command 'echo hi'.
+
+N.B. Special characters such as '!' are not named directly, and are accessed
+by their regular key, combined with the shift modifier: 'Shift+1'.
+
+Some keys, such as '<', and '>' have special names, to avoid conflits with
+the bind syntax, or the config file format. Other keys with no character
+associated with them, such as the 'Return' key or the arrow keys also have
+special names. These are as follows:
+
+*Application*::
+	The Application / Compose / Context Menu / Alt Gr key.
+
+*AudioMute*::
+	The mute volume key.
+
+*AudioNext*::
+	The next track media key.
+
+*AudioPlay*::
+	The play media key.
+
+*AudioPrev*::
+	The previous track media key.
+
+*AudioStop*::
+	The stop media key.
+
+*Backspace*::
+	The backspace key.
+
+*BrightnessDown*::
+	The brightness down key.
+
+*BrightnessUp*::
+	The brightness up key.
+
+*Cancel*::
+	The cancel key.
+
+*Clear*::
+	The clear key.
+
+*Delete*::
+	The delete key.
+
+*Down*::
+	The down arrow key.
+
+*Eject*::
+	The eject key.
+
+*End*::
+	The end key.
+
+*Escape*::
+	The Esc / escape key.
+
+*Equals*::
+	The = key.
+
+*F<1-24>*::
+	The F keys.
+
+*Home*::
+	The home key.
+
+*Keypad <00|000|0-9>*::
+	The numeric keypad number keys.
+
+*Keypad Backspace*::
+	The numeric keypad backspace key.
+
+*Keypad Clear*::
+	The numeric keypad clear key.
+
+*Keypad Enter*::
+	The numeric keypad enter key.
+
+*Keypad -*::
+	The numeric keypad subtract key.
+
+*Keypad +*::
+	The numeric keypad add key.
+
+**Left*::
+	The left arrow key.
+
+LeftSquareBracket*::
+	The [ key.
+
+*Mute*::
+	The mute key.
+
+*PageDown*::
+	The page down key.
+
+*PageUp*::
+	The page down key.
+
+*Pause*::
+	The pause key.
+
+*Return*::
+	The return / enter key.
+
+*Right*::
+	The right arrow key.
+
+*RightSquareBracket*::
+	The ] key.
+
+*Space*::
+	The space bar.
+
+*Up*::
+	The up arrow key.
+
+*VolumeDown*::
+	The volume down key.
+
+*VolumeUp*::
+	The volume up key.
+
+See Also
+--------
+
+**imv**(1)
