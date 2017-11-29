@@ -70,6 +70,8 @@ struct imv {
   size_t stdin_image_data_len;
   char *input_buffer;
   char *starting_path;
+  char *title_text;
+  char *overlay_text;
 
   SDL_Window *window;
   SDL_Renderer *renderer;
@@ -108,8 +110,7 @@ static bool setup_window(struct imv *imv);
 static void handle_event(struct imv *imv, SDL_Event *event);
 static void render_window(struct imv *imv);
 static void update_env_vars(struct imv *imv);
-static size_t generate_title_text(struct imv *imv, char *buf, size_t len);
-static size_t generate_overlay_text(struct imv *imv, char *buf, size_t len);
+static size_t generate_env_text(struct imv *imv, char *buf, size_t len, const char *format);
 
 static const char *add_bind(struct imv *imv, const char *keys, const char *command)
 {
@@ -161,6 +162,16 @@ struct imv *imv_create(void)
   imv->stdin_image_data_len = 0;
   imv->input_buffer = NULL;
   imv->starting_path = NULL;
+  imv->title_text = strdup(
+      "imv - [${imv_current_index}/${imv_file_count}]"
+      " [${imv_width}x${imv_height}] [${imv_scale}%]"
+      " $imv_current_file [$imv_scaling_mode]"
+  );
+  imv->overlay_text = strdup(
+      "[${imv_current_index}/${imv_file_count}]"
+      " [${imv_width}x${imv_height}] [${imv_scale}%]"
+      " $imv_current_file [$imv_scaling_mode]"
+  );
   imv->window = NULL;
   imv->renderer = NULL;
   imv->font = NULL;
@@ -487,7 +498,7 @@ int imv_run(struct imv *imv)
       imv->view->playing = true;
 
       char title[1024];
-      generate_title_text(imv, &title[0], sizeof title);
+      generate_env_text(imv, &title[0], sizeof title, imv->title_text);
       imv_viewport_set_title(imv->view, title);
     }
 
@@ -772,7 +783,7 @@ static void render_window(struct imv *imv)
 
   /* update window title */
   char title_text[1024];
-  generate_title_text(imv, &title_text[0], sizeof title_text);
+  generate_env_text(imv, &title_text[0], sizeof title_text, imv->title_text);
   imv_viewport_set_title(imv->view, title_text);
 
   /* first we draw the background */
@@ -805,7 +816,7 @@ static void render_window(struct imv *imv)
     SDL_Color fg = {255,255,255,255};
     SDL_Color bg = {0,0,0,160};
     char overlay_text[1024];
-    generate_overlay_text(imv, overlay_text, sizeof overlay_text);
+    generate_env_text(imv, overlay_text, sizeof overlay_text, imv->overlay_text);
     imv_printf(imv->renderer, imv->font, 0, 0, &fg, &bg, "%s", overlay_text);
   }
 
@@ -950,6 +961,18 @@ static int handle_ini_value(void *user, const char *section, const char *name,
     if(!strcmp(name, "overlay_font")) {
       free(imv->font_name);
       imv->font_name = strdup(value);
+      return 1;
+    }
+
+    if(!strcmp(name, "overlay_text")) {
+      free(imv->overlay_text);
+      imv->overlay_text = strdup(value);
+      return 1;
+    }
+
+    if(!strcmp(name, "title_text")) {
+      free(imv->title_text);
+      imv->title_text = strdup(value);
       return 1;
     }
 
@@ -1173,40 +1196,52 @@ void command_set_slideshow_duration(struct list *args, const char *argstr, void 
 
 static void update_env_vars(struct imv *imv)
 {
+  char str[64];
+
   setenv("imv_current_file", imv_navigator_selection(imv->navigator), 1);
+  setenv("imv_scaling_mode", scaling_label[imv->scaling_mode], 1);
+  setenv("imv_loading", imv->loading ? "1" : "0", 1);
+
+  snprintf(str, sizeof str, "%zu", imv_navigator_index(imv->navigator) + 1);
+  setenv("imv_current_index", str, 1);
+
+  snprintf(str, sizeof str, "%zu", imv_navigator_length(imv->navigator));
+  setenv("imv_file_count", str, 1);
+
+  snprintf(str, sizeof str, "%d", imv_image_width(imv->image));
+  setenv("imv_width", str, 1);
+
+  snprintf(str, sizeof str, "%d", imv_image_height(imv->image));
+  setenv("imv_height", str, 1);
+
+  snprintf(str, sizeof str, "%d", (int)(imv->view->scale * 100.0));
+  setenv("imv_scale", str, 1);
+
+  snprintf(str, sizeof str, "%zu", imv->slideshow_image_duration / 1000);
+  setenv("imv_slidshow_duration", str, 1);
+
+  snprintf(str, sizeof str, "%zu", imv->slideshow_time_elapsed / 1000);
+  setenv("imv_slidshow_elapsed", str, 1);
 }
 
-static size_t generate_title_text(struct imv *imv, char *buf, size_t buf_len)
+static size_t generate_env_text(struct imv *imv, char *buf, size_t buf_len, const char *format)
 {
-  const char *current_path = imv_navigator_selection(imv->navigator);
-  const size_t index_cur = imv_navigator_index(imv->navigator);
-  const size_t index_len = imv_navigator_length(imv->navigator);
+  update_env_vars(imv);
+
+  /* const char *format = "imv - [${imv_current_index}/${imv_file_count}] [${imv_width}x${imv_height}] [${imv_scale}%] $imv_current_file [$imv_scaling_mode]"; */
 
   size_t len = 0;
-
-  if (imv->loading) {
-    len += snprintf(buf, buf_len, "imv - [%zu/%zu] [LOADING] %s [%s]",
-                    index_cur + 1, index_len, current_path,
-                    scaling_label[imv->scaling_mode]);
-  } else {
-    len += snprintf(buf, buf_len, "imv - [%zu/%zu] [%ix%i] [%.2f%%] %s [%s]",
-        index_cur + 1, index_len,
-        imv_image_width(imv->image), imv_image_height(imv->image),
-        100.0 * imv->view->scale,
-        current_path, scaling_label[imv->scaling_mode]);
-
-    if(imv->slideshow_image_duration >= 1000) {
-      len += snprintf(buf + len, buf_len - len, "[%lu/%lus]",
-          imv->slideshow_time_elapsed / 1000 + 1, imv->slideshow_image_duration / 1000);
+  wordexp_t word;
+  if(wordexp(format, &word, 0) == 0) {
+    for(size_t i = 0; i < word.we_wordc; ++i) {
+      len += snprintf(buf + len, buf_len - len, "%s ", word.we_wordv[i]);
     }
+    wordfree(&word);
+  } else {
+    len += snprintf(buf, buf_len, "error expanding text");
   }
 
   return len;
-}
-
-static size_t generate_overlay_text(struct imv *imv, char *buf, size_t len)
-{
-  return generate_title_text(imv, buf, len) + strlen("imv - ");
 }
 
 /* vim:set ts=2 sts=2 sw=2 et: */

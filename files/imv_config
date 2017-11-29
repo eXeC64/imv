@@ -38,6 +38,26 @@
 # Disable imv's builtin binds so they don't conflict with the ones in this config
 suppress_default_binds = true
 
+# Set the text used for the title and overlay. Environment variables
+# can be used, as can $(command) shell expansion, etc.
+# imv exports details about its state and the current image through various
+# environment variables.
+
+# Available values:
+#   imv_current_file - path of currently opened image
+#   imv_scaling_mode - name of the current scaling mode
+#   imv_loading - 1 when a new image is loading, 0 otherwise
+#   imv_current_index - index of current image, from 1-N
+#   imv_file_count - total number of files
+#   imv_width - width of current image
+#   imv_height - height of current image
+#   imv_scale - scaling of current image in percent
+#   imv_slideshow_duration - number of seconds each image is shown for
+#   imv_slideshow_elapsed - how long the current image has been shown for
+
+# title_text = imv - [${imv_current_index}/${imv_file_count}] $imv_current_file
+# overlay_text = ${imv_width}x${imv_height} @$ {imv_scale}% [$imv_scaling_mode]
+
 [aliases]
 # Create some command aliases
 q = quit
