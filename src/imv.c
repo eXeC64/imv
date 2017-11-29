@@ -92,7 +92,7 @@ void command_pan(struct list *args, const char *argstr, void *data);
 void command_select_rel(struct list *args, const char *argstr, void *data);
 void command_select_abs(struct list *args, const char *argstr, void *data);
 void command_zoom(struct list *args, const char *argstr, void *data);
-void command_remove(struct list *args, const char *argstr, void *data);
+void command_close(struct list *args, const char *argstr, void *data);
 void command_fullscreen(struct list *args, const char *argstr, void *data);
 void command_overlay(struct list *args, const char *argstr, void *data);
 void command_exec(struct list *args, const char *argstr, void *data);
@@ -168,7 +168,7 @@ struct imv *imv_create(void)
   imv_command_register(imv->commands, "select_rel", &command_select_rel);
   imv_command_register(imv->commands, "select_abs", &command_select_abs);
   imv_command_register(imv->commands, "zoom", &command_zoom);
-  imv_command_register(imv->commands, "remove", &command_remove);
+  imv_command_register(imv->commands, "close", &command_close);
   imv_command_register(imv->commands, "fullscreen", &command_fullscreen);
   imv_command_register(imv->commands, "overlay", &command_overlay);
   imv_command_register(imv->commands, "exec", &command_exec);
@@ -190,7 +190,7 @@ struct imv *imv_create(void)
   add_bind(imv, "k", "pan 0 50");
   add_bind(imv, "h", "pan 50 0");
   add_bind(imv, "l", "pan -50 0");
-  add_bind(imv, "x", "remove");
+  add_bind(imv, "x", "close");
   add_bind(imv, "f", "fullscreen");
   add_bind(imv, "d", "overlay");
   add_bind(imv, "p", "exec echo $imv_current_file");
@@ -1054,7 +1054,7 @@ void command_zoom(struct list *args, const char *argstr, void *data)
   }
 }
 
-void command_remove(struct list *args, const char *argstr, void *data)
+void command_close(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;

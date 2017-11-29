@@ -87,7 +87,7 @@ i = zoom 1
 o = zoom -1
 
 # Other commands
-x = remove
+x = close
 f = fullscreen
 d = overlay
 p = exec echo $imv_current_file
