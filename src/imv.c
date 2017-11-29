@@ -43,6 +43,7 @@ enum background_type {
 
 struct imv {
   bool quit;
+  bool loading;
   bool fullscreen;
   bool overlay_enabled;
   bool nearest_neighbour;
@@ -106,6 +107,8 @@ void command_set_slideshow_duration(struct list *args, const char *argstr, void 
 static bool setup_window(struct imv *imv);
 static void handle_event(struct imv *imv, SDL_Event *event);
 static void render_window(struct imv *imv);
+static size_t generate_title_text(struct imv *imv, char *buf, size_t len);
+static size_t generate_overlay_text(struct imv *imv, char *buf, size_t len);
 
 static const char *add_bind(struct imv *imv, const char *keys, const char *command)
 {
@@ -133,6 +136,7 @@ struct imv *imv_create(void)
 {
   struct imv *imv = malloc(sizeof(struct imv));
   imv->quit = false;
+  imv->loading = false;
   imv->fullscreen = false;
   imv->overlay_enabled = false;
   imv->nearest_neighbour = false;
@@ -475,17 +479,15 @@ int imv_run(struct imv *imv)
         continue;
       }
 
-      char title[1024];
-      const size_t index_cur = imv_navigator_index(imv->navigator);
-      const size_t index_len = imv_navigator_length(imv->navigator);
-      snprintf(title, sizeof(title), "imv - [%zu/%zu] [LOADING] %s [%s]",
-          index_cur + 1, index_len, current_path,
-          scaling_label[imv->scaling_mode]);
-      imv_viewport_set_title(imv->view, title);
 
       imv_loader_load(imv->loader, current_path,
           imv->stdin_image_data, imv->stdin_image_data_len);
+      imv->loading = true;
       imv->view->playing = true;
+
+      char title[1024];
+      generate_title_text(imv, &title[0], sizeof title);
+      imv_viewport_set_title(imv->view, title);
     }
 
     if(imv->need_rescale) {
@@ -658,6 +660,7 @@ static void handle_event(struct imv *imv, SDL_Event *event)
     imv_bitmap_free(bmp);
     imv->need_redraw = true;
     imv->need_rescale |= event->user.code;
+    imv->loading = false;
     return;
   } else if(event->type == imv->events.BAD_IMAGE) {
     /* an image failed to load, remove it from our image list */
@@ -763,24 +766,13 @@ static void handle_event(struct imv *imv, SDL_Event *event)
 
 static void render_window(struct imv *imv)
 {
-  char title[1024];
   int ww, wh;
   SDL_GetWindowSize(imv->window, &ww, &wh);
 
   /* update window title */
-  const char *current_path = imv_navigator_selection(imv->navigator);
-  const size_t index_cur = imv_navigator_index(imv->navigator);
-  const size_t index_len = imv_navigator_length(imv->navigator);
-  int len = snprintf(title, sizeof(title), "imv - [%zu/%zu] [%ix%i] [%.2f%%] %s [%s]",
-      index_cur + 1, index_len,
-      imv_image_width(imv->image), imv_image_height(imv->image),
-      100.0 * imv->view->scale,
-      current_path, scaling_label[imv->scaling_mode]);
-  if(imv->slideshow_image_duration >= 1000) {
-    len += snprintf(title + len, sizeof(title) - len, "[%lu/%lus]",
-        imv->slideshow_time_elapsed / 1000 + 1, imv->slideshow_image_duration / 1000);
-  }
-  imv_viewport_set_title(imv->view, title);
+  char title_text[1024];
+  generate_title_text(imv, &title_text[0], sizeof title_text);
+  imv_viewport_set_title(imv->view, title_text);
 
   /* first we draw the background */
   if(imv->background_type == BACKGROUND_SOLID) {
@@ -811,8 +803,9 @@ static void render_window(struct imv *imv)
   if(imv->overlay_enabled && imv->font) {
     SDL_Color fg = {255,255,255,255};
     SDL_Color bg = {0,0,0,160};
-    imv_printf(imv->renderer, imv->font, 0, 0, &fg, &bg, "%s",
-        title + strlen("imv - "));
+    char overlay_text[1024];
+    generate_overlay_text(imv, overlay_text, sizeof overlay_text);
+    imv_printf(imv->renderer, imv->font, 0, 0, &fg, &bg, "%s", overlay_text);
   }
 
   /* draw command entry bar if needed */
@@ -1175,6 +1168,39 @@ void command_set_slideshow_duration(struct list *args, const char *argstr, void 
 
     imv->need_redraw = true;
   }
+}
+
+static size_t generate_title_text(struct imv *imv, char *buf, size_t buf_len)
+{
+  const char *current_path = imv_navigator_selection(imv->navigator);
+  const size_t index_cur = imv_navigator_index(imv->navigator);
+  const size_t index_len = imv_navigator_length(imv->navigator);
+
+  size_t len = 0;
+
+  if (imv->loading) {
+    len += snprintf(buf, buf_len, "imv - [%zu/%zu] [LOADING] %s [%s]",
+                    index_cur + 1, index_len, current_path,
+                    scaling_label[imv->scaling_mode]);
+  } else {
+    len += snprintf(buf, buf_len, "imv - [%zu/%zu] [%ix%i] [%.2f%%] %s [%s]",
+        index_cur + 1, index_len,
+        imv_image_width(imv->image), imv_image_height(imv->image),
+        100.0 * imv->view->scale,
+        current_path, scaling_label[imv->scaling_mode]);
+
+    if(imv->slideshow_image_duration >= 1000) {
+      len += snprintf(buf + len, buf_len - len, "[%lu/%lus]",
+          imv->slideshow_time_elapsed / 1000 + 1, imv->slideshow_image_duration / 1000);
+    }
+  }
+
+  return len;
+}
+
+static size_t generate_overlay_text(struct imv *imv, char *buf, size_t len)
+{
+  return generate_title_text(imv, buf, len) + strlen("imv - ");
 }
 
 /* vim:set ts=2 sts=2 sw=2 et: */
