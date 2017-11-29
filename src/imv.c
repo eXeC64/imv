@@ -833,6 +833,7 @@ static void render_window(struct imv *imv)
 static char *get_config_path(void)
 {
   const char *config_paths[] = {
+    "$imv_config",
     "$HOME/.imv_config",
     "$HOME/.imv/config",
     "$XDG_CONFIG_HOME/imv/config",
@@ -843,6 +844,10 @@ static char *get_config_path(void)
   for(size_t i = 0; i < sizeof(config_paths) / sizeof(char*); ++i) {
     wordexp_t word;
     if(wordexp(config_paths[i], &word, 0) == 0) {
+      if (!word.we_wordv[0]) {
+        continue;
+      }
+
       char *path = strdup(word.we_wordv[0]);
       wordfree(&word);
 
