@@ -202,7 +202,7 @@ static int print_event(char *buf, size_t len, const SDL_Event *event)
     keyname = "LeftSquareBracket";
   } else if(!strcmp(keyname, "]")) {
     keyname = "RightSquareBracket";
-  } else if(isalpha(*keyname)) {
+  } else if(strlen(keyname) == 1 && isalpha(*keyname)) {
     singlekey[0] = tolower(*keyname);
     keyname = &singlekey[0];
   }
