@@ -34,8 +34,11 @@ Options
 *-a*::
 	Default to displaying images at actual size.
 
-*-s*::
-	Default to shrinking images to fit the window, but not expanding them.
+*-s* <none|shrink|full>::
+	Set scaling mode to use. 'none' will show each image at its actual size.
+	'shrink' will scale down the image to fit inside the window. 'full' will
+	both scale up and scale down the image to fit perfectly inside the window.
+	Defaults to 'full'.
 
 *-S*::
 	Default to scaling images to fit the window perfectly.

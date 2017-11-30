@@ -308,6 +308,19 @@ static bool parse_slideshow_duration(struct imv *imv, const char *duration)
   return true;
 }
 
+static enum scaling_mode parse_scaling_mode(const char *mode)
+{
+  if (!strcmp(mode, "shrink")) {
+    return SCALING_DOWN;
+  }
+
+  if (!strcmp(mode, "full")) {
+    return SCALING_FULL;
+  }
+
+  return SCALING_NONE;
+}
+
 static int load_paths_from_stdin(void *data)
 {
   struct imv *imv = data;
@@ -339,19 +352,17 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
 
   int o;
 
-  while((o = getopt(argc, argv, "frasSudxhln:b:e:t:")) != -1) {
+  while((o = getopt(argc, argv, "frudxhls:n:b:e:t:")) != -1) {
     switch(o) {
-      case 'f': imv->fullscreen = true;            break;
-      case 'r': imv->recursive_load = true;        break;
-      case 'a': imv->scaling_mode = SCALING_NONE;  break;
-      case 's': imv->scaling_mode = SCALING_DOWN;  break;
-      case 'S': imv->scaling_mode = SCALING_FULL;  break;
-      case 'u': imv->nearest_neighbour = true;     break;
-      case 'd': imv->overlay_enabled = true;       break;
-      case 'x': imv->loop_input = false;           break;
-      case 'l': imv->list_files_at_exit = true;    break;
-      case 'n': imv->starting_path = optarg;       break;
-      case 'e': imv->font_name = strdup(optarg);   break;
+      case 'f': imv->fullscreen = true;                          break;
+      case 'r': imv->recursive_load = true;                      break;
+      case 's': imv->scaling_mode = parse_scaling_mode(optarg);  break;
+      case 'u': imv->nearest_neighbour = true;                   break;
+      case 'd': imv->overlay_enabled = true;                     break;
+      case 'x': imv->loop_input = false;                         break;
+      case 'l': imv->list_files_at_exit = true;                  break;
+      case 'n': imv->starting_path = optarg;                     break;
+      case 'e': imv->font_name = strdup(optarg);                 break;
       case 'h':
         fprintf(stdout,
         "imv %s\n"
