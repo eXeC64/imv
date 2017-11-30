@@ -58,9 +58,6 @@ Options
 *-n* <path|index>::
 	Start with the given path, or index selected.
 
-*-e* <font_name>::
-	Set the overlay's font name.
-
 *-b* <background>::
 	Set the background colour. Can either be a 6-digit hexadecimal colour code
 	or 'checks' to show a chequered background.

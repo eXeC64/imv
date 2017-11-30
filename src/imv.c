@@ -380,7 +380,7 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
 
   int o;
 
-  while((o = getopt(argc, argv, "frdxhlu:s:n:b:e:t:")) != -1) {
+  while((o = getopt(argc, argv, "frdxhlu:s:n:b:t:")) != -1) {
     switch(o) {
       case 'f': imv->fullscreen = true;                          break;
       case 'r': imv->recursive_load = true;                      break;
@@ -388,7 +388,6 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
       case 'x': imv->loop_input = false;                         break;
       case 'l': imv->list_files_at_exit = true;                  break;
       case 'n': imv->starting_path = optarg;                     break;
-      case 'e': imv->font_name = strdup(optarg);                 break;
       case 'h':
         fprintf(stdout,
         "imv %s\n"
