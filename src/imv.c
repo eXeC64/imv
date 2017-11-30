@@ -101,6 +101,7 @@ void command_pan(struct list *args, const char *argstr, void *data);
 void command_select_rel(struct list *args, const char *argstr, void *data);
 void command_select_abs(struct list *args, const char *argstr, void *data);
 void command_zoom(struct list *args, const char *argstr, void *data);
+void command_open(struct list *args, const char *argstr, void *data);
 void command_close(struct list *args, const char *argstr, void *data);
 void command_fullscreen(struct list *args, const char *argstr, void *data);
 void command_overlay(struct list *args, const char *argstr, void *data);
@@ -190,6 +191,7 @@ struct imv *imv_create(void)
   imv_command_register(imv->commands, "select_rel", &command_select_rel);
   imv_command_register(imv->commands, "select_abs", &command_select_abs);
   imv_command_register(imv->commands, "zoom", &command_zoom);
+  imv_command_register(imv->commands, "open", &command_open);
   imv_command_register(imv->commands, "close", &command_close);
   imv_command_register(imv->commands, "fullscreen", &command_fullscreen);
   imv_command_register(imv->commands, "overlay", &command_overlay);
@@ -1114,6 +1116,31 @@ void command_zoom(struct list *args, const char *argstr, void *data)
     } else {
       long int amount = strtol(args->items[1], NULL, 10);
       imv_viewport_zoom(imv->view, imv->image, IMV_ZOOM_KEYBOARD, amount);
+    }
+  }
+}
+
+void command_open(struct list *args, const char *argstr, void *data)
+{
+  (void)argstr;
+  struct imv *imv = data;
+  bool recursive = imv->recursive_load;
+
+  update_env_vars(imv);
+  for (size_t i = 1; i < args->len; ++i) {
+
+    /* allow -r arg to specify recursive */
+    if (i == 1 && !strcmp(args->items[i], "-r")) {
+      recursive = true;
+      continue;
+    }
+
+    wordexp_t word;
+    if(wordexp(args->items[i], &word, 0) == 0) {
+      for(size_t j = 0; j < word.we_wordc; ++j) {
+        imv_navigator_add(imv->navigator, word.we_wordv[j], recursive);
+      }
+      wordfree(&word);
     }
   }
 }

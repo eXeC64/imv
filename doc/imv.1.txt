@@ -88,6 +88,10 @@ Commands can be entered by pressing *:*. imv supports the following commands:
 	Zoom into the image by the given amount. Negative values zoom out.
 	'actual' resets the zoom to 100%, showing the image at its actual size.
 
+*open* [-r] <paths ...>::
+	Add the given paths to the list of open images. If the '-r' option is
+	specified, do so recursively. Shell expansions may be used.
+
 *close*::
 	Close the currently selected image.
 
