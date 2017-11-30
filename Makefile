@@ -1,4 +1,4 @@
-.PHONY: imv clean check install uninstall
+.PHONY: imv clean check install uninstall doc
 
 PREFIX ?= /usr
 BINPREFIX ?= $(PREFIX)/bin
@@ -24,7 +24,7 @@ VERSION != git describe --dirty --always --tags 2> /dev/null || echo v2.1.3
 
 CFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
 
-imv: $(TARGET)
+imv: $(TARGET) doc
 
 $(TARGET): $(OBJECTS)
 	$(CC) -o $@ $^ $(LIBS) $(LDFLAGS)
@@ -48,10 +48,14 @@ check: $(BUILDDIR) $(TESTS)
 
 clean:
 	$(RM) -Rf $(BUILDDIR)
+	$(RM) doc/imv.1 doc/imv.5
 
-install: $(TARGET)
-	a2x --no-xmllint --doctype manpage --format manpage doc/imv.1.txt
-	a2x --no-xmllint --doctype manpage --format manpage doc/imv.5.txt
+doc: doc/imv.1 doc/imv.5
+
+doc/%: doc/%.txt
+	a2x --no-xmllint --doctype manpage --format manpage $<
+
+install: $(TARGET) doc
 	install -D -m 0755 $(TARGET) $(DESTDIR)$(BINPREFIX)/imv
 	install -D -m 0644 doc/imv.1 $(DESTDIR)$(MANPREFIX)/man1/imv.1
 	install -D -m 0644 doc/imv.5 $(DESTDIR)$(MANPREFIX)/man5/imv.5
