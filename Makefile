@@ -24,7 +24,7 @@ VERSION != git describe --dirty --always --tags 2> /dev/null || echo v2.1.3
 
 CFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
 
-imv: $(TARGET) doc
+imv: $(TARGET)
 
 $(TARGET): $(OBJECTS)
 	$(CC) -o $@ $^ $(LIBS) $(LDFLAGS)
