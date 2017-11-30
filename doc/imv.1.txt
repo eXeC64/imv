@@ -43,8 +43,8 @@ Options
 *-S*::
 	Default to scaling images to fit the window perfectly.
 
-*-u*::
-	Set scaling method to 'nearest neighbour'.
+*-u* <linear|nearest_neighbour>::
+	Set upscaling method used by imv.
 
 *-d*::
 	Start with overlay visible.

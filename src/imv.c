@@ -29,6 +29,12 @@ enum scaling_mode {
   SCALING_MODE_COUNT
 };
 
+enum upscaling_method {
+  UPSCALING_LINEAR,
+  UPSCALING_NEAREST_NEIGHBOUR,
+  UPSCALING_METHOD_COUNT,
+};
+
 static const char *scaling_label[] = {
   "actual size",
   "shrink to fit",
@@ -46,7 +52,7 @@ struct imv {
   bool loading;
   bool fullscreen;
   bool overlay_enabled;
-  bool nearest_neighbour;
+  enum upscaling_method upscaling_method;
   bool stay_fullscreen_on_focus_loss;
   bool need_redraw;
   bool need_rescale;
@@ -141,7 +147,7 @@ struct imv *imv_create(void)
   imv->loading = false;
   imv->fullscreen = false;
   imv->overlay_enabled = false;
-  imv->nearest_neighbour = false;
+  imv->upscaling_method = UPSCALING_LINEAR;
   imv->stay_fullscreen_on_focus_loss = false;
   imv->need_redraw = true;
   imv->need_rescale = true;
@@ -308,17 +314,39 @@ static bool parse_slideshow_duration(struct imv *imv, const char *duration)
   return true;
 }
 
-static enum scaling_mode parse_scaling_mode(const char *mode)
+static bool parse_scaling_mode(struct imv *imv, const char *mode)
 {
   if (!strcmp(mode, "shrink")) {
-    return SCALING_DOWN;
+    imv->scaling_mode = SCALING_DOWN;
+    return true;
   }
 
   if (!strcmp(mode, "full")) {
-    return SCALING_FULL;
+    imv->scaling_mode = SCALING_FULL;
+    return true;
   }
 
-  return SCALING_NONE;
+  if (!strcmp(mode, "none")) {
+    imv->scaling_mode = SCALING_NONE;
+    return true;
+  }
+
+  return false;
+}
+
+static bool parse_upscaling_method(struct imv *imv, const char *method)
+{
+  if (!strcmp(method, "linear")) {
+    imv->upscaling_method = UPSCALING_LINEAR;
+    return true;
+  }
+
+  if (!strcmp(method, "nearest_neighbour")) {
+    imv->upscaling_method = UPSCALING_NEAREST_NEIGHBOUR;
+    return true;
+  }
+
+  return false;
 }
 
 static int load_paths_from_stdin(void *data)
@@ -352,12 +380,10 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
 
   int o;
 
-  while((o = getopt(argc, argv, "frudxhls:n:b:e:t:")) != -1) {
+  while((o = getopt(argc, argv, "frdxhlu:s:n:b:e:t:")) != -1) {
     switch(o) {
       case 'f': imv->fullscreen = true;                          break;
       case 'r': imv->recursive_load = true;                      break;
-      case 's': imv->scaling_mode = parse_scaling_mode(optarg);  break;
-      case 'u': imv->nearest_neighbour = true;                   break;
       case 'd': imv->overlay_enabled = true;                     break;
       case 'x': imv->loop_input = false;                         break;
       case 'l': imv->list_files_at_exit = true;                  break;
@@ -380,6 +406,16 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
         , IMV_VERSION);
         imv->quit = true;
         return true;
+      case 's':
+        if(!parse_scaling_mode(imv, optarg)) {
+          return false;
+        }
+        break;
+      case 'u':
+        if(!parse_upscaling_method(imv, optarg)) {
+          return false;
+        }
+        break;
       case 'b':
         if(!parse_bg(imv, optarg)) {
           return false;
@@ -636,7 +672,7 @@ static bool setup_window(struct imv *imv)
 
   /* use the appropriate resampling method */
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,
-    imv->nearest_neighbour ? "0" : "1");
+    imv->upscaling_method == UPSCALING_LINEAR? "1" : "0");
 
   /* allow fullscreen to be maintained even when focus is lost */
   SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS,
@@ -920,8 +956,7 @@ static int handle_ini_value(void *user, const char *section, const char *name,
     }
 
     if(!strcmp(name, "upscaling_method")) {
-      imv->nearest_neighbour = !strcmp(value, "nearest_neighbour");
-      return 1;
+      return parse_upscaling_method(imv, value);
     }
 
     if(!strcmp(name, "stay_fullscreen_on_focus_loss")) {
@@ -945,14 +980,7 @@ static int handle_ini_value(void *user, const char *section, const char *name,
     }
 
     if(!strcmp(name, "scaling_mode")) {
-      if(!strcmp(value, "none")) {
-        imv->scaling_mode = SCALING_NONE;
-      } else if(!strcmp(value, "shrink")) {
-        imv->scaling_mode = SCALING_DOWN;
-      } else if(!strcmp(value, "full")) {
-        imv->scaling_mode = SCALING_FULL;
-      }
-      return 1;
+      return parse_scaling_mode(imv, value);
     }
 
     if(!strcmp(name, "background")) {
