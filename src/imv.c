@@ -613,7 +613,7 @@ int imv_run(struct imv *imv)
     unsigned int timeout = 1000; /* sleep up to a second */
 
     /* if we need to display the next frame of an animation soon we should
-      * limit our sleep until the next frame is due */
+     * limit our sleep until the next frame is due */
     const double next_frame_in = imv_loader_time_left(imv->loader);
     if(next_frame_in > 0.0) {
       timeout = (unsigned int)(next_frame_in * 1000.0);
