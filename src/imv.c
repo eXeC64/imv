@@ -408,21 +408,25 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
         return true;
       case 's':
         if(!parse_scaling_mode(imv, optarg)) {
+          fprintf(stderr, "Invalid scaling mode. Aborting.\n");
           return false;
         }
         break;
       case 'u':
         if(!parse_upscaling_method(imv, optarg)) {
+          fprintf(stderr, "Invalid upscaling method. Aborting.\n");
           return false;
         }
         break;
       case 'b':
         if(!parse_bg(imv, optarg)) {
+          fprintf(stderr, "Invalid background. Aborting.\n");
           return false;
         }
         break;
       case 't':
         if(!parse_slideshow_duration(imv, optarg)) {
+          fprintf(stderr, "Invalid slideshow duration. Aborting.\n");
           return false;
         }
         break;
