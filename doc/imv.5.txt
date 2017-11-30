@@ -189,10 +189,10 @@ special names. These are as follows:
 *Keypad +*::
 	The numeric keypad add key.
 
-**Left*::
+*Left*::
 	The left arrow key.
 
-LeftSquareBracket*::
+*LeftSquareBracket*::
 	The [ key.
 
 *Mute*::
