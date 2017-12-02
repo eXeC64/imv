@@ -51,6 +51,8 @@ struct imv {
   bool quit;
   bool loading;
   bool fullscreen;
+  int initial_width;
+  int initial_height;
   bool overlay_enabled;
   enum upscaling_method upscaling_method;
   bool stay_fullscreen_on_focus_loss;
@@ -147,6 +149,8 @@ struct imv *imv_create(void)
   imv->quit = false;
   imv->loading = false;
   imv->fullscreen = false;
+  imv->initial_width = 1280;
+  imv->initial_height = 720;
   imv->overlay_enabled = false;
   imv->upscaling_method = UPSCALING_LINEAR;
   imv->stay_fullscreen_on_focus_loss = false;
@@ -651,16 +655,11 @@ static bool setup_window(struct imv *imv)
 
   imv->sdl_init = true;
 
-  /* width and height arbitrarily chosen. Perhaps there's a smarter way to
-   * set this */
-  const int width = 1280;
-  const int height = 720;
-
   imv->window = SDL_CreateWindow(
         "imv",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
-        width, height,
+        imv->initial_width, imv->initial_height,
         SDL_WINDOW_RESIZABLE);
 
   if(!imv->window) {
@@ -952,6 +951,15 @@ static int handle_ini_value(void *user, const char *section, const char *name,
 
     if(!strcmp(name, "fullscreen")) {
       imv->fullscreen = parse_bool(value);
+      return 1;
+    }
+
+    if(!strcmp(name, "width")) {
+      imv->initial_width = strtol(value, NULL, 10);
+      return 1;
+    }
+    if(!strcmp(name, "height")) {
+      imv->initial_height = strtol(value, NULL, 10);
       return 1;
     }
 

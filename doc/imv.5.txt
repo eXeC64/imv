@@ -31,6 +31,12 @@ The *[options]* section accepts the following settings:
 *fullscreen* = <true|false>::
 	Start imv fullscreen. Defaults to 'false'.
 
+*width* = <width>::
+	Initial width of the imv window. Defaults to 1280.
+
+*height* = <height>::
+	Initial height of the imv window. Defaults to 720.
+
 *list_files_at_exit* = <true|false>::
 	Print open files to stdout at exit, each on a separate line.
 	Defaults to 'false'.
