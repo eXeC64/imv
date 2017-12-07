@@ -551,7 +551,7 @@ int imv_run(struct imv *imv)
       imv_loader_load(imv->loader, current_path,
           imv->stdin_image_data, imv->stdin_image_data_len);
       imv->loading = true;
-      imv->view->playing = true;
+      imv_viewport_set_playing(imv->view, true);
 
       char title[1024];
       generate_env_text(imv, &title[0], sizeof title, imv->title_text);
@@ -578,7 +578,7 @@ int imv_run(struct imv *imv)
 
     /* if we're playing an animated gif, tell the loader how much time has
      * passed */
-    if(imv->view->playing) {
+    if(imv_viewport_is_playing(imv->view)) {
       unsigned int dt = current_time - last_time;
       /* We cap the delta-time to 100 ms so that if imv is asleep for several
        * seconds or more (e.g. suspended), upon waking up it doesn't try to
@@ -860,7 +860,13 @@ static void render_window(struct imv *imv)
   }
 
   /* draw our actual image */
-  imv_image_draw(imv->image, imv->view->x, imv->view->y, imv->view->scale);
+  {
+    int x, y;
+    double scale;
+    imv_viewport_get_offset(imv->view, &x, &y);
+    imv_viewport_get_scale(imv->view, &scale);
+    imv_image_draw(imv->image, x, y, scale);
+  }
 
   /* if the overlay needs to be drawn, draw that too */
   if(imv->overlay_enabled && imv->font) {
@@ -1291,8 +1297,12 @@ static void update_env_vars(struct imv *imv)
   snprintf(str, sizeof str, "%d", imv_image_height(imv->image));
   setenv("imv_height", str, 1);
 
-  snprintf(str, sizeof str, "%d", (int)(imv->view->scale * 100.0));
-  setenv("imv_scale", str, 1);
+  {
+    double scale;
+    imv_viewport_get_scale(imv->view, &scale);
+    snprintf(str, sizeof str, "%d", (int)(scale * 100.0));
+    setenv("imv_scale", str, 1);
+  }
 
   snprintf(str, sizeof str, "%zu", imv->slideshow_image_duration / 1000);
   setenv("imv_slidshow_duration", str, 1);

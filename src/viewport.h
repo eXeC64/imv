@@ -1,18 +1,11 @@
 #ifndef IMV_VIEWPORT_H
 #define IMV_VIEWPORT_H
 
+#include <stdbool.h>
 #include <SDL2/SDL.h>
 #include "image.h"
 
-struct imv_viewport {
-  SDL_Window *window;
-  double scale;
-  int x, y;
-  int fullscreen;
-  int redraw;
-  int playing;
-  int locked;
-};
+struct imv_viewport;
 
 /* Used to signify how a a user requested a zoom */
 enum imv_zoom_source {
@@ -29,11 +22,20 @@ void imv_viewport_free(struct imv_viewport *view);
 /* Toggle their viewport's fullscreen mode. Triggers a redraw */
 void imv_viewport_toggle_fullscreen(struct imv_viewport *view);
 
+/* Set playback of animated gifs */
+void imv_viewport_set_playing(struct imv_viewport *view, bool playing);
+
+/* Get playback status of animated gifs */
+bool imv_viewport_is_playing(struct imv_viewport *view);
+
 /* Toggle playback of animated gifs */
 void imv_viewport_toggle_playing(struct imv_viewport *view);
 
-/* Reset the viewport to its initial settings */
-void imv_viewport_reset(struct imv_viewport *view);
+/* Fetch viewport offset/position */
+void imv_viewport_get_offset(struct imv_viewport *view, int *x, int *y);
+
+/* Fetch viewport scale */
+void imv_viewport_get_scale(struct imv_viewport *view, double *scale);
 
 /* Pan the view by the given amounts without letting the image get too far
  * off-screen */
@@ -70,6 +72,5 @@ void imv_viewport_update(struct imv_viewport *view, struct imv_image *image);
 int imv_viewport_needs_redraw(struct imv_viewport *view);
 
 #endif
-
 
 /* vim:set ts=2 sts=2 sw=2 et: */

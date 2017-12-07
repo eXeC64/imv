@@ -1,5 +1,15 @@
 #include "viewport.h"
 
+struct imv_viewport {
+  SDL_Window *window;
+  double scale;
+  int x, y;
+  int fullscreen;
+  int redraw;
+  int playing;
+  int locked;
+};
+
 struct imv_viewport *imv_viewport_create(SDL_Window *window)
 {
   struct imv_viewport *view = malloc(sizeof(struct imv_viewport));
@@ -27,6 +37,16 @@ void imv_viewport_toggle_fullscreen(struct imv_viewport *view)
   }
 }
 
+void imv_viewport_set_playing(struct imv_viewport *view, bool playing)
+{
+  view->playing = playing;
+}
+
+bool imv_viewport_is_playing(struct imv_viewport *view)
+{
+  return view->playing;
+}
+
 void imv_viewport_toggle_playing(struct imv_viewport *view)
 {
   view->playing = !view->playing;
@@ -38,6 +58,23 @@ void imv_viewport_scale_to_actual(struct imv_viewport *view, const struct imv_im
   view->redraw = 1;
   view->locked = 1;
   imv_viewport_center(view, image);
+}
+
+void imv_viewport_get_offset(struct imv_viewport *view, int *x, int *y)
+{
+  if(x) {
+    *x = view->x;
+  }
+  if(y) {
+    *y = view->y;
+  }
+}
+
+void imv_viewport_get_scale(struct imv_viewport *view, double *scale)
+{
+  if(scale) {
+    *scale = view->scale;
+  }
 }
 
 void imv_viewport_move(struct imv_viewport *view, int x, int y,
