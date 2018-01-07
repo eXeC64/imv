@@ -121,7 +121,7 @@ int imv_navigator_add(struct imv_navigator *nav, const char *path,
 const char *imv_navigator_selection(struct imv_navigator *nav)
 {
   if(nav->num_paths == 0) {
-    return NULL;
+    return "";
   }
   return nav->paths[nav->cur_path];
 }
