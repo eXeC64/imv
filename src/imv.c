@@ -551,7 +551,7 @@ int imv_run(struct imv *imv)
     /* if the user has changed image, start loading the new one */
     if(imv_navigator_poll_changed(imv->navigator)) {
       const char *current_path = imv_navigator_selection(imv->navigator);
-      if(!current_path) {
+      if(!strcmp("", current_path)) {
         if(!imv->paths_from_stdin) {
           fprintf(stderr, "No input files left. Exiting.\n");
           imv->quit = true;
