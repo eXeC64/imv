@@ -908,9 +908,10 @@ static char *get_config_path(void)
 {
   const char *config_paths[] = {
     "$imv_config",
+    "$XDG_CONFIG_HOME/imv/config",
+    "$HOME/.config/imv/config",
     "$HOME/.imv_config",
     "$HOME/.imv/config",
-    "$XDG_CONFIG_HOME/imv/config",
     "/usr/local/etc/imv_config",
     "/etc/imv_config",
   };
