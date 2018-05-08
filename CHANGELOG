@@ -1,6 +1,23 @@
 imv Changelog
 =============
 
+v3.0.0 - 2018-05-08
+
+BREAKING CHANGES:
+* Change a,s,S flags to -s <mode> syntax
+* Make -u take an argument
+
+
+* Dual-license under MIT and GPL
+* Large refactor of entire codebase
+* Added config file
+* Added command system
+* Added bind system
+* Improved power consumption by sleeping more opportunistically
+* Show image scale in window title by default
+* Prevent scrolling images offscreen
+* Fix bug where slideshow timer is not reset when an image is closed
+
 v2.1.3 - 2016-10-22
 
 * Fix various resource leaks
