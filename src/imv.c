@@ -548,26 +548,27 @@ int imv_run(struct imv *imv)
       break;
     }
 
+    /* if we're out of images, and we're not expecting more from stdin, quit */
+    if(!imv->paths_from_stdin && imv_navigator_length(imv->navigator) == 0) {
+      fprintf(stderr, "No input files left. Exiting.\n");
+      imv->quit = true;
+      continue;
+    }
+
     /* if the user has changed image, start loading the new one */
     if(imv_navigator_poll_changed(imv->navigator)) {
       const char *current_path = imv_navigator_selection(imv->navigator);
-      if(!strcmp("", current_path)) {
-        if(!imv->paths_from_stdin) {
-          fprintf(stderr, "No input files left. Exiting.\n");
-          imv->quit = true;
-        }
-        continue;
+      /* check we got a path back */
+      if(strcmp("", current_path)) {
+        imv_loader_load(imv->loader, current_path,
+            imv->stdin_image_data, imv->stdin_image_data_len);
+        imv->loading = true;
+        imv_viewport_set_playing(imv->view, true);
+
+        char title[1024];
+        generate_env_text(imv, &title[0], sizeof title, imv->title_text);
+        imv_viewport_set_title(imv->view, title);
       }
-
-
-      imv_loader_load(imv->loader, current_path,
-          imv->stdin_image_data, imv->stdin_image_data_len);
-      imv->loading = true;
-      imv_viewport_set_playing(imv->view, true);
-
-      char title[1024];
-      generate_env_text(imv, &title[0], sizeof title, imv->title_text);
-      imv_viewport_set_title(imv->view, title);
     }
 
     if(imv->need_rescale) {
