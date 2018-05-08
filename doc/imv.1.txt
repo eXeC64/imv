@@ -128,9 +128,10 @@ Configuration
 The path to a config file can be given via the *$imv_config* environment
 variable. If not found, imv will search for it in the following locations:
 
+- $XDG_CONFIG_HOME/imv/config (recommended)
+- $HOME/.config/imv/config
 - $HOME/.imv_config
 - $HOME/.imv/config
-- $XDG_CONFIG_HOME/imv/config (recommended)
 - /usr/local/etc/imv_config
 - /etc/imv_config
 
@@ -141,7 +142,7 @@ For documentation on the config file format, see **imv**(5).
 Environment Variables
 ---------------------
 
-When imv executes a command, it provides a number of environment variables,
+When imv executes a shell command, it provides a number of environment variables,
 exposing imv's state. These environment variables are also available when
 customising the window's title, or the overlay text.
 
