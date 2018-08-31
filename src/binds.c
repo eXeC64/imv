@@ -5,7 +5,7 @@
 
 struct bind_node {
   char *key; /* input key to reach this node */
-  char *command; /* command to run for this node, or NULL if not leaf node */
+  struct list *commands; /* commands to run for this node, or NULL if not leaf node */
   struct list *suffixes; /* list of bind_node* suffixes, or NULL if leaf node */
 };
 
@@ -24,7 +24,7 @@ static int compare_node_key(const void* item, const void *key)
 static void init_bind_node(struct bind_node *bn)
 {
   bn->key = NULL;
-  bn->command = NULL;
+  bn->commands = NULL;
   bn->suffixes = list_create();
 }
 
@@ -34,7 +34,9 @@ static void destroy_bind_node(struct bind_node *bn)
     destroy_bind_node(bn->suffixes->items[i]);
   }
   free(bn->key);
-  free(bn->command);
+  if(bn->commands) {
+    list_deep_free(bn->commands);
+  }
   list_deep_free(bn->suffixes);
 }
 
@@ -69,7 +71,7 @@ enum bind_result imv_binds_add(struct imv_binds *binds, const struct list *keys,
   struct bind_node *node = &binds->bind_tree;
   for(size_t i = 0; i < keys->len; ++i) {
     /* If we've reached a node that already has a command, there's a conflict */
-    if(node->command) {
+    if(node->commands) {
       result = BIND_INVALID_COMMAND;
       break;
     }
@@ -90,15 +92,14 @@ enum bind_result imv_binds_add(struct imv_binds *binds, const struct list *keys,
     /* We've now found the correct node for this key */
 
     /* Check if the node has a command */
-    if(next_node->command) {
+    if(next_node->commands) {
       if(i + 1 < keys->len) {
         /* If we're not at the end, it's a conflict */
         result = BIND_CONFLICTS;
         break;
       } else {
-        /* Otherwise we just need to overwrite the existing bind. */
-        free(next_node->command);
-        next_node->command = strdup(command);
+        /* Otherwise we just need to append a new command to the existing bind. */
+        list_append(next_node->commands, strdup(command));
         result = BIND_SUCCESS;
         break;
       }
@@ -110,7 +111,8 @@ enum bind_result imv_binds_add(struct imv_binds *binds, const struct list *keys,
       if(next_node->suffixes->len > 0) {
         result = BIND_CONFLICTS;
       } else {
-        next_node->command = strdup(command);
+        next_node->commands = list_create();
+        list_append(next_node->commands, strdup(command));
       }
     } else {
       /* Otherwise, move down the trie */
@@ -133,7 +135,7 @@ enum lookup_result {
   LOOKUP_MATCH,
 };
 
-static enum lookup_result bind_lookup(struct bind_node *node, struct list *keys, const char **out_str)
+static enum lookup_result bind_lookup(struct bind_node *node, struct list *keys, struct list **out_list)
 {
   for(size_t part = 0; part < keys->len; ++part) {
     const char* cur_key = keys->items[part];
@@ -151,8 +153,8 @@ static enum lookup_result bind_lookup(struct bind_node *node, struct list *keys,
     }
   }
 
-  if(node->command) {
-    *out_str = node->command;
+  if(node->commands) {
+    *out_list = node->commands;
     return LOOKUP_MATCH;
   }
   return LOOKUP_PARTIAL;
@@ -216,7 +218,7 @@ void imv_bind_clear_input(struct imv_binds *binds)
   binds->keys = list_create();
 }
 
-const char *imv_bind_handle_event(struct imv_binds *binds, const SDL_Event *event)
+struct list *imv_bind_handle_event(struct imv_binds *binds, const SDL_Event *event)
 {
   if(event->key.keysym.sym == SDLK_ESCAPE) {
     imv_bind_clear_input(binds);
@@ -230,13 +232,13 @@ const char *imv_bind_handle_event(struct imv_binds *binds, const SDL_Event *even
   }
   list_append(binds->keys, strdup(buffer));
 
-  const char *command = NULL;
-  enum lookup_result result = bind_lookup(&binds->bind_tree, binds->keys, &command);
+  struct list *commands = NULL;
+  enum lookup_result result = bind_lookup(&binds->bind_tree, binds->keys, &commands);
   if(result == LOOKUP_PARTIAL) {
     return NULL;
   } else if(result == LOOKUP_MATCH) {
     imv_bind_clear_input(binds);
-    return command;
+    return commands;
   } else if(result == LOOKUP_INVALID) {
     imv_bind_clear_input(binds);
     return NULL;

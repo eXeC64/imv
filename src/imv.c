@@ -760,10 +760,14 @@ static void handle_event(struct imv *imv, SDL_Event *event)
   }
 
   switch(event->type) {
-    case SDL_QUIT:
-      imv_command_exec(imv->commands, "quit", imv);
+    case SDL_QUIT: {
+      /* new scope needed in order to declare variables in a switch statement */
+      struct list *commands = list_create();
+      list_append(commands, "quit");
+      imv_command_exec(imv->commands, commands, imv);
+      list_free(commands);
       break;
-
+    }
     case SDL_TEXTINPUT:
       strncat(imv->input_buffer, event->text.text, command_buffer_len - 1);
       imv->need_redraw = true;
@@ -780,8 +784,11 @@ static void handle_event(struct imv *imv, SDL_Event *event)
           imv->input_buffer = NULL;
           imv->need_redraw = true;
         } else if(event->key.keysym.sym == SDLK_RETURN) {
-          imv_command_exec(imv->commands, imv->input_buffer, imv);
+          struct list *commands = list_create();
+          list_append(commands, imv->input_buffer);
+          imv_command_exec(imv->commands, commands, imv);
           SDL_StopTextInput();
+          list_free(commands);
           free(imv->input_buffer);
           imv->input_buffer = NULL;
           imv->need_redraw = true;
@@ -806,9 +813,9 @@ static void handle_event(struct imv *imv, SDL_Event *event)
           }
           break;
         default: { /* braces to allow const char *cmd definition */
-          const char *cmd = imv_bind_handle_event(imv->binds, event);
-          if(cmd) {
-            imv_command_exec(imv->commands, cmd, imv);
+          struct list *cmds = imv_bind_handle_event(imv->binds, event);
+          if(cmds) {
+            imv_command_exec(imv->commands, cmds, imv);
           }
         }
       }
