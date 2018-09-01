@@ -54,8 +54,8 @@ int imv_command_exec(struct imv_commands *cmds, struct list *commands, void *dat
     struct list *args = list_from_string(command, ' ');
 
     if(args->len > 0) {
-      for(size_t i = 0; i < cmds->command_list->len; ++i) {
-        struct command *cmd = cmds->command_list->items[i];
+      for(size_t j = 0; j < cmds->command_list->len; ++j) {
+        struct command *cmd = cmds->command_list->items[j];
         if(!strcmp(cmd->command, args->items[0])) {
           if(cmd->handler) {
             /* argstr = all args as a single string */
@@ -63,10 +63,10 @@ int imv_command_exec(struct imv_commands *cmds, struct list *commands, void *dat
             cmd->handler(args, argstr, data);
             ret = 0;
           } else if(cmd->alias) {
-            struct list *commands = list_create();
-            list_append(commands, cmd->alias);
-            ret = imv_command_exec(cmds, commands, data);
-            list_free(commands);
+            struct list *command_list = list_create();
+            list_append(command_list, cmd->alias);
+            ret = imv_command_exec(cmds, command_list, data);
+            list_free(command_list);
           }
           break;
         }
