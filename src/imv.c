@@ -129,6 +129,7 @@ static const char *add_bind(struct imv *imv, const char *keys, const char *comma
   }
 
   enum bind_result result = imv_binds_add(imv->binds, list, command);
+  list_free(list);
 
   if (result == BIND_SUCCESS) {
     return NULL;
@@ -244,10 +245,14 @@ struct imv *imv_create(void)
 void imv_free(struct imv *imv)
 {
   free(imv->font_name);
+  free(imv->title_text);
+  free(imv->overlay_text);
   imv_binds_free(imv->binds);
   imv_navigator_free(imv->navigator);
   imv_loader_free(imv->loader);
   imv_commands_free(imv->commands);
+  imv_viewport_free(imv->view);
+  imv_image_free(imv->image);
   if(imv->stdin_image_data) {
     free(imv->stdin_image_data);
   }
@@ -928,6 +933,7 @@ static char *get_config_path(void)
     wordexp_t word;
     if(wordexp(config_paths[i], &word, 0) == 0) {
       if (!word.we_wordv[0]) {
+        wordfree(&word);
         continue;
       }
 
@@ -1073,7 +1079,7 @@ static int handle_ini_value(void *user, const char *section, const char *name,
 
 bool imv_load_config(struct imv *imv)
 {
-  const char *path = get_config_path();
+  char *path = get_config_path();
   if(!path) {
     /* no config, no problem - we have defaults */
     return true;
@@ -1087,6 +1093,7 @@ bool imv_load_config(struct imv *imv)
     fprintf(stderr, "Error in config file: %s:%d\n", path, err);
     return false;
   }
+  free(path);
   return true;
 }
 
