@@ -51,15 +51,16 @@ you like.
 In your imv config:
 
     [binds]
-    <Shift+x> = exec rm $imv_current_file
+    <Shift+x> = exec rm "$imv_current_file"
+    <Shift+x> = close
 
-Then press 'X' within imv to delete the image.
+Then press 'X' within imv to delete the image and close it.
 
 #### Rotate an image
 In your imv config:
 
     [binds]
-    <Shift+r> = exec mogrify -rotate 90 $imv_current_file
+    <Shift+r> = exec mogrify -rotate 90 "$imv_current_file"
 
 Then press 'R' within imv to rotate the image 90 degrees using imagemagick.
 
