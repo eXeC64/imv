@@ -46,35 +46,39 @@ void imv_command_alias(struct imv_commands *cmds, const char *command, const cha
   list_append(cmds->command_list, cmd);
 }
 
-int imv_command_exec(struct imv_commands *cmds, struct list *commands, void *data)
+int imv_command_exec(struct imv_commands *cmds, const char *command, void *data)
 {
+  struct list *args = list_from_string(command, ' ');
   int ret = 1;
-  for(size_t i = 0; i < commands->len; ++i) {
-    const char *command = commands->items[i];
-    struct list *args = list_from_string(command, ' ');
 
-    if(args->len > 0) {
-      for(size_t j = 0; j < cmds->command_list->len; ++j) {
-        struct command *cmd = cmds->command_list->items[j];
-        if(!strcmp(cmd->command, args->items[0])) {
-          if(cmd->handler) {
-            /* argstr = all args as a single string */
-            const char *argstr = command + strlen(cmd->command) + 1;
-            cmd->handler(args, argstr, data);
-            ret = 0;
-          } else if(cmd->alias) {
-            struct list *command_list = list_create();
-            list_append(command_list, cmd->alias);
-            ret = imv_command_exec(cmds, command_list, data);
-            list_free(command_list);
-          }
-          break;
+  if(args->len > 0) {
+    for(size_t i = 0; i < cmds->command_list->len; ++i) {
+      struct command *cmd = cmds->command_list->items[i];
+      if(!strcmp(cmd->command, args->items[0])) {
+        if(cmd->handler) {
+          /* argstr = all args as a single string */
+          const char *argstr = command + strlen(cmd->command) + 1;
+          cmd->handler(args, argstr, data);
+          ret = 0;
+        } else if(cmd->alias) {
+          ret = imv_command_exec(cmds, cmd->alias, data);
         }
+        break;
       }
     }
-    list_deep_free(args);
   }
 
+  list_deep_free(args);
+  return ret;
+}
+
+int imv_command_exec_list(struct imv_commands *cmds, struct list *commands, void *data)
+{
+  int ret = 0;
+  for(size_t i = 0; i < commands->len; ++i) {
+    const char *command = commands->items[i];
+    ret += imv_command_exec(cmds, command, data);
+  }
   return ret;
 }
 

@@ -11,7 +11,8 @@ struct imv_commands *imv_commands_create(void);
 void imv_commands_free(struct imv_commands *cmds);
 void imv_command_register(struct imv_commands *cmds, const char *command, void (*handler)(struct list*, const char*, void*));
 void imv_command_alias(struct imv_commands *cmds, const char *command, const char *alias);
-int imv_command_exec(struct imv_commands *cmds, struct list *commands, void *data);
+int imv_command_exec(struct imv_commands *cmds, const char *command, void *data);
+int imv_command_exec_list(struct imv_commands *cmds, struct list *commands, void *data);
 
 #endif
 
