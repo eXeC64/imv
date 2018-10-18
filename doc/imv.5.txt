@@ -96,7 +96,8 @@ Binds
 The *[binds]* section allows custom key bindings to be added to imv.
 
 Binds are in the format 'key combination = command'. A key combination can
-consist of multiple keys in succession.
+consist of multiple keys in succession. If there is more then one command
+defined for a given key combination, they are executed one after another.
 
 Single keys such as 'q' are just that: 'q = quit' will bind the 'q' key to the
 'quit' command.

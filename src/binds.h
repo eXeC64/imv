@@ -32,7 +32,7 @@ const struct list *imv_bind_input_buffer(struct imv_binds *binds);
 void imv_bind_clear_input(struct imv_binds *binds);
 
 /* Handle an input event, if a bind is triggered, return its command */
-const char *imv_bind_handle_event(struct imv_binds *binds, const SDL_Event *event);
+struct list *imv_bind_handle_event(struct imv_binds *binds, const SDL_Event *event);
 
 /* Convert a string (such as from a config) to a key list */
 struct list *imv_bind_parse_keys(const char *keys);

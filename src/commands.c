@@ -72,4 +72,14 @@ int imv_command_exec(struct imv_commands *cmds, const char *command, void *data)
   return ret;
 }
 
+int imv_command_exec_list(struct imv_commands *cmds, struct list *commands, void *data)
+{
+  int ret = 0;
+  for(size_t i = 0; i < commands->len; ++i) {
+    const char *command = commands->items[i];
+    ret += imv_command_exec(cmds, command, data);
+  }
+  return ret;
+}
+
 /* vim:set ts=2 sts=2 sw=2 et: */

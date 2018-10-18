@@ -129,6 +129,7 @@ static const char *add_bind(struct imv *imv, const char *keys, const char *comma
   }
 
   enum bind_result result = imv_binds_add(imv->binds, list, command);
+  list_free(list);
 
   if (result == BIND_SUCCESS) {
     return NULL;
@@ -244,10 +245,14 @@ struct imv *imv_create(void)
 void imv_free(struct imv *imv)
 {
   free(imv->font_name);
+  free(imv->title_text);
+  free(imv->overlay_text);
   imv_binds_free(imv->binds);
   imv_navigator_free(imv->navigator);
   imv_loader_free(imv->loader);
   imv_commands_free(imv->commands);
+  imv_viewport_free(imv->view);
+  imv_image_free(imv->image);
   if(imv->stdin_image_data) {
     free(imv->stdin_image_data);
   }
@@ -763,7 +768,6 @@ static void handle_event(struct imv *imv, SDL_Event *event)
     case SDL_QUIT:
       imv_command_exec(imv->commands, "quit", imv);
       break;
-
     case SDL_TEXTINPUT:
       strncat(imv->input_buffer, event->text.text, command_buffer_len - 1);
       imv->need_redraw = true;
@@ -780,8 +784,11 @@ static void handle_event(struct imv *imv, SDL_Event *event)
           imv->input_buffer = NULL;
           imv->need_redraw = true;
         } else if(event->key.keysym.sym == SDLK_RETURN) {
-          imv_command_exec(imv->commands, imv->input_buffer, imv);
+          struct list *commands = list_create();
+          list_append(commands, imv->input_buffer);
+          imv_command_exec_list(imv->commands, commands, imv);
           SDL_StopTextInput();
+          list_free(commands);
           free(imv->input_buffer);
           imv->input_buffer = NULL;
           imv->need_redraw = true;
@@ -806,9 +813,9 @@ static void handle_event(struct imv *imv, SDL_Event *event)
           }
           break;
         default: { /* braces to allow const char *cmd definition */
-          const char *cmd = imv_bind_handle_event(imv->binds, event);
-          if(cmd) {
-            imv_command_exec(imv->commands, cmd, imv);
+          struct list *cmds = imv_bind_handle_event(imv->binds, event);
+          if(cmds) {
+            imv_command_exec_list(imv->commands, cmds, imv);
           }
         }
       }
@@ -921,6 +928,7 @@ static char *get_config_path(void)
     wordexp_t word;
     if(wordexp(config_paths[i], &word, 0) == 0) {
       if (!word.we_wordv[0]) {
+        wordfree(&word);
         continue;
       }
 
@@ -1066,7 +1074,7 @@ static int handle_ini_value(void *user, const char *section, const char *name,
 
 bool imv_load_config(struct imv *imv)
 {
-  const char *path = get_config_path();
+  char *path = get_config_path();
   if(!path) {
     /* no config, no problem - we have defaults */
     return true;
@@ -1080,6 +1088,7 @@ bool imv_load_config(struct imv *imv)
     fprintf(stderr, "Error in config file: %s:%d\n", path, err);
     return false;
   }
+  free(path);
   return true;
 }
 
