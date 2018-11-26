@@ -121,27 +121,93 @@ static void render_window(struct imv *imv);
 static void update_env_vars(struct imv *imv);
 static size_t generate_env_text(struct imv *imv, char *buf, size_t len, const char *format);
 
-static const char *add_bind(struct imv *imv, const char *keys, const char *command)
+
+/* Finds the next split between commands in a string ';', and provies it as
+ * out with a len. Returns the next starting point after the current string,
+ * or NULL if nothing left.
+ */
+static const char *split_commands(const char *start, const char **out, size_t *len)
+{
+  bool in_single_quotes = false;
+  bool in_double_quotes = false;
+
+  const char *str = start;
+
+  while (*str) {
+    if (!in_single_quotes && *str == '"') {
+      in_double_quotes = !in_double_quotes;
+    } else if (!in_double_quotes && *str == '\'') {
+      in_single_quotes = !in_single_quotes;
+    } else if (*str == '\\') {
+      /* We don't care about the behaviour of any escaped character, just
+       * make sure to skip over them. We do need to make sure not to allow
+       * escaping of the null terminator though.
+       */
+      if (str[1] != '\0') {
+        ++str;
+      }
+    } else if (!in_single_quotes && !in_double_quotes && *str == ';') {
+      /* Found a command split that wasn't escaped or quoted */
+      *out = start;
+      *len = str - start;
+      return str + 1;
+    }
+    ++str;
+  }
+
+  *out = start;
+  *len = str - start;
+  return str;
+}
+
+static bool add_bind(struct imv *imv, const char *keys, const char *commands)
 {
   struct list *list = imv_bind_parse_keys(keys);
   if(!list) {
-    return "Invalid key combination";
+    fprintf(stderr, "Invalid key combination");
+    return false;
   }
 
-  enum bind_result result = imv_binds_add(imv->binds, list, command);
+  char command_buf[512];
+  const char *command_ptr;
+  size_t command_len;
+
+  bool success = true;
+
+  imv_binds_clear_key(imv->binds, list);
+  while (*commands) {
+    commands = split_commands(commands, &command_ptr, &command_len);
+    if (!command_ptr) {
+      break;
+    }
+
+    strncpy(&command_buf[0], command_ptr, sizeof command_buf);
+    if (command_len >= sizeof command_buf) {
+      fprintf(stderr, "Command exceeded max length, not binding: %s\n", &command_buf[0]);
+      continue;
+    }
+
+    command_buf[command_len] = '\0';
+    enum bind_result result = imv_binds_add(imv->binds, list, &command_buf[0]);
+
+    if (result == BIND_INVALID_KEYS) {
+      fprintf(stderr, "Invalid keys to bind to");
+      success = false;
+      break;
+    } else if (result == BIND_INVALID_COMMAND) {
+      fprintf(stderr, "No command given to bind to");
+      success = false;
+      break;
+    } else if (result == BIND_CONFLICTS) {
+      fprintf(stderr, "Key combination conflicts with existing bind");
+      success = false;
+      break;
+    }
+  }
+
   list_free(list);
 
-  if (result == BIND_SUCCESS) {
-    return NULL;
-  } else if (result == BIND_INVALID_KEYS) {
-    return "Invalid keys to bind to";
-  } else if (result == BIND_INVALID_COMMAND) {
-    return "No command given to bind to";
-  } else if (result == BIND_CONFLICTS) {
-    return "Key combination conflicts with existing bind";
-  }
-
-  return NULL;
+  return success;
 }
 
 struct imv *imv_create(void)
@@ -962,12 +1028,7 @@ static int handle_ini_value(void *user, const char *section, const char *name,
   struct imv *imv = user;
 
   if (!strcmp(section, "binds")) {
-    const char *err = add_bind(imv, name, value);
-    if (err) {
-      fprintf(stderr, "Config error: %s\n", err);
-      return 0;
-    }
-    return 1;
+    return add_bind(imv, name, value);
   }
 
   if (!strcmp(section, "aliases")) {

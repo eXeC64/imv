@@ -71,7 +71,7 @@ The *[options]* section accepts the following settings:
 *stay_fullscreen_on_focus_loss* = <true|false>::
 	Stay full screen even when imv loses focus. Defaults to 'false'.
 
-*suppess_default_binds* = <true|false>::
+*suppress_default_binds* = <true|false>::
 	Disable imv's built-in binds so they don't conflict with custom ones.
 	Defaults to 'false'.
 
@@ -96,8 +96,10 @@ Binds
 The *[binds]* section allows custom key bindings to be added to imv.
 
 Binds are in the format 'key combination = command'. A key combination can
-consist of multiple keys in succession. If there is more then one command
-defined for a given key combination, they are executed one after another.
+consist of multiple keys in succession. Multiple commands for a single key
+combination can be defined by separating each command with a ';'. Single and
+double quotes are honoured, as is escaping with a backslash, to allow the
+proper quoting of shell commands.
 
 Single keys such as 'q' are just that: 'q = quit' will bind the 'q' key to the
 'quit' command.
