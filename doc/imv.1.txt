@@ -117,7 +117,8 @@ Commands can be entered by pressing *:*. imv supports the following commands:
 	Toggle playback of the current image if it is an animated gif.
 
 *scaling_mode* <none|shrink|full>::
-	Set the current scaling mode.
+	Set the current scaling mode. Setting the mode to 'next' advances it to the
+	next mode in the list.
 
 *slideshow_duration* <amount>::
 	Change the slideshow duration by the given amount in seconds.
