@@ -116,7 +116,7 @@ Commands can be entered by pressing *:*. imv supports the following commands:
 *toggle_playing*::
 	Toggle playback of the current image if it is an animated gif.
 
-*scaling_mode* <none|shrink|full>::
+*scaling_mode* <none|shrink|full|next>::
 	Set the current scaling mode. Setting the mode to 'next' advances it to the
 	next mode in the list.
 
