@@ -130,6 +130,30 @@ void imv_binds_clear(struct imv_binds *binds)
   init_bind_node(&binds->bind_tree);
 }
 
+void imv_binds_clear_key(struct imv_binds *binds, const struct list *keys)
+{
+  struct bind_node *node = &binds->bind_tree;
+
+  for(size_t i = 0; i < keys->len; ++i) {
+    /* Traverse the trie to find the right node for the input keys */
+    int child_index = list_find(node->suffixes, &compare_node_key, keys->items[i]);
+    if(child_index == -1) {
+      /* No such node, no more work to do */
+      return;
+    } else {
+      node = node->suffixes->items[child_index];
+    }
+  }
+
+  /* We've now found the correct node for the input */
+
+  /* Clear the commands for this node */
+  if(node->commands) {
+    list_deep_free(node->commands);
+    node->commands = NULL;
+  }
+}
+
 enum lookup_result {
   LOOKUP_PARTIAL,
   LOOKUP_INVALID,

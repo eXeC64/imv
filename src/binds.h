@@ -25,6 +25,9 @@ enum bind_result imv_binds_add(struct imv_binds *binds, const struct list *keys,
 /* Remove all key bindings */
 void imv_binds_clear(struct imv_binds *binds);
 
+/* Clear all bindings for a key*/
+void imv_binds_clear_key(struct imv_binds *binds, const struct list *keys);
+
 /* Fetch the list of keys pressed so far */
 const struct list *imv_bind_input_buffer(struct imv_binds *binds);
 
