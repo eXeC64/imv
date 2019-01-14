@@ -95,6 +95,9 @@ Installation
 `imv` depends on `pthreads`, `FontConfig`, `SDL2`, `SDL_TTF`, `FreeImage`,
 and `asciidoc`.
 
+On Debian derivatives, you want:
+`libsdl2-dev libfreeimage-dev libsdl2-ttf-dev libfreeimage3 libfontconfig1-dev`
+
     $ make
     # make install
 
