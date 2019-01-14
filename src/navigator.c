@@ -8,6 +8,11 @@
 #include <stdio.h>
 #include <time.h>
 
+/* Some systems like GNU/Hurd don't define PATH_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 struct imv_navigator {
   int num_paths;
   int cur_path;

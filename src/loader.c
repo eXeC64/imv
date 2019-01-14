@@ -8,6 +8,11 @@
 #include <SDL2/SDL.h>
 #include <FreeImage.h>
 
+/* Some systems like GNU/Hurd don't define PATH_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 static void block_usr1_signal(void);
 static int is_thread_cancelled(void);
 static void *bg_new_img(void *data);

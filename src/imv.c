@@ -22,6 +22,11 @@
 #include "viewport.h"
 #include "util.h"
 
+/* Some systems like GNU/Hurd don't define PATH_MAX */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 enum scaling_mode {
   SCALING_NONE,
   SCALING_DOWN,
