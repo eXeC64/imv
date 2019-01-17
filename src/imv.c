@@ -16,7 +16,9 @@
 #include "commands.h"
 #include "ini.h"
 #include "list.h"
-#include "loader.h"
+#include "source.h"
+#include "backend.h"
+#include "backend_freeimage.h"
 #include "image.h"
 #include "navigator.h"
 #include "viewport.h"
@@ -75,7 +77,8 @@ struct imv {
   char *font_name;
   struct imv_binds *binds;
   struct imv_navigator *navigator;
-  struct imv_loader *loader;
+  struct imv_backend *backend;
+  struct imv_source *source;
   struct imv_commands *commands;
   struct imv_image *image;
   struct imv_viewport *view;
@@ -238,7 +241,8 @@ struct imv *imv_create(void)
   imv->font_name = strdup("Monospace:24");
   imv->binds = imv_binds_create();
   imv->navigator = imv_navigator_create();
-  imv->loader = imv_loader_create();
+  imv->backend = imv_backend_freeimage();
+  imv->source = NULL;
   imv->commands = imv_commands_create();
   imv->stdin_image_data = NULL;
   imv->stdin_image_data_len = 0;
@@ -319,7 +323,10 @@ void imv_free(struct imv *imv)
   free(imv->overlay_text);
   imv_binds_free(imv->binds);
   imv_navigator_free(imv->navigator);
-  imv_loader_free(imv->loader);
+  imv->backend->free(imv->backend);
+  if (imv->source) {
+    imv->source->free(imv->source);
+  }
   imv_commands_free(imv->commands);
   imv_viewport_free(imv->view);
   imv_image_free(imv->image);
@@ -635,8 +642,17 @@ int imv_run(struct imv *imv)
       const char *current_path = imv_navigator_selection(imv->navigator);
       /* check we got a path back */
       if(strcmp("", current_path)) {
-        imv_loader_load(imv->loader, current_path,
-            imv->stdin_image_data, imv->stdin_image_data_len);
+        enum backend_result result = imv->backend->open_path(current_path, &imv->source);
+        if (result == BACKEND_SUCCESS) {
+          imv->source->image_event_id = imv->events.NEW_IMAGE;
+          imv->source->error_event_id = imv->events.BAD_IMAGE;
+          imv->source->load_first_frame(imv->source);
+        }
+
+        // TODO stdin
+        /* imv_loader_load(imv->loader, current_path, */
+            /* imv->stdin_image_data, imv->stdin_image_data_len); */
+
         imv->loading = true;
         imv_viewport_set_playing(imv->view, true);
 
@@ -661,10 +677,10 @@ int imv_run(struct imv *imv)
       }
     }
 
-    /* tell the loader time has passed (for gifs) */
+    /* tell the source time has passed (for gifs) */
     current_time = SDL_GetTicks();
 
-    /* if we're playing an animated gif, tell the loader how much time has
+    /* if we're playing an animated gif, tell the source how much time has
      * passed */
     if(imv_viewport_is_playing(imv->view)) {
       unsigned int dt = current_time - last_time;
@@ -674,7 +690,9 @@ int imv_run(struct imv *imv)
       if(dt > 100) {
         dt = 100;
       }
-      imv_loader_time_passed(imv->loader, dt / 1000.0);
+      if (imv->source) {
+        imv->source->time_passed(imv->source, dt / 1000.0);
+      }
     }
 
     /* handle slideshow */
@@ -691,7 +709,6 @@ int imv_run(struct imv *imv)
 
     last_time = current_time;
 
-
     /* check if the viewport needs a redraw */
     if(imv_viewport_needs_redraw(imv->view)) {
       imv->need_redraw = true;
@@ -707,7 +724,8 @@ int imv_run(struct imv *imv)
 
     /* if we need to display the next frame of an animation soon we should
      * limit our sleep until the next frame is due */
-    const double next_frame_in = imv_loader_time_left(imv->loader);
+    const double next_frame_in = imv->source ?
+      imv->source->time_left(imv->source) : 0.0;
     if(next_frame_in > 0.0) {
       timeout = (unsigned int)(next_frame_in * 1000.0);
     }
@@ -735,11 +753,6 @@ static bool setup_window(struct imv *imv)
   imv->events.NEW_IMAGE = SDL_RegisterEvents(1);
   imv->events.BAD_IMAGE = SDL_RegisterEvents(1);
   imv->events.NEW_PATH = SDL_RegisterEvents(1);
-
-  /* tell the loader which event ids it should use */
-  imv_loader_set_event_types(imv->loader,
-      imv->events.NEW_IMAGE,
-      imv->events.BAD_IMAGE);
 
   imv->sdl_init = true;
 
@@ -1306,7 +1319,9 @@ void command_next_frame(struct list *args, const char *argstr, void *data)
   (void)args;
   (void)argstr;
   struct imv *imv = data;
-  imv_loader_load_next_frame(imv->loader);
+  if (imv->source) {
+    imv->source->load_next_frame(imv->source);
+  }
 }
 
 void command_toggle_playing(struct list *args, const char *argstr, void *data)
