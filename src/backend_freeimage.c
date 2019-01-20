@@ -244,8 +244,6 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   source->width = 0;
   source->height = 0;
   source->num_frames = 0;
-  source->image_event_id = 0;
-  source->error_event_id = 0;
   source->load_first_frame = &first_frame;
   source->load_next_frame = &next_frame;
   source->free = &source_free;

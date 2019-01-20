@@ -36,13 +36,6 @@ struct imv_source {
   /* Next frame to be loaded, 0-indexed */
   int next_frame;
 
-  /* Frames are returned using SDL events. These two fields must be
-   * populated by callers before calling any frame loading functionality
-   * on the source.
-   */
-  unsigned int image_event_id;
-  unsigned int error_event_id;
-
   /* Trigger loading of the first frame. */
   void (*load_first_frame)(struct imv_source *src); 
 
