@@ -264,7 +264,7 @@ static void backend_free(struct imv_backend *backend)
 struct imv_backend *imv_backend_freeimage(void)
 {
   struct imv_backend *backend = malloc(sizeof(struct imv_backend));
-  backend->name = "FreeImage (GPL license)";
+  backend->name = "FreeImage (FIPL v1.0 license)";
   backend->open_path = &open_path;
   backend->free = &backend_free;
   return backend;

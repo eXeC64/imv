@@ -120,6 +120,4 @@ Tests
 
 License
 -------
-`imv`'s source is published under the [MIT](LICENSE.MIT) license, but due to
-the use of a GPLv2 library `imv` is also published under the terms of the
-[GPLv2](LICENSE.GPL) license.
+`imv`'s source is published under the [MIT](LICENSE.MIT) license.
