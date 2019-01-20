@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include <FreeImage.h>
-#include <SDL2/SDL.h>
 
 struct private {
   FREE_IMAGE_FORMAT format;
@@ -64,22 +63,36 @@ static struct imv_bitmap *to_imv_bitmap(FIBITMAP *in_bmp)
 
 static void report_error(struct imv_source *src)
 {
-  SDL_Event event;
-  SDL_zero(event);
-  event.type = src->error_event_id;
-  event.user.data1 = strdup(src->name);
-  SDL_PushEvent(&event);
+  if (!src->callback) {
+    fprintf(stderr, "imv_source(%s) has no callback configured. "
+                    "Discarding error.\n", src->name);
+    return;
+  }
+
+  struct imv_source_message msg;
+  msg.source = src;
+  msg.user_data = src->user_data;
+  msg.bitmap = NULL;
+  msg.error = "Internal error";
+
+  src->callback(&msg);
 }
 
-static void send_bitmap(struct imv_source *src, FIBITMAP *fibitmap, int is_new_image)
+static void send_bitmap(struct imv_source *src, FIBITMAP *fibitmap)
 {
-  SDL_Event event;
-  SDL_zero(event);
-  event.type = src->image_event_id;
-  event.user.data1 = to_imv_bitmap(fibitmap);
-  event.user.code = is_new_image;
-  FreeImage_Unload(fibitmap);
-  SDL_PushEvent(&event);
+  if (!src->callback) {
+    fprintf(stderr, "imv_source(%s) has no callback configured. "
+                    "Discarding result.\n", src->name);
+    return;
+  }
+
+  struct imv_source_message msg;
+  msg.source = src;
+  msg.user_data = src->user_data;
+  msg.bitmap = to_imv_bitmap(fibitmap);
+  msg.error = NULL;
+
+  src->callback(&msg);
 }
 
 static void first_frame(struct imv_source *src)
@@ -128,7 +141,7 @@ static void first_frame(struct imv_source *src)
 
   src->width = FreeImage_GetWidth(bmp);
   src->height = FreeImage_GetWidth(bmp);
-  send_bitmap(src, bmp, 1 /* is new image */);
+  send_bitmap(src, bmp);
   private->last_frame = bmp;
 }
 
@@ -136,7 +149,7 @@ static void next_frame(struct imv_source *src)
 {
   struct private *private = src->private;
   if (src->num_frames == 1) {
-    send_bitmap(private->last_frame, 0 /* not a new image */);
+    send_bitmap(src, private->last_frame);
     return;
   }
 
@@ -166,6 +179,8 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   source->time_passed = &time_passed;
   source->time_left = &time_left;
   source->free = &source_free;
+  source->callback = NULL;
+  source->user_data = NULL;
   source->private = private;
   *src = source;
 

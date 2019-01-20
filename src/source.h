@@ -4,6 +4,20 @@
 #include <stdbool.h>
 #include "bitmap.h"
 
+struct imv_source_message {
+  /* Pointer to sender of message */
+  struct imv_source *source;
+
+  /* User-supplied pointer */
+  void *user_data;
+
+  /* Receiver is responsible for destroying bitmap */
+  struct imv_bitmap *bitmap;
+
+  /* Error message if bitmap was NULL */
+  const char *error;
+};
+
 /* Generic source of one or more bitmaps. Essentially a single image file */
 struct imv_source {
   /* usually the path of the image this is the source of */
@@ -40,6 +54,12 @@ struct imv_source {
    * it is safe to dealocate/overwrite the imv_source instance.
    */
   void (*free)(struct imv_source *src);
+
+  /* User-specified callback for returning messages */
+  void (*callback)(struct imv_source_message *message);
+
+  /* User-specified pointer, included in returned messages */
+  void *user_data;
 
   /* Implementation private data */
   void *private;

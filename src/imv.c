@@ -79,6 +79,7 @@ struct imv {
   struct imv_navigator *navigator;
   struct imv_backend *backend;
   struct imv_source *source;
+  struct imv_source *last_source;
   struct imv_commands *commands;
   struct imv_image *image;
   struct imv_viewport *view;
@@ -217,6 +218,40 @@ static bool add_bind(struct imv *imv, const char *keys, const char *commands)
   return success;
 }
 
+static void source_callback(struct imv_source_message *msg)
+{
+  struct imv *imv = msg->user_data;
+  if (msg->source != imv->source) {
+    /* We received a message from an old source, tidy up contents
+     * as required, but ignore it.
+     */
+    if (msg->bitmap) {
+      imv_bitmap_free(msg->bitmap);
+    }
+    return;
+  }
+
+  SDL_Event event;
+  SDL_zero(event);
+
+  if (msg->bitmap) {
+    event.type = imv->events.NEW_IMAGE;
+    event.user.data1 = msg->bitmap;
+
+    /* Keep track of the last source to send us a bitmap in order to detect
+     * when we're getting a new image, as opposed to a new frame from the
+     * same image.
+     */
+    event.user.code = msg->source != imv->last_source;
+    imv->last_source = msg->source;
+  } else {
+    event.type = imv->events.BAD_IMAGE;
+    event.user.data1 = strdup(msg->error);
+  }
+
+  SDL_PushEvent(&event);
+}
+
 struct imv *imv_create(void)
 {
   struct imv *imv = malloc(sizeof(struct imv));
@@ -243,6 +278,7 @@ struct imv *imv_create(void)
   imv->navigator = imv_navigator_create();
   imv->backend = imv_backend_freeimage();
   imv->source = NULL;
+  imv->last_source = NULL;
   imv->commands = imv_commands_create();
   imv->stdin_image_data = NULL;
   imv->stdin_image_data_len = 0;
@@ -642,10 +678,15 @@ int imv_run(struct imv *imv)
       const char *current_path = imv_navigator_selection(imv->navigator);
       /* check we got a path back */
       if(strcmp("", current_path)) {
-        enum backend_result result = imv->backend->open_path(current_path, &imv->source);
+        struct imv_source *new_source;
+        enum backend_result result = imv->backend->open_path(current_path, &new_source);
         if (result == BACKEND_SUCCESS) {
-          imv->source->image_event_id = imv->events.NEW_IMAGE;
-          imv->source->error_event_id = imv->events.BAD_IMAGE;
+          if (imv->source) {
+            imv->source->free(imv->source);
+          }
+          imv->source = new_source;
+          imv->source->callback = &source_callback;
+          imv->source->user_data = imv;
           imv->source->load_first_frame(imv->source);
         }
 
