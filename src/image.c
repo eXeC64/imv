@@ -44,6 +44,18 @@ void imv_image_free(struct imv_image *image)
   free(image);
 }
 
+static int convert_pixelformat(enum imv_pixelformat fmt)
+{
+  if (fmt == IMV_ARGB) {
+    return SDL_PIXELFORMAT_ARGB8888;
+  } else if (fmt == IMV_ABGR) {
+    return SDL_PIXELFORMAT_ABGR8888;
+  } else {
+    fprintf(stderr, "Unknown pixel format. Defaulting to ARGB\n");
+    return SDL_PIXELFORMAT_ARGB8888;
+  }
+}
+
 int imv_image_set_bitmap(struct imv_image *image, struct imv_bitmap *bmp)
 {
   image->width = bmp->width;
@@ -73,6 +85,7 @@ int imv_image_set_bitmap(struct imv_image *image, struct imv_bitmap *bmp)
   image->num_chunks = image->num_chunks_wide * image->num_chunks_tall;
   image->chunks = malloc(sizeof(SDL_Texture*) * image->num_chunks);
 
+  const int format = convert_pixelformat(bmp->format);
   int failed_at = -1;
   for(int y = 0; y < image->num_chunks_tall; ++y) {
     for(int x = 0; x < image->num_chunks_wide; ++x) {
@@ -80,7 +93,7 @@ int imv_image_set_bitmap(struct imv_image *image, struct imv_bitmap *bmp)
       const int is_last_v_chunk = (y == image->num_chunks_tall - 1);
       image->chunks[x + y * image->num_chunks_wide] =
         SDL_CreateTexture(image->renderer,
-          SDL_PIXELFORMAT_ARGB8888,
+          format,
           SDL_TEXTUREACCESS_STATIC,
           is_last_h_chunk ? image->last_chunk_width : image->chunk_width,
           is_last_v_chunk ? image->last_chunk_height : image->chunk_height);

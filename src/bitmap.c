@@ -9,7 +9,7 @@ struct imv_bitmap *imv_bitmap_clone(struct imv_bitmap *bmp)
   const size_t num_bytes = 4 * bmp->width * bmp->height;
   copy->width = bmp->width;
   copy->height = bmp->height;
-  copy->height = bmp->height;
+  copy->format = bmp->format;
   copy->data = malloc(num_bytes);
   memcpy(copy->data, bmp->data, num_bytes);
   return copy;

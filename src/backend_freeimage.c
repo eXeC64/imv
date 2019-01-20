@@ -42,6 +42,7 @@ static struct imv_bitmap *to_imv_bitmap(FIBITMAP *in_bmp)
   struct imv_bitmap *bmp = malloc(sizeof(struct imv_bitmap));
   bmp->width = FreeImage_GetWidth(in_bmp);
   bmp->height = FreeImage_GetHeight(in_bmp);
+  bmp->format = IMV_ARGB;
   bmp->data = malloc(4 * bmp->width * bmp->height);
   FreeImage_ConvertToRawBits(bmp->data, in_bmp, 4 * bmp->width, 32,
       FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
