@@ -9,7 +9,7 @@ CONFIGPREFIX ?= /etc
 CFLAGS ?= -W -Wall -pedantic -Wmissing-prototypes
 CFLAGS += -std=c99
 CPPFLAGS += $(shell sdl2-config --cflags) -D_XOPEN_SOURCE=700
-LIBS := $(shell sdl2-config --libs) -lfreeimage -lSDL2_ttf -lfontconfig -lpthread
+LIBS := $(shell sdl2-config --libs) -lfreeimage -lpng -lSDL2_ttf -lfontconfig -lpthread
 
 BUILDDIR ?= build
 TARGET := $(BUILDDIR)/imv

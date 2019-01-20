@@ -18,7 +18,6 @@
 #include "list.h"
 #include "source.h"
 #include "backend.h"
-#include "backend_freeimage.h"
 #include "image.h"
 #include "navigator.h"
 #include "viewport.h"
@@ -54,6 +53,11 @@ enum background_type {
   BACKGROUND_TYPE_COUNT
 };
 
+struct backend_chain {
+  struct imv_backend *backend;
+  struct backend_chain *next;
+};
+
 struct imv {
   bool quit;
   bool loading;
@@ -80,7 +84,7 @@ struct imv {
   char *font_name;
   struct imv_binds *binds;
   struct imv_navigator *navigator;
-  struct imv_backend *backend;
+  struct backend_chain *backends;
   struct imv_source *source;
   struct imv_source *last_source;
   struct imv_commands *commands;
@@ -284,7 +288,8 @@ struct imv *imv_create(void)
   imv->font_name = strdup("Monospace:24");
   imv->binds = imv_binds_create();
   imv->navigator = imv_navigator_create();
-  imv->backend = imv_backend_freeimage();
+
+  imv->backends = NULL;
   imv->source = NULL;
   imv->last_source = NULL;
   imv->commands = imv_commands_create();
@@ -367,7 +372,14 @@ void imv_free(struct imv *imv)
   free(imv->overlay_text);
   imv_binds_free(imv->binds);
   imv_navigator_free(imv->navigator);
-  imv->backend->free(imv->backend);
+
+  struct backend_chain *chain = imv->backends;
+  while (chain) {
+    struct backend_chain *next_backend = chain->next;
+    chain->backend->free(chain->backend);
+    chain = next_backend;
+  }
+
   if (imv->source) {
     imv->source->free(imv->source);
   }
@@ -402,6 +414,14 @@ void imv_free(struct imv *imv)
     SDL_Quit();
   }
   free(imv);
+}
+
+void imv_install_backend(struct imv *imv, struct imv_backend *backend)
+{
+  struct backend_chain *chain = malloc(sizeof(struct backend_chain));
+  chain->backend = backend;
+  chain->next = imv->backends;
+  imv->backends = chain;
 }
 
 static bool parse_bg(struct imv *imv, const char *bg)
@@ -680,7 +700,23 @@ int imv_run(struct imv *imv)
       /* check we got a path back */
       if(strcmp("", current_path)) {
         struct imv_source *new_source;
-        enum backend_result result = imv->backend->open_path(current_path, &new_source);
+
+        enum backend_result result = BACKEND_UNSUPPORTED;
+
+        if (!imv->backends) {
+          fprintf(stderr, "No backends installed. Unable to load image.\n");
+        }
+        for (struct backend_chain *chain = imv->backends; chain; chain = chain->next) {
+          struct imv_backend *backend = chain->backend;
+          result = backend->open_path(current_path, &new_source);
+          if (result == BACKEND_UNSUPPORTED) {
+            /* Try the next backend */
+            continue;
+          } else {
+            break;
+          }
+        }
+
         if (result == BACKEND_SUCCESS) {
           if (imv->source) {
             imv->source->free(imv->source);
@@ -689,6 +725,13 @@ int imv_run(struct imv *imv)
           imv->source->callback = &source_callback;
           imv->source->user_data = imv;
           imv->source->load_first_frame(imv->source);
+
+          imv->loading = true;
+          imv_viewport_set_playing(imv->view, true);
+
+          char title[1024];
+          generate_env_text(imv, title, sizeof title, imv->title_text);
+          imv_viewport_set_title(imv->view, title);
         } else {
           /* Error loading path so remove it from the navigator */
           imv_navigator_remove(imv->navigator, current_path);
@@ -698,12 +741,6 @@ int imv_run(struct imv *imv)
         /* imv_loader_load(imv->loader, current_path, */
             /* imv->stdin_image_data, imv->stdin_image_data_len); */
 
-        imv->loading = true;
-        imv_viewport_set_playing(imv->view, true);
-
-        char title[1024];
-        generate_env_text(imv, title, sizeof title, imv->title_text);
-        imv_viewport_set_title(imv->view, title);
       }
     }
 
@@ -738,7 +775,7 @@ int imv_run(struct imv *imv)
       imv->need_redraw = true;
 
       /* Trigger loading of a new frame, now this one's being displayed */
-      if (imv->source) {
+      if (imv->source && imv->source->load_next_frame) {
         imv->source->load_next_frame(imv->source);
       }
     }
@@ -872,7 +909,7 @@ static void handle_new_image(struct imv *imv, struct imv_bitmap *bitmap, int fra
   imv->next_frame_duration = 0;
 
   /* If this is an animated image, we should kick off loading the next frame */
-  if (imv->source && frametime) {
+  if (imv->source && imv->source->load_next_frame && frametime) {
     imv->source->load_next_frame(imv->source);
   }
 }
@@ -1393,7 +1430,7 @@ void command_next_frame(struct list *args, const char *argstr, void *data)
   (void)args;
   (void)argstr;
   struct imv *imv = data;
-  if (imv->source) {
+  if (imv->source && imv->source->load_next_frame) {
     imv->source->load_next_frame(imv->source);
     imv->next_frame_due = 1; /* Earliest possible non-zero timestamp */
   }
