@@ -74,6 +74,9 @@ struct imv {
   struct { unsigned char r, g, b; } background_color;
   unsigned long slideshow_image_duration;
   unsigned long slideshow_time_elapsed;
+  unsigned int next_frame_due;
+  int next_frame_duration;
+  struct imv_bitmap *next_frame;
   char *font_name;
   struct imv_binds *binds;
   struct imv_navigator *navigator;
@@ -237,12 +240,14 @@ static void source_callback(struct imv_source_message *msg)
   if (msg->bitmap) {
     event.type = imv->events.NEW_IMAGE;
     event.user.data1 = msg->bitmap;
+    event.user.code = msg->frametime;
 
     /* Keep track of the last source to send us a bitmap in order to detect
      * when we're getting a new image, as opposed to a new frame from the
      * same image.
      */
-    event.user.code = msg->source != imv->last_source;
+    uintptr_t is_new_image = msg->source != imv->last_source;
+    event.user.data2 = (void*)is_new_image;
     imv->last_source = msg->source;
   } else {
     event.type = imv->events.BAD_IMAGE;
@@ -273,6 +278,9 @@ struct imv *imv_create(void)
   imv->background_color.r = imv->background_color.g = imv->background_color.b = 0;
   imv->slideshow_image_duration = 0;
   imv->slideshow_time_elapsed = 0;
+  imv->next_frame_due = 0;
+  imv->next_frame_duration = 0;
+  imv->next_frame = NULL;
   imv->font_name = strdup("Monospace:24");
   imv->binds = imv_binds_create();
   imv->navigator = imv_navigator_create();
@@ -366,6 +374,9 @@ void imv_free(struct imv *imv)
   imv_commands_free(imv->commands);
   imv_viewport_free(imv->view);
   imv_image_free(imv->image);
+  if (imv->next_frame) {
+    imv_bitmap_free(imv->next_frame);
+  }
   if(imv->stdin_image_data) {
     free(imv->stdin_image_data);
   }
@@ -688,6 +699,9 @@ int imv_run(struct imv *imv)
           imv->source->callback = &source_callback;
           imv->source->user_data = imv;
           imv->source->load_first_frame(imv->source);
+        } else {
+          /* Error loading path so remove it from the navigator */
+          imv_navigator_remove(imv->navigator, current_path);
         }
 
         // TODO stdin
@@ -718,21 +732,24 @@ int imv_run(struct imv *imv)
       }
     }
 
-    /* tell the source time has passed (for gifs) */
     current_time = SDL_GetTicks();
 
-    /* if we're playing an animated gif, tell the source how much time has
-     * passed */
-    if(imv_viewport_is_playing(imv->view)) {
-      unsigned int dt = current_time - last_time;
-      /* We cap the delta-time to 100 ms so that if imv is asleep for several
-       * seconds or more (e.g. suspended), upon waking up it doesn't try to
-       * catch up all the time it missed by playing through the gif quickly. */
-      if(dt > 100) {
-        dt = 100;
-      }
+    /* Check if a new frame is due */
+    if (imv_viewport_is_playing(imv->view) && imv->next_frame
+        && imv->next_frame_due && imv->next_frame_due <= current_time) {
+      imv_image_set_bitmap(imv->image, imv->next_frame);
+      imv->current_image.width = imv->next_frame->width;
+      imv->current_image.height = imv->next_frame->height;
+      imv_bitmap_free(imv->next_frame);
+      imv->next_frame = NULL;
+      imv->next_frame_due = current_time + imv->next_frame_duration;
+      imv->next_frame_duration = 0;
+
+      imv->need_redraw = true;
+
+      /* Trigger loading of a new frame, now this one's being displayed */
       if (imv->source) {
-        imv->source->time_passed(imv->source, dt / 1000.0);
+        imv->source->load_next_frame(imv->source);
       }
     }
 
@@ -761,14 +778,13 @@ int imv_run(struct imv *imv)
     }
 
     /* sleep until we have something to do */
-    unsigned int timeout = 1000; /* sleep up to a second */
+    unsigned int timeout = 1000; /* milliseconds */
 
     /* if we need to display the next frame of an animation soon we should
      * limit our sleep until the next frame is due */
-    const double next_frame_in = imv->source ?
-      imv->source->time_left(imv->source) : 0.0;
-    if(next_frame_in > 0.0) {
-      timeout = (unsigned int)(next_frame_in * 1000.0);
+    if (imv_viewport_is_playing(imv->view)
+        && imv->next_frame_due > current_time) {
+      timeout = imv->next_frame_due - current_time;
     }
 
     /* go to sleep until an input event, etc. or the timeout expires */
@@ -852,20 +868,47 @@ static bool setup_window(struct imv *imv)
   return true;
 }
 
+
+static void handle_new_image(struct imv *imv, struct imv_bitmap *bitmap, int frametime)
+{
+  imv_image_set_bitmap(imv->image, bitmap);
+  imv->current_image.width = bitmap->width;
+  imv->current_image.height = bitmap->height;
+  imv_bitmap_free(bitmap);
+  imv->need_redraw = true;
+  imv->need_rescale = true;
+  imv->loading = false;
+  imv->next_frame_due = frametime ? SDL_GetTicks() + frametime : 0;
+  imv->next_frame_duration = 0;
+
+  /* If this is an animated image, we should kick off loading the next frame */
+  if (imv->source && frametime) {
+    imv->source->load_next_frame(imv->source);
+  }
+}
+
+static void handle_new_frame(struct imv *imv, struct imv_bitmap *bitmap, int frametime)
+{
+  if (imv->next_frame) {
+    imv_bitmap_free(imv->next_frame);
+  }
+  imv->next_frame = bitmap;
+
+  imv->next_frame_duration = frametime;
+}
+
 static void handle_event(struct imv *imv, SDL_Event *event)
 {
   const int command_buffer_len = 1024;
 
   if(event->type == imv->events.NEW_IMAGE) {
-    /* new image to display */
-    struct imv_bitmap *bmp = event->user.data1;
-    imv_image_set_bitmap(imv->image, bmp);
-    imv->current_image.width = bmp->width;
-    imv->current_image.height = bmp->height;
-    imv_bitmap_free(bmp);
-    imv->need_redraw = true;
-    imv->need_rescale |= event->user.code;
-    imv->loading = false;
+    /* new image vs just a new frame of the same image */
+    bool is_new_image = !!event->user.data2;
+    if (is_new_image) {
+      handle_new_image(imv, event->user.data1, event->user.code);
+    } else {
+      handle_new_frame(imv, event->user.data1, event->user.code);
+    }
     return;
   } else if(event->type == imv->events.BAD_IMAGE) {
     /* an image failed to load, remove it from our image list */
@@ -1362,6 +1405,7 @@ void command_next_frame(struct list *args, const char *argstr, void *data)
   struct imv *imv = data;
   if (imv->source) {
     imv->source->load_next_frame(imv->source);
+    imv->next_frame_due = 1; /* Earliest possible non-zero timestamp */
   }
 }
 

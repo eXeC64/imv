@@ -12,20 +12,7 @@ struct private {
   FREE_IMAGE_FORMAT format;
   FIMULTIBITMAP *multibitmap;
   FIBITMAP *last_frame;
-  int raw_frame_time;
 };
-
-static void time_passed(struct imv_source *src, double dt)
-{
-  (void)src;
-  (void)dt;
-}
-
-static double time_left(struct imv_source *src)
-{
-  (void)src;
-  return 0.0;
-}
 
 static void source_free(struct imv_source *src)
 {
@@ -78,7 +65,7 @@ static void report_error(struct imv_source *src)
   src->callback(&msg);
 }
 
-static void send_bitmap(struct imv_source *src, FIBITMAP *fibitmap)
+static void send_bitmap(struct imv_source *src, FIBITMAP *fibitmap, int frametime)
 {
   if (!src->callback) {
     fprintf(stderr, "imv_source(%s) has no callback configured. "
@@ -90,6 +77,7 @@ static void send_bitmap(struct imv_source *src, FIBITMAP *fibitmap)
   msg.source = src;
   msg.user_data = src->user_data;
   msg.bitmap = to_imv_bitmap(fibitmap);
+  msg.frametime = frametime;
   msg.error = NULL;
 
   src->callback(&msg);
@@ -100,6 +88,8 @@ static void first_frame(struct imv_source *src)
   FIBITMAP *bmp = NULL;
 
   struct private *private = src->private;
+
+  int frametime = 0;
 
   if (private->format == FIF_GIF) {
     private->multibitmap = FreeImage_OpenMultiBitmap(FIF_GIF, src->name,
@@ -120,9 +110,9 @@ static void first_frame(struct imv_source *src)
     FITAG *tag = NULL;
     FreeImage_GetMetadata(FIMD_ANIMATION, frame, "FrameTime", &tag);
     if(FreeImage_GetTagValue(tag)) {
-      private->raw_frame_time = *(int*)FreeImage_GetTagValue(tag);
+      frametime = *(int*)FreeImage_GetTagValue(tag);
     } else {
-      private->raw_frame_time = 100; /* default value for gifs */
+      frametime = 100; /* default value for gifs */
     }
     bmp = FreeImage_ConvertTo24Bits(frame);
     FreeImage_UnlockPage(private->multibitmap, frame, 0);
@@ -140,8 +130,8 @@ static void first_frame(struct imv_source *src)
   }
 
   src->width = FreeImage_GetWidth(bmp);
-  src->height = FreeImage_GetWidth(bmp);
-  send_bitmap(src, bmp);
+  src->height = FreeImage_GetHeight(bmp);
+  send_bitmap(src, bmp, frametime);
   private->last_frame = bmp;
 }
 
@@ -149,11 +139,93 @@ static void next_frame(struct imv_source *src)
 {
   struct private *private = src->private;
   if (src->num_frames == 1) {
-    send_bitmap(src, private->last_frame);
+    send_bitmap(src, private->last_frame, 0);
     return;
   }
 
-  // TODO gifs
+  FITAG *tag = NULL;
+  char disposal_method = 0;
+  int frametime = 0;
+  short top = 0;
+  short left = 0;
+
+  FIBITMAP *frame = FreeImage_LockPage(private->multibitmap, src->next_frame);
+  FIBITMAP *frame32 = FreeImage_ConvertTo32Bits(frame);
+
+  /* First frame is always going to use the raw frame */
+  if(src->next_frame > 0) {
+    FreeImage_GetMetadata(FIMD_ANIMATION, frame, "DisposalMethod", &tag);
+    if(FreeImage_GetTagValue(tag)) {
+      disposal_method = *(char*)FreeImage_GetTagValue(tag);
+    }
+  }
+
+  FreeImage_GetMetadata(FIMD_ANIMATION, frame, "FrameLeft", &tag);
+  if(FreeImage_GetTagValue(tag)) {
+    left = *(short*)FreeImage_GetTagValue(tag);
+  }
+
+  FreeImage_GetMetadata(FIMD_ANIMATION, frame, "FrameTop", &tag);
+  if(FreeImage_GetTagValue(tag)) {
+    top = *(short*)FreeImage_GetTagValue(tag);
+  }
+
+  FreeImage_GetMetadata(FIMD_ANIMATION, frame, "FrameTime", &tag);
+  if(FreeImage_GetTagValue(tag)) {
+    frametime = *(int*)FreeImage_GetTagValue(tag);
+  }
+
+  /* some gifs don't provide a frame time at all */
+  if(frametime == 0) {
+    frametime = 100;
+  }
+
+  FreeImage_UnlockPage(private->multibitmap, frame, 0);
+
+  /* If this frame is inset, we need to expand it for compositing */
+  if(src->width != (int)FreeImage_GetWidth(frame32) ||
+     src->height != (int)FreeImage_GetHeight(frame32)) {
+    FIBITMAP *expanded = FreeImage_Allocate(src->width, src->height, 32, 0,0,0);
+    FreeImage_Paste(expanded, frame32, left, top, 255);
+    FreeImage_Unload(frame32);
+    frame32 = expanded;
+  }
+
+  switch(disposal_method) {
+    case 0: /* nothing specified, fall through to compositing */
+    case 1: /* composite over previous frame */
+      if(private->last_frame && src->next_frame > 0) {
+        FIBITMAP *bg_frame = FreeImage_ConvertTo24Bits(private->last_frame);
+        FreeImage_Unload(private->last_frame);
+        FIBITMAP *comp = FreeImage_Composite(frame32, 1, NULL, bg_frame);
+        FreeImage_Unload(bg_frame);
+        FreeImage_Unload(frame32);
+        private->last_frame = comp;
+      } else {
+        /* No previous frame, just render directly */
+        if(private->last_frame) {
+          FreeImage_Unload(private->last_frame);
+        }
+        private->last_frame = frame32;
+      }
+      break;
+    case 2: /* TODO - set to background, composite over that */
+      if(private->last_frame) {
+        FreeImage_Unload(private->last_frame);
+      }
+      private->last_frame = frame32;
+      break;
+    case 3: /* TODO - restore to previous content */
+      if(private->last_frame) {
+        FreeImage_Unload(private->last_frame);
+      }
+      private->last_frame = frame32;
+      break;
+  }
+
+  src->next_frame = (src->next_frame + 1) % src->num_frames;
+
+  send_bitmap(src, private->last_frame, frametime);
 }
 
 static enum backend_result open_path(const char *path, struct imv_source **src)
@@ -176,8 +248,6 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   source->error_event_id = 0;
   source->load_first_frame = &first_frame;
   source->load_next_frame = &next_frame;
-  source->time_passed = &time_passed;
-  source->time_left = &time_left;
   source->free = &source_free;
   source->callback = NULL;
   source->user_data = NULL;

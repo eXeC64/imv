@@ -14,6 +14,9 @@ struct imv_source_message {
   /* Receiver is responsible for destroying bitmap */
   struct imv_bitmap *bitmap;
 
+  /* If an animated gif, the frame's duration in milliseconds, else 0 */
+  int frametime;
+
   /* Error message if bitmap was NULL */
   const char *error;
 };
@@ -30,6 +33,9 @@ struct imv_source {
   /* Usually 1, more if animated */
   int num_frames;
 
+  /* Next frame to be loaded, 0-indexed */
+  int next_frame;
+
   /* Frames are returned using SDL events. These two fields must be
    * populated by callers before calling any frame loading functionality
    * on the source.
@@ -42,13 +48,6 @@ struct imv_source {
 
   /* Trigger loading of next frame.  */
   void (*load_next_frame)(struct imv_source *src); 
-
-  /* Notify source of time passing, automatically triggers loading of
-   * the next frame when due. */
-  void (*time_passed)(struct imv_source *src, double dt); 
-
-  /* Asks the source how long we can sleep for before the next frame is due */
-  double (*time_left)(struct imv_source *src);
 
   /* Safely free contents of this source. After this returns
    * it is safe to dealocate/overwrite the imv_source instance.
