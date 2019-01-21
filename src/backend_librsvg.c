@@ -1,6 +1,10 @@
-#include "backend_rsvg.h"
+#include "backend_librsvg.h"
 #include "backend.h"
 #include "source.h"
+
+#include <stddef.h>
+
+#ifdef IMV_BACKEND_LIBRSVG
 
 #include <librsvg/rsvg.h>
 
@@ -131,11 +135,20 @@ static void backend_free(struct imv_backend *backend)
   free(backend);
 }
 
-struct imv_backend *imv_backend_rsvg(void)
+struct imv_backend *imv_backend_librsvg(void)
 {
   struct imv_backend *backend = malloc(sizeof(struct imv_backend));
-  backend->name = "rsvg (LGPL license)";
+  backend->name = "librsvg (LGPL license)";
   backend->open_path = &open_path;
   backend->free = &backend_free;
   return backend;
 }
+
+#else
+
+struct imv_backend *imv_backend_librsvg(void)
+{
+  return NULL;
+}
+
+#endif

@@ -1,5 +1,7 @@
 .PHONY: imv clean check install uninstall doc
 
+include config.mk
+
 PREFIX ?= /usr
 BINPREFIX ?= $(PREFIX)/bin
 MANPREFIX ?= $(PREFIX)/share/man
@@ -8,11 +10,8 @@ CONFIGPREFIX ?= /etc
 
 CFLAGS ?= -W -Wall -pedantic -Wmissing-prototypes
 CFLAGS += -std=c99
-CFLAGS += $(shell pkg-config --cflags librsvg-2.0)
 CPPFLAGS += $(shell sdl2-config --cflags) -D_XOPEN_SOURCE=700
 LIBS := $(shell sdl2-config --libs)
-LIBS += -lfreeimage -lpng
-LIBS += $(shell pkg-config --libs librsvg-2.0)
 LIBS += -lSDL2_ttf -lfontconfig -lpthread
 
 BUILDDIR ?= build
@@ -27,6 +26,22 @@ TLIBS := $(LIBS) $(shell pkg-config --libs cmocka)
 VERSION != git describe --dirty --always --tags 2> /dev/null || echo v3.0.0
 
 CFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
+
+# Add backends to build as configured
+ifeq ($(BACKEND_FREEIMAGE),yes)
+	CFLAGS += -DIMV_BACKEND_FREEIMAGE
+	LIBS += -lfreeimage
+endif
+
+ifeq ($(BACKEND_LIBPNG),yes)
+	CFLAGS += -DIMV_BACKEND_LIBPNG
+	LIBS += -lpng
+endif
+
+ifeq ($(BACKEND_LIBRSVG),yes)
+	CFLAGS += -DIMV_BACKEND_LIBRSVG $(shell pkg-config --cflags librsvg-2.0)
+	LIBS += $(shell pkg-config --libs librsvg-2.0)
+endif
 
 imv: $(TARGET)
 

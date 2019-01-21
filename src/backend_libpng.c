@@ -1,11 +1,12 @@
 #include "backend_libpng.h"
 #include "backend.h"
 #include "source.h"
-
 #include <alloca.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef IMV_BACKEND_LIBPNG
 
 #include <png.h>
 
@@ -191,3 +192,12 @@ struct imv_backend *imv_backend_libpng(void)
   backend->free = &backend_free;
   return backend;
 }
+
+#else
+
+struct imv_backend *imv_backend_libpng(void)
+{
+  return NULL;
+}
+
+#endif

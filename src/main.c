@@ -1,9 +1,10 @@
 #include "imv.h"
 
 #include "backend.h"
+
 #include "backend_freeimage.h"
 #include "backend_libpng.h"
-#include "backend_rsvg.h"
+#include "backend_librsvg.h"
 
 int main(int argc, char** argv)
 {
@@ -13,9 +14,17 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  imv_install_backend(imv, imv_backend_rsvg());
+#ifdef IMV_BACKEND_FREEIMAGE
   imv_install_backend(imv, imv_backend_freeimage());
+#endif
+
+#ifdef IMV_BACKEND_LIBPNG
   imv_install_backend(imv, imv_backend_libpng());
+#endif
+
+#ifdef IMV_BACKEND_LIBRSVG
+  imv_install_backend(imv, imv_backend_librsvg());
+#endif
 
   if(!imv_load_config(imv)) {
     imv_free(imv);
