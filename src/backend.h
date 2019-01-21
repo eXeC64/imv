@@ -18,13 +18,19 @@ struct imv_backend {
   /* Name of the backend, for debug and user informational purposes */
   const char *name;
 
+  /* Information about the backend, displayed by help dialog */
+  const char *description;
+
+  /* Official website address */
+  const char *website;
+
+  /* License the backend is used under */
+  const char *license;
+
   /* Input: path to open
    * Output: initialises the imv_source instance passed in
    */
   enum backend_result (*open_path)(const char *path, struct imv_source **src);
-
-  /* Clean up this backend */
-  void (*free)(struct imv_backend *backend);
 };
 
 #endif

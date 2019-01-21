@@ -4,6 +4,6 @@
 struct imv_backend;
 
 /* Create an instance of the libpng backend */
-struct imv_backend *imv_backend_libpng(void);
+const struct imv_backend *imv_backend_libpng(void);
 
 #endif

@@ -258,23 +258,22 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   return BACKEND_SUCCESS;
 }
 
-static void backend_free(struct imv_backend *backend)
-{
-  free(backend);
-}
+const struct imv_backend freeimage_backend = {
+  .name = "FreeImage",
+  .description = "Open source image library supporting a large number of formats",
+  .website = "http://freeimage.sourceforge.net/",
+  .license = "FreeImage Public License v1.0",
+  .open_path = &open_path,
+};
 
-struct imv_backend *imv_backend_freeimage(void)
+const struct imv_backend *imv_backend_freeimage(void)
 {
-  struct imv_backend *backend = malloc(sizeof(struct imv_backend));
-  backend->name = "FreeImage (FIPL v1.0 license)";
-  backend->open_path = &open_path;
-  backend->free = &backend_free;
-  return backend;
+  return &freeimage_backend;
 }
 
 #else
 
-struct imv_backend *imv_backend_freeimage(void)
+const struct imv_backend *imv_backend_freeimage(void)
 {
   return NULL;
 }

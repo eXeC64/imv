@@ -130,23 +130,22 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   return BACKEND_SUCCESS;
 }
 
-static void backend_free(struct imv_backend *backend)
-{
-  free(backend);
-}
+const struct imv_backend librsvg_backend = {
+  .name = "libRSVG",
+  .description = "SVG library developed by GNOME",
+  .website = "https://wiki.gnome.org/Projects/LibRsvg",
+  .license = "Lesser GNU Public License",
+  .open_path = &open_path,
+};
 
-struct imv_backend *imv_backend_librsvg(void)
+const struct imv_backend *imv_backend_librsvg(void)
 {
-  struct imv_backend *backend = malloc(sizeof(struct imv_backend));
-  backend->name = "librsvg (LGPL license)";
-  backend->open_path = &open_path;
-  backend->free = &backend_free;
-  return backend;
+  return &librsvg_backend;
 }
 
 #else
 
-struct imv_backend *imv_backend_librsvg(void)
+const struct imv_backend *imv_backend_librsvg(void)
 {
   return NULL;
 }

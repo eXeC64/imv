@@ -4,6 +4,6 @@
 struct imv_backend;
 
 /* Create an instance of the rsvg backend */
-struct imv_backend *imv_backend_librsvg(void);
+const struct imv_backend *imv_backend_librsvg(void);
 
 #endif

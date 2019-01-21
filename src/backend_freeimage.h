@@ -4,6 +4,6 @@
 struct imv_backend;
 
 /* Create an instance of the freeimage backend */
-struct imv_backend *imv_backend_freeimage(void);
+const struct imv_backend *imv_backend_freeimage(void);
 
 #endif

@@ -179,23 +179,22 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   return BACKEND_SUCCESS;
 }
 
-static void backend_free(struct imv_backend *backend)
-{
-  free(backend);
-}
+const struct imv_backend libpng_backend = {
+  .name = "libpng",
+  .description = "The official PNG reference implementation",
+  .website = "http://www.libpng.org/pub/png/libpng.html",
+  .license = "The libpng license",
+  .open_path = &open_path,
+};
 
-struct imv_backend *imv_backend_libpng(void)
+const struct imv_backend *imv_backend_libpng(void)
 {
-  struct imv_backend *backend = malloc(sizeof(struct imv_backend));
-  backend->name = "libpng (libpng/zlib license)";
-  backend->open_path = &open_path;
-  backend->free = &backend_free;
-  return backend;
+  return &libpng_backend;
 }
 
 #else
 
-struct imv_backend *imv_backend_libpng(void)
+const struct imv_backend *imv_backend_libpng(void)
 {
   return NULL;
 }

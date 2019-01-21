@@ -54,7 +54,7 @@ enum background_type {
 };
 
 struct backend_chain {
-  struct imv_backend *backend;
+  const struct imv_backend *backend;
   struct backend_chain *next;
 };
 
@@ -288,7 +288,6 @@ struct imv *imv_create(void)
   imv->font_name = strdup("Monospace:24");
   imv->binds = imv_binds_create();
   imv->navigator = imv_navigator_create();
-
   imv->backends = NULL;
   imv->source = NULL;
   imv->last_source = NULL;
@@ -372,20 +371,14 @@ void imv_free(struct imv *imv)
   free(imv->overlay_text);
   imv_binds_free(imv->binds);
   imv_navigator_free(imv->navigator);
-
-  struct backend_chain *chain = imv->backends;
-  while (chain) {
-    struct backend_chain *next_backend = chain->next;
-    chain->backend->free(chain->backend);
-    chain = next_backend;
-  }
-
   if (imv->source) {
     imv->source->free(imv->source);
   }
   imv_commands_free(imv->commands);
   imv_viewport_free(imv->view);
-  imv_image_free(imv->image);
+  if (imv->image) {
+    imv_image_free(imv->image);
+  }
   if (imv->next_frame) {
     imv_bitmap_free(imv->next_frame);
   }
@@ -416,7 +409,7 @@ void imv_free(struct imv *imv)
   free(imv);
 }
 
-void imv_install_backend(struct imv *imv, struct imv_backend *backend)
+void imv_install_backend(struct imv *imv, const struct imv_backend *backend)
 {
   struct backend_chain *chain = malloc(sizeof(struct backend_chain));
   chain->backend = backend;
@@ -528,6 +521,33 @@ static int load_paths_from_stdin(void *data)
   return 0;
 }
 
+static void print_help(struct imv *imv)
+{
+  printf("imv %s\nSee manual for usage information.\n", IMV_VERSION);
+  puts("This version of imv has been compiled with the following backends:\n");
+
+  for (struct backend_chain *chain = imv->backends;
+       chain;
+       chain = chain->next) {
+    printf("Name: %s\n"
+           "Description: %s\n"
+           "Website: %s\n"
+           "License: %s\n\n",
+           chain->backend->name,
+           chain->backend->description,
+           chain->backend->website,
+           chain->backend->license);
+  }
+
+  puts("Legal:\n"
+       "imv's full source code is published under the terms of the MIT\n"
+       "license, and can be found at https://github.com/eXeC64/imv\n"
+       "\n"
+       "imv uses the inih library to parse ini files.\n"
+       "See https://github.com/benhoyt/inih for details.\n"
+       "inih is used under the New (3-clause) BSD license.");
+}
+
 bool imv_parse_args(struct imv *imv, int argc, char **argv)
 {
   /* Do not print getopt errors */
@@ -544,22 +564,7 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
       case 'l': imv->list_files_at_exit = true;                  break;
       case 'n': imv->starting_path = optarg;                     break;
       case 'h':
-        fprintf(stdout,
-        "imv %s\n"
-        "See manual for usage information.\n"
-        "\n"
-        "Legal:\n"
-        "imv's full source code is published under the terms of the MIT\n"
-        "license, and can be found at https://github.com/eXeC64/imv\n"
-        "\n"
-        "imv uses the FreeImage open source image library.\n"
-        "See http://freeimage.sourceforge.net for details.\n"
-        "FreeImage is used under the FIPL License v1.0.\n"
-        "\n"
-        "imv uses the inih library to parse ini files.\n"
-        "See https://github.com/benhoyt/inih for details.\n"
-        "inih is used under the New (3-clause) BSD license.\n"
-        , IMV_VERSION);
+        print_help(imv);
         imv->quit = true;
         return true;
       case 's':
@@ -707,7 +712,7 @@ int imv_run(struct imv *imv)
           fprintf(stderr, "No backends installed. Unable to load image.\n");
         }
         for (struct backend_chain *chain = imv->backends; chain; chain = chain->next) {
-          struct imv_backend *backend = chain->backend;
+          const struct imv_backend *backend = chain->backend;
           result = backend->open_path(current_path, &new_source);
           if (result == BACKEND_UNSUPPORTED) {
             /* Try the next backend */
