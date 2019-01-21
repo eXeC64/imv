@@ -8,8 +8,12 @@ CONFIGPREFIX ?= /etc
 
 CFLAGS ?= -W -Wall -pedantic -Wmissing-prototypes
 CFLAGS += -std=c99
+CFLAGS += $(shell pkg-config --cflags librsvg-2.0)
 CPPFLAGS += $(shell sdl2-config --cflags) -D_XOPEN_SOURCE=700
-LIBS := $(shell sdl2-config --libs) -lfreeimage -lpng -lSDL2_ttf -lfontconfig -lpthread
+LIBS := $(shell sdl2-config --libs)
+LIBS += -lfreeimage -lpng
+LIBS += $(shell pkg-config --libs librsvg-2.0)
+LIBS += -lSDL2_ttf -lfontconfig -lpthread
 
 BUILDDIR ?= build
 TARGET := $(BUILDDIR)/imv

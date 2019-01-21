@@ -3,6 +3,7 @@
 #include "backend.h"
 #include "backend_freeimage.h"
 #include "backend_libpng.h"
+#include "backend_rsvg.h"
 
 int main(int argc, char** argv)
 {
@@ -12,6 +13,7 @@ int main(int argc, char** argv)
     return 1;
   }
 
+  imv_install_backend(imv, imv_backend_rsvg());
   imv_install_backend(imv, imv_backend_freeimage());
   imv_install_backend(imv, imv_backend_libpng());
 
