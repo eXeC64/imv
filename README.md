@@ -12,6 +12,7 @@ Features
   * Photoshop PSD files
   * Animated GIFS
   * Various RAW formats
+  * SVG
 * Configurable key bindings and behaviour
 
 Example Usage
@@ -91,12 +92,12 @@ cycling through the list.
 Installation
 ------------
 
-`imv` depends on `pthreads`, `FontConfig`, `SDL2`, `SDL_TTF`, `FreeImage`,
-and `asciidoc`.
+`imv` depends on `pthreads`, `FontConfig`, `SDL2`, `SDL_TTF` and `asciidoc`.
+Additional dependencies are determined by which backends are selected when
+building `imv`. You can find a summary of which backends are available and
+control which ones `imv` is built with in [config.mk](config.mk)
 
-On Debian derivatives, you want:
-`libsdl2-dev libfreeimage-dev libsdl2-ttf-dev libfreeimage3 libfontconfig1-dev`
-
+    $ $EDITOR config.mk
     $ make
     # make install
 
