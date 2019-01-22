@@ -51,8 +51,7 @@ you like.
 In your imv config:
 
     [binds]
-    <Shift+x> = exec rm "$imv_current_file"
-    <Shift+x> = close
+    <Shift+x> = exec rm "$imv_current_file"; close
 
 Then press 'X' within imv to delete the image and close it.
 
