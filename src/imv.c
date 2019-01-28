@@ -127,11 +127,11 @@ static void update_env_vars(struct imv *imv);
 static size_t generate_env_text(struct imv *imv, char *buf, size_t len, const char *format);
 
 
-/* Finds the next split between commands in a string ';', and provies it as
- * out with a len. Returns the next starting point after the current string,
- * or NULL if nothing left.
+/* Finds the next split between commands in a string (';'). Provides a pointer
+ * to the next character after the delimiter as out, or a pointer to '\0' if
+ * nothing is left. Also provides the len from start up to the delimiter.
  */
-static const char *split_commands(const char *start, const char **out, size_t *len)
+static void split_commands(const char *start, const char **out, size_t *len)
 {
   bool in_single_quotes = false;
   bool in_double_quotes = false;
@@ -153,16 +153,15 @@ static const char *split_commands(const char *start, const char **out, size_t *l
       }
     } else if (!in_single_quotes && !in_double_quotes && *str == ';') {
       /* Found a command split that wasn't escaped or quoted */
-      *out = start;
       *len = str - start;
-      return str + 1;
+      *out = str + 1;
+      return;
     }
     ++str;
   }
 
-  *out = start;
+  *out = str;
   *len = str - start;
-  return str;
 }
 
 static bool add_bind(struct imv *imv, const char *keys, const char *commands)
@@ -174,26 +173,25 @@ static bool add_bind(struct imv *imv, const char *keys, const char *commands)
   }
 
   char command_buf[512];
-  const char *command_ptr;
+  const char *next_command;
   size_t command_len;
 
   bool success = true;
 
   imv_binds_clear_key(imv->binds, list);
-  while (*commands) {
-    commands = split_commands(commands, &command_ptr, &command_len);
-    if (!command_ptr) {
+  while (*commands != '\0') {
+    split_commands(commands, &next_command, &command_len);
+
+    if (command_len >= sizeof command_buf) {
+      fprintf(stderr, "Command exceeded max length, not binding: %.*s\n", (int)command_len, commands);
+      imv_binds_clear_key(imv->binds, list);
+      success = false;
       break;
     }
-
-    strncpy(&command_buf[0], command_ptr, sizeof command_buf);
-    if (command_len >= sizeof command_buf) {
-      fprintf(stderr, "Command exceeded max length, not binding: %s\n", &command_buf[0]);
-      continue;
-    }
-
+    strncpy(command_buf, commands, command_len);
     command_buf[command_len] = '\0';
-    enum bind_result result = imv_binds_add(imv->binds, list, &command_buf[0]);
+
+    enum bind_result result = imv_binds_add(imv->binds, list, command_buf);
 
     if (result == BIND_INVALID_KEYS) {
       fprintf(stderr, "Invalid keys to bind to");
@@ -208,6 +206,7 @@ static bool add_bind(struct imv *imv, const char *keys, const char *commands)
       success = false;
       break;
     }
+    commands = next_command;
   }
 
   list_free(list);
@@ -642,7 +641,7 @@ int imv_run(struct imv *imv)
         imv_viewport_set_playing(imv->view, true);
 
         char title[1024];
-        generate_env_text(imv, &title[0], sizeof title, imv->title_text);
+        generate_env_text(imv, title, sizeof title, imv->title_text);
         imv_viewport_set_title(imv->view, title);
       }
     }
@@ -925,7 +924,7 @@ static void render_window(struct imv *imv)
 
   /* update window title */
   char title_text[1024];
-  generate_env_text(imv, &title_text[0], sizeof title_text, imv->title_text);
+  generate_env_text(imv, title_text, sizeof title_text, imv->title_text);
   imv_viewport_set_title(imv->view, title_text);
 
   /* first we draw the background */

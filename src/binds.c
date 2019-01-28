@@ -231,7 +231,7 @@ static int print_event(char *buf, size_t len, const SDL_Event *event)
     keyname = "RightSquareBracket";
   } else if(strlen(keyname) == 1 && isalpha(*keyname)) {
     singlekey[0] = tolower(*keyname);
-    keyname = &singlekey[0];
+    keyname = singlekey;
   }
 
   return snprintf(buf, len, "%s%s", prefix, keyname);
