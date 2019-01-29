@@ -29,6 +29,9 @@ struct imv_image *imv_image_create(SDL_Renderer *r)
 
 void imv_image_free(struct imv_image *image)
 {
+  if(!image) {
+    return;
+  }
   if(image->num_chunks > 0) {
     for(int i = 0; i < image->num_chunks; ++i) {
       SDL_DestroyTexture(image->chunks[i]);

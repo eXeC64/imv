@@ -115,7 +115,7 @@ void imv_printf(SDL_Renderer *renderer, TTF_Font *font, int x, int y,
   va_start(args, fmt);
   vsnprintf(line, sizeof(line), fmt, args);
 
-  SDL_Surface *surf = TTF_RenderUTF8_Blended(font, &line[0], *fg);
+  SDL_Surface *surf = TTF_RenderUTF8_Blended(font, line, *fg);
   SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, surf);
 
   SDL_Rect tex_rect = {0,0,0,0};
