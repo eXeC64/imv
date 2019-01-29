@@ -933,7 +933,7 @@ static void handle_event(struct imv *imv, SDL_Event *event)
 {
   const int command_buffer_len = 1024;
 
-  if(event->type == imv->events.NEW_IMAGE) {
+  if (event->type == imv->events.NEW_IMAGE) {
     /* new image vs just a new frame of the same image */
     bool is_new_image = !!event->user.data2;
     if (is_new_image) {
@@ -942,14 +942,14 @@ static void handle_event(struct imv *imv, SDL_Event *event)
       handle_new_frame(imv, event->user.data1, event->user.code);
     }
     return;
-  } else if(event->type == imv->events.BAD_IMAGE) {
+  } else if (event->type == imv->events.BAD_IMAGE) {
     /* an image failed to load, remove it from our image list */
     char *err_path = event->user.data1;
     imv_navigator_remove(imv->navigator, err_path);
 
     /* special case: the image came from stdin */
-    if(strcmp(err_path, "-") == 0) {
-      if(imv->stdin_image_data) {
+    if (strcmp(err_path, "-") == 0) {
+      if (imv->stdin_image_data) {
         free(imv->stdin_image_data);
         imv->stdin_image_data = NULL;
         imv->stdin_image_data_len = 0;
@@ -957,13 +957,13 @@ static void handle_event(struct imv *imv, SDL_Event *event)
       fprintf(stderr, "Failed to load image from stdin.\n");
     }
     free(err_path);
-  } else if(event->type == imv->events.NEW_PATH) {
+  } else if (event->type == imv->events.NEW_PATH) {
     /* received a new path from the stdin reading thread */
     imv_add_path(imv, event->user.data1);
     free(event->user.data1);
   }
 
-  switch(event->type) {
+  switch (event->type) {
     case SDL_QUIT:
       imv_command_exec(imv->commands, "quit", imv);
       break;
@@ -975,14 +975,14 @@ static void handle_event(struct imv *imv, SDL_Event *event)
     case SDL_KEYDOWN:
       SDL_ShowCursor(SDL_DISABLE);
 
-      if(imv->input_buffer) {
+      if (imv->input_buffer) {
         /* in command mode, update the buffer */
-        if(event->key.keysym.sym == SDLK_ESCAPE) {
+        if (event->key.keysym.sym == SDLK_ESCAPE) {
           SDL_StopTextInput();
           free(imv->input_buffer);
           imv->input_buffer = NULL;
           imv->need_redraw = true;
-        } else if(event->key.keysym.sym == SDLK_RETURN) {
+        } else if (event->key.keysym.sym == SDLK_RETURN) {
           struct list *commands = list_create();
           list_append(commands, imv->input_buffer);
           imv_command_exec_list(imv->commands, commands, imv);
@@ -991,9 +991,9 @@ static void handle_event(struct imv *imv, SDL_Event *event)
           free(imv->input_buffer);
           imv->input_buffer = NULL;
           imv->need_redraw = true;
-        } else if(event->key.keysym.sym == SDLK_BACKSPACE) {
+        } else if (event->key.keysym.sym == SDLK_BACKSPACE) {
           const size_t len = strlen(imv->input_buffer);
-          if(len > 0) {
+          if (len > 0) {
             imv->input_buffer[len - 1] = '\0';
             imv->need_redraw = true;
           }
@@ -1004,7 +1004,7 @@ static void handle_event(struct imv *imv, SDL_Event *event)
 
       switch (event->key.keysym.sym) {
         case SDLK_SEMICOLON:
-          if(event->key.keysym.mod & KMOD_SHIFT) {
+          if (event->key.keysym.mod & KMOD_SHIFT) {
             SDL_StartTextInput();
             imv->input_buffer = malloc(command_buffer_len);
             imv->input_buffer[0] = '\0';
@@ -1013,7 +1013,7 @@ static void handle_event(struct imv *imv, SDL_Event *event)
           break;
         default: { /* braces to allow const char *cmd definition */
           struct list *cmds = imv_bind_handle_event(imv->binds, event);
-          if(cmds) {
+          if (cmds) {
             imv_command_exec_list(imv->commands, cmds, imv);
           }
         }
@@ -1024,7 +1024,7 @@ static void handle_event(struct imv *imv, SDL_Event *event)
       SDL_ShowCursor(SDL_ENABLE);
       break;
     case SDL_MOUSEMOTION:
-      if(event->motion.state & SDL_BUTTON_LMASK) {
+      if (event->motion.state & SDL_BUTTON_LMASK) {
         imv_viewport_move(imv->view, event->motion.xrel, event->motion.yrel, imv->image);
       }
       SDL_ShowCursor(SDL_ENABLE);
@@ -1036,7 +1036,7 @@ static void handle_event(struct imv *imv, SDL_Event *event)
        * we have to clear the event queue. It's hacky, but works without
        * any visible side effects.
        */
-      if(event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
+      if (event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
         SDL_PumpEvents();
         SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
       }
