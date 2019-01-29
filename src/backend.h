@@ -1,6 +1,8 @@
 #ifndef IMV_BACKEND_H
 #define IMV_BACKEND_H
 
+#include <stddef.h>
+
 struct imv_source;
 
 enum backend_result {
@@ -31,6 +33,11 @@ struct imv_backend {
    * Output: initialises the imv_source instance passed in
    */
   enum backend_result (*open_path)(const char *path, struct imv_source **src);
+
+  /* Input: pointer to data and length of data
+   * Output: initialises the imv_source instance passed in
+   */
+  enum backend_result (*open_memory)(void *data, size_t len, struct imv_source **src);
 };
 
 #endif
