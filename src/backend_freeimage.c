@@ -11,6 +11,7 @@
 #include <FreeImage.h>
 
 struct private {
+  FIMEMORY *memory;
   FREE_IMAGE_FORMAT format;
   FIMULTIBITMAP *multibitmap;
   FIBITMAP *last_frame;
@@ -22,6 +23,11 @@ static void source_free(struct imv_source *src)
   src->name = NULL;
 
   struct private *private = src->private;
+
+  if (private->memory) {
+    FreeImage_CloseMemory(private->memory);
+    private->memory = NULL;
+  }
 
   if (private->multibitmap) {
     FreeImage_CloseMultiBitmap(private->multibitmap, 0);
@@ -95,11 +101,21 @@ static void first_frame(struct imv_source *src)
   int frametime = 0;
 
   if (private->format == FIF_GIF) {
-    private->multibitmap = FreeImage_OpenMultiBitmap(FIF_GIF, src->name,
-        /* don't create file */ 0,
-        /* read only */ 1,
-        /* keep in memory */ 1,
-        /* flags */ GIF_LOAD256);
+    if (src->name) {
+      private->multibitmap = FreeImage_OpenMultiBitmap(FIF_GIF, src->name,
+          /* don't create file */ 0,
+          /* read only */ 1,
+          /* keep in memory */ 1,
+          /* flags */ GIF_LOAD256);
+    } else if (private->memory) {
+      private->multibitmap = FreeImage_LoadMultiBitmapFromMemory(FIF_GIF,
+          private->memory,
+          /* flags */ GIF_LOAD256);
+    } else {
+      report_error(src);
+      return;
+    }
+
     if (!private->multibitmap) {
       report_error(src);
       return;
@@ -123,7 +139,12 @@ static void first_frame(struct imv_source *src)
   } else { /* not a gif */
     src->num_frames = 1;
     int flags = (private->format == FIF_JPEG) ? JPEG_EXIFROTATE : 0;
-    FIBITMAP *fibitmap = FreeImage_Load(private->format, src->name, flags);
+    FIBITMAP *fibitmap = NULL;
+    if (src->name) {
+      fibitmap = FreeImage_Load(private->format, src->name, flags);
+    } else if (private->memory) {
+      fibitmap = FreeImage_LoadFromMemory(private->format, private->memory, flags);
+    }
     if (!fibitmap) {
       report_error(src);
       return;
@@ -258,12 +279,44 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   return BACKEND_SUCCESS;
 }
 
+static enum backend_result open_memory(void *data, size_t len, struct imv_source **src)
+{
+  FIMEMORY *fmem = FreeImage_OpenMemory(data, len);
+
+  FREE_IMAGE_FORMAT fmt = FreeImage_GetFileTypeFromMemory(fmem, 0);
+
+  if (fmt == FIF_UNKNOWN) {
+    FreeImage_CloseMemory(fmem);
+    return BACKEND_UNSUPPORTED;
+  }
+
+  struct private *private = calloc(sizeof(struct private), 1);
+  private->format = fmt;
+  private->memory = fmem;
+
+  struct imv_source *source = calloc(sizeof(struct imv_source), 1);
+  source->name = NULL;
+  source->width = 0;
+  source->height = 0;
+  source->num_frames = 0;
+  source->load_first_frame = &first_frame;
+  source->load_next_frame = &next_frame;
+  source->free = &source_free;
+  source->callback = NULL;
+  source->user_data = NULL;
+  source->private = private;
+  *src = source;
+
+  return BACKEND_SUCCESS;
+}
+
 const struct imv_backend freeimage_backend = {
   .name = "FreeImage",
   .description = "Open source image library supporting a large number of formats",
   .website = "http://freeimage.sourceforge.net/",
   .license = "FreeImage Public License v1.0",
   .open_path = &open_path,
+  .open_memory = &open_memory,
 };
 
 const struct imv_backend *imv_backend_freeimage(void)
