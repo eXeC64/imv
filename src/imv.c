@@ -255,7 +255,8 @@ static void source_callback(struct imv_source_message *msg)
     imv->last_source = msg->source;
   } else {
     event.type = imv->events.BAD_IMAGE;
-    event.user.data1 = strdup(msg->error);
+    /* TODO: Something more elegant with error messages */
+    /* event.user.data1 = strdup(msg->error); */
   }
 
   SDL_PushEvent(&event);
@@ -944,8 +945,7 @@ static void handle_event(struct imv *imv, SDL_Event *event)
     return;
   } else if (event->type == imv->events.BAD_IMAGE) {
     /* an image failed to load, remove it from our image list */
-    char *err_path = event->user.data1;
-    imv_navigator_remove(imv->navigator, err_path);
+    const char *err_path = imv_navigator_selection(imv->navigator);
 
     /* special case: the image came from stdin */
     if (strcmp(err_path, "-") == 0) {
@@ -956,7 +956,8 @@ static void handle_event(struct imv *imv, SDL_Event *event)
       }
       fprintf(stderr, "Failed to load image from stdin.\n");
     }
-    free(err_path);
+
+    imv_navigator_remove(imv->navigator, err_path);
   } else if (event->type == imv->events.NEW_PATH) {
     /* received a new path from the stdin reading thread */
     imv_add_path(imv, event->user.data1);
