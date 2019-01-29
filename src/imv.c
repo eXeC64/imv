@@ -705,6 +705,8 @@ int imv_run(struct imv *imv)
       const char *current_path = imv_navigator_selection(imv->navigator);
       /* check we got a path back */
       if(strcmp("", current_path)) {
+
+        const bool path_is_stdin = !strcmp("-", current_path);
         struct imv_source *new_source;
 
         enum backend_result result = BACKEND_UNSUPPORTED;
@@ -714,7 +716,24 @@ int imv_run(struct imv *imv)
         }
         for (struct backend_chain *chain = imv->backends; chain; chain = chain->next) {
           const struct imv_backend *backend = chain->backend;
-          result = backend->open_path(current_path, &new_source);
+          if (path_is_stdin) {
+
+            if (!backend->open_memory) {
+              /* memory loading unsupported by backend */
+              continue;
+            }
+
+            result = backend->open_memory(imv->stdin_image_data,
+                imv->stdin_image_data_len, &new_source);
+          } else {
+
+            if (!backend->open_path) {
+              /* path loading unsupported by backend */
+              continue;
+            }
+
+            result = backend->open_path(current_path, &new_source);
+          }
           if (result == BACKEND_UNSUPPORTED) {
             /* Try the next backend */
             continue;
@@ -742,11 +761,6 @@ int imv_run(struct imv *imv)
           /* Error loading path so remove it from the navigator */
           imv_navigator_remove(imv->navigator, current_path);
         }
-
-        // TODO stdin
-        /* imv_loader_load(imv->loader, current_path, */
-            /* imv->stdin_image_data, imv->stdin_image_data_len); */
-
       }
     }
 
