@@ -149,8 +149,9 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   png_set_sig_bytes(private->png, sizeof header);
   png_read_info(private->png, private->info);
 
+  /* Tell libpng to give us a consistent output format */
   png_set_gray_to_rgb(private->png);
-
+  png_set_filler(private->png, 0xff, PNG_FILLER_AFTER);
   png_read_update_info(private->png, private->info);
 
   struct imv_source *source = calloc(1, sizeof(struct imv_source));
