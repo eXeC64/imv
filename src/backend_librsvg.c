@@ -71,7 +71,7 @@ static void send_bitmap(struct imv_source *src, GdkPixbuf *bitmap)
 
 static void load_image(struct imv_source *src)
 {
-  GError *error;
+  GError *error = NULL;
   char path[PATH_MAX+8];
   snprintf(path, sizeof path, "file://%s", src->name);
   RsvgHandle *handle = rsvg_handle_new_from_file(path, &error);
