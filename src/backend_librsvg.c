@@ -2,7 +2,7 @@
 #include "backend.h"
 #include "source.h"
 
-#include <stddef.h>
+#include <stdlib.h>
 
 #ifdef IMV_BACKEND_LIBRSVG
 
