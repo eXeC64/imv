@@ -12,7 +12,7 @@ cache:
     - $HOME/cmocka
 
 env:
-  - CFLAGS="-W -Wall -Wextra -Wpedantic -Wpointer-arith -Wuninitialized -Wstrict-prototypes -Wmissing-prototypes -Wunused -Wsign-compare -Wshadow -Werror"
+  - CFLAGS="-W -Wall -Wextra -Wpedantic -Wpointer-arith -Wstrict-prototypes -Wshadow -Werror"
 
 script:
   - sed -i 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk # Enable all backends for test build

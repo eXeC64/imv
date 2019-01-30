@@ -8,7 +8,7 @@ MANPREFIX ?= $(PREFIX)/share/man
 DATAPREFIX ?= $(PREFIX)/share
 CONFIGPREFIX ?= /etc
 
-CFLAGS ?= -W -Wall -pedantic -Wmissing-prototypes
+CFLAGS ?= -W -Wall -Wextra -Wpedantic -Wpointer-arith -Wstrict-prototypes -Wshadow
 CFLAGS += -std=c99
 CPPFLAGS += $(shell sdl2-config --cflags) -D_XOPEN_SOURCE=700
 LIBS := $(shell sdl2-config --libs)
