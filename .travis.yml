@@ -15,6 +15,7 @@ env:
   - CFLAGS="-W -Wall -Wextra -Wpedantic -Wpointer-arith -Wuninitialized -Wstrict-prototypes -Wmissing-prototypes -Wunused -Wsign-compare -Wshadow -Werror"
 
 script:
+  - sed -i 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk # Enable all backends for test build
   - make V=yes
   - CFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" make check
 
@@ -25,6 +26,8 @@ addons:
   apt:
     packages:
       - libfreeimage-dev
+      - libpng-dev
+      - librsvg2-dev
       - libsdl2-ttf-dev
 
 install:
