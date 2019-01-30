@@ -20,8 +20,6 @@ TARGET := $(BUILDDIR)/imv
 SOURCES := $(wildcard src/*.c)
 OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
 TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(wildcard test/*.c))
-TFLAGS ?= -g $(CFLAGS) $(CPPFLAGS) $(shell pkg-config --cflags cmocka)
-TLIBS := $(LIBS) $(shell pkg-config --libs cmocka)
 
 VERSION != git describe --dirty --always --tags 2> /dev/null || echo v3.0.0
 
@@ -42,6 +40,9 @@ ifeq ($(BACKEND_LIBRSVG),yes)
 	CFLAGS += -DIMV_BACKEND_LIBRSVG $(shell pkg-config --cflags librsvg-2.0)
 	LIBS += $(shell pkg-config --libs librsvg-2.0)
 endif
+
+TFLAGS ?= -g $(CFLAGS) $(CPPFLAGS) $(shell pkg-config --cflags cmocka)
+TLIBS := $(LIBS) $(shell pkg-config --libs cmocka)
 
 imv: $(TARGET)
 
