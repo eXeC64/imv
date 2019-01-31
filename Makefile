@@ -35,6 +35,11 @@ ifeq ($(BACKEND_LIBPNG),yes)
 	override LIBS += -lpng
 endif
 
+ifeq ($(BACKEND_LIBJPEG),yes)
+	override CPPFLAGS += -DIMV_BACKEND_LIBJPEG
+	override LIBS += -lturbojpeg
+endif
+
 ifeq ($(BACKEND_LIBRSVG),yes)
 	override CPPFLAGS += -DIMV_BACKEND_LIBRSVG $(shell pkg-config --cflags librsvg-2.0)
 	override LIBS += $(shell pkg-config --libs librsvg-2.0)

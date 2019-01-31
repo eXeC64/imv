@@ -12,6 +12,12 @@ BACKEND_FREEIMAGE=yes
 # license: libpng license
 BACKEND_LIBPNG=no
 
+# libjpeg-turbo https://libjpeg-turbo.org/
+# provides: jpeg
+# depends: none
+# license: modified bsd
+BACKEND_LIBJPEG=no
+
 # librsvg https://wiki.gnome.org/Projects/LibRsvg
 # provides: svg
 # depends: gdk-pixbuf2 pango libcroco

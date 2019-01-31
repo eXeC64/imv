@@ -26,6 +26,7 @@ addons:
   apt:
     packages:
       - libfreeimage-dev
+      - libjpeg-turbo8-dev
       - libpng-dev
       - librsvg2-dev
       - libsdl2-ttf-dev
