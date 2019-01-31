@@ -700,8 +700,12 @@ int imv_run(struct imv *imv)
       continue;
     }
 
-    /* if the user has changed image, start loading the new one */
-    if(imv_navigator_poll_changed(imv->navigator)) {
+    /* If the user has changed image, start loading the new one. It's possible
+     * that there are lots of unsupported files listed back to back, so we
+     * may immediate close one and navigate onto the next. So we attempt to
+     * load in a while loop until the navigation stops.
+     */
+    while (imv_navigator_poll_changed(imv->navigator)) {
       const char *current_path = imv_navigator_selection(imv->navigator);
       /* check we got a path back */
       if(strcmp("", current_path)) {
