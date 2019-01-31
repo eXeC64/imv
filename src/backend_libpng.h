@@ -3,7 +3,7 @@
 
 struct imv_backend;
 
-/* Create an instance of the libpng backend */
+/* Get an instance of the libpng backend */
 const struct imv_backend *imv_backend_libpng(void);
 
 #endif

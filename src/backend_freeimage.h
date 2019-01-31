@@ -3,7 +3,7 @@
 
 struct imv_backend;
 
-/* Create an instance of the freeimage backend */
+/* Get an instance of the freeimage backend */
 const struct imv_backend *imv_backend_freeimage(void);
 
 #endif
