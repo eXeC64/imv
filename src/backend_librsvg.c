@@ -3,6 +3,7 @@
 #include "source.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef IMV_BACKEND_LIBRSVG
 

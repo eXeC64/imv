@@ -207,7 +207,7 @@ static int print_event(char *buf, size_t len, const SDL_Event *event)
   }
 
   /* Build prefix first: */
-  char prefix[16] = {0};
+  char prefix[32] = {0};
   snprintf(prefix, sizeof prefix, "%s%s%s",
       SDL_GetModState() & KMOD_CTRL ? "Ctrl+" : "",
       SDL_GetModState() & KMOD_ALT ? "Meta+" : "",
