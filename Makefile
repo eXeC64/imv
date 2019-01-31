@@ -1,4 +1,4 @@
-.PHONY: imv clean check install uninstall doc
+.PHONY: imv debug clean check install uninstall doc
 
 include config.mk
 
@@ -8,11 +8,10 @@ MANPREFIX ?= $(PREFIX)/share/man
 DATAPREFIX ?= $(PREFIX)/share
 CONFIGPREFIX ?= /etc
 
-CFLAGS ?= -W -Wall -Wextra -Wpedantic -Wpointer-arith -Wstrict-prototypes -Wshadow
-CFLAGS += -std=c99
-CPPFLAGS += $(shell sdl2-config --cflags) -D_XOPEN_SOURCE=700
-LIBS := $(shell sdl2-config --libs)
-LIBS += -lSDL2_ttf -lfontconfig -lpthread
+override CFLAGS += -std=c99 -W -Wall -Wpedantic -Wextra
+override CPPFLAGS += $(shell sdl2-config --cflags) -D_XOPEN_SOURCE=700
+override LIBS := $(shell sdl2-config --libs)
+override LIBS += -lSDL2_ttf -lfontconfig -lpthread
 
 BUILDDIR ?= build
 TARGET := $(BUILDDIR)/imv
@@ -23,22 +22,22 @@ TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(wildcard test/*.c))
 
 VERSION != git describe --dirty --always --tags 2> /dev/null || echo v3.0.0
 
-CFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
+override CPPFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
 
 # Add backends to build as configured
 ifeq ($(BACKEND_FREEIMAGE),yes)
-	CFLAGS += -DIMV_BACKEND_FREEIMAGE
-	LIBS += -lfreeimage
+	override CPPFLAGS += -DIMV_BACKEND_FREEIMAGE
+	override LIBS += -lfreeimage
 endif
 
 ifeq ($(BACKEND_LIBPNG),yes)
-	CFLAGS += -DIMV_BACKEND_LIBPNG
-	LIBS += -lpng
+	override CPPFLAGS += -DIMV_BACKEND_LIBPNG
+	override LIBS += -lpng
 endif
 
 ifeq ($(BACKEND_LIBRSVG),yes)
-	CFLAGS += -DIMV_BACKEND_LIBRSVG $(shell pkg-config --cflags librsvg-2.0)
-	LIBS += $(shell pkg-config --libs librsvg-2.0)
+	override CPPFLAGS += -DIMV_BACKEND_LIBRSVG $(shell pkg-config --cflags librsvg-2.0)
+	override LIBS += $(shell pkg-config --libs librsvg-2.0)
 endif
 
 TFLAGS ?= -g $(CFLAGS) $(CPPFLAGS) $(shell pkg-config --cflags cmocka)
@@ -57,7 +56,7 @@ $(OBJECTS): | $(BUILDDIR)
 $(BUILDDIR):
 	mkdir -p $(BUILDDIR)
 
-$(BUILDDIR)/%.o: src/%.c
+$(BUILDDIR)/%.o: src/%.c Makefile
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
 $(BUILDDIR)/test_%: test/%.c $(filter-out src/main.c, $(wildcard src/*.c))
