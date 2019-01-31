@@ -26,9 +26,13 @@ static void source_free(struct imv_source *src)
 
   struct private *private = src->private;
   tjDestroy(private->jpeg);
-  munmap(private->data, private->len);
+  if (private->fd >= 0) {
+    munmap(private->data, private->len);
+    close(private->fd);
+  } else {
+    free(private->data);
+  }
   private->data = NULL;
-  close(private->fd);
 
   free(src->private);
   src->private = NULL;
@@ -156,6 +160,45 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   return BACKEND_SUCCESS;
 }
 
+static enum backend_result open_memory(void *data, size_t len, struct imv_source **src)
+{
+  struct private private;
+
+  private.fd = -1;
+  private.data = data;
+  private.len = len;
+
+  private.jpeg = tjInitDecompress();
+  if (!private.jpeg) {
+    return BACKEND_UNSUPPORTED;
+  }
+
+  int width, height;
+  int rcode = tjDecompressHeader(private.jpeg, private.data, private.len,
+      &width, &height);
+  if (rcode) {
+    tjDestroy(private.jpeg);
+    return BACKEND_UNSUPPORTED;
+  }
+
+  struct imv_source *source = calloc(1, sizeof(struct imv_source));
+  source->name = strdup("-");
+  source->width = width;
+  source->height = height;
+  source->num_frames = 1;
+  source->next_frame = 1;
+  source->load_first_frame = &load_image;
+  source->load_next_frame = NULL;
+  source->free = &source_free;
+  source->callback = NULL;
+  source->user_data = NULL;
+  source->private = malloc(sizeof private);
+  memcpy(source->private, &private, sizeof private);
+
+  *src = source;
+  return BACKEND_SUCCESS;
+}
+
 const struct imv_backend libjpeg_backend = {
   .name = "libjpeg-turbo",
   .description = "Fast JPEG codec based on libjpeg. "
@@ -164,6 +207,7 @@ const struct imv_backend libjpeg_backend = {
   .website = "https://libjpeg-turbo.org/",
   .license = "The Modified BSD License",
   .open_path = &open_path,
+  .open_memory = &open_memory,
 };
 
 const struct imv_backend *imv_backend_libjpeg(void)
