@@ -30,6 +30,7 @@ addons:
       - libpng-dev
       - librsvg2-dev
       - libsdl2-ttf-dev
+      - libtiff-dev
 
 install:
   # Note: travis concatinates lines belonging to the same item
