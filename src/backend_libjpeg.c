@@ -120,7 +120,7 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   private.len = len;
 
   private.data = mmap(NULL, private.len, PROT_READ, MAP_PRIVATE, private.fd, 0);
-  if (!private.data) {
+  if (private.data == MAP_FAILED || !private.data) {
     close(private.fd);
     return BACKEND_BAD_PATH;
   }
