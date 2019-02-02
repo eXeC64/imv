@@ -3,6 +3,7 @@
 #include "backend.h"
 
 #include "backend_freeimage.h"
+#include "backend_libtiff.h"
 #include "backend_libpng.h"
 #include "backend_libjpeg.h"
 #include "backend_librsvg.h"
@@ -17,6 +18,10 @@ int main(int argc, char** argv)
 
 #ifdef IMV_BACKEND_FREEIMAGE
   imv_install_backend(imv, imv_backend_freeimage());
+#endif
+
+#ifdef IMV_BACKEND_LIBTIFF
+  imv_install_backend(imv, imv_backend_libtiff());
 #endif
 
 #ifdef IMV_BACKEND_LIBPNG

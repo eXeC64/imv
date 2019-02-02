@@ -6,6 +6,12 @@
 # license: FIPL v1.0
 BACKEND_FREEIMAGE=yes
 
+# libtiff
+# provides: tiff
+# dependws: libjpeg  zlib  xz  zstd
+# license: MIT
+BACKEND_LIBTIFF=no
+
 # libpng http://www.libpng.org/pub/png/libpng.html
 # provides: png
 # depends: zlib

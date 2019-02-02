@@ -30,6 +30,11 @@ ifeq ($(BACKEND_FREEIMAGE),yes)
 	override LIBS += -lfreeimage
 endif
 
+ifeq ($(BACKEND_LIBTIFF),yes)
+	override CPPFLAGS += -DIMV_BACKEND_LIBTIFF
+	override LIBS += -ltiff
+endif
+
 ifeq ($(BACKEND_LIBPNG),yes)
 	override CPPFLAGS += -DIMV_BACKEND_LIBPNG
 	override LIBS += -lpng
