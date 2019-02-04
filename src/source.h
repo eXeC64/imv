@@ -1,6 +1,7 @@
 #ifndef IMV_SOURCE_H
 #define IMV_SOURCE_H
 
+#include <pthread.h>
 #include <stdbool.h>
 #include "bitmap.h"
 
@@ -36,11 +37,18 @@ struct imv_source {
   /* Next frame to be loaded, 0-indexed */
   int next_frame;
 
-  /* Trigger loading of the first frame. */
-  void (*load_first_frame)(struct imv_source *src); 
+  /* Attempted to be locked by load_first_frame or load_next_frame.
+   * If the mutex can't be locked, the call is aborted.
+   * Used to prevent the source from having multiple worker threads at once.
+   * Released by the source before calling the message callback with a result.
+   */
+  pthread_mutex_t busy;
 
-  /* Trigger loading of next frame.  */
-  void (*load_next_frame)(struct imv_source *src); 
+  /* Trigger loading of the first frame. Returns 0 on success. */
+  int (*load_first_frame)(struct imv_source *src);
+
+  /* Trigger loading of next frame. Returns 0 on success. */
+  int (*load_next_frame)(struct imv_source *src);
 
   /* Safely free contents of this source. After this returns
    * it is safe to dealocate/overwrite the imv_source instance.

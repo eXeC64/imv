@@ -19,6 +19,7 @@ struct private {
 
 static void source_free(struct imv_source *src)
 {
+  pthread_mutex_lock(&src->busy);
   free(src->name);
   src->name = NULL;
 
@@ -42,6 +43,8 @@ static void source_free(struct imv_source *src)
   free(private);
   src->private = NULL;
 
+  pthread_mutex_unlock(&src->busy);
+  pthread_mutex_destroy(&src->busy);
   free(src);
 }
 
@@ -71,6 +74,7 @@ static void report_error(struct imv_source *src)
   msg.bitmap = NULL;
   msg.error = "Internal error";
 
+  pthread_mutex_unlock(&src->busy);
   src->callback(&msg);
 }
 
@@ -89,11 +93,17 @@ static void send_bitmap(struct imv_source *src, FIBITMAP *fibitmap, int frametim
   msg.frametime = frametime;
   msg.error = NULL;
 
+  pthread_mutex_unlock(&src->busy);
   src->callback(&msg);
 }
 
-static void first_frame(struct imv_source *src)
+static int first_frame(struct imv_source *src)
 {
+  /* Don't run if this source is already active */
+  if (pthread_mutex_trylock(&src->busy)) {
+    return -1;
+  }
+
   FIBITMAP *bmp = NULL;
 
   struct private *private = src->private;
@@ -113,12 +123,12 @@ static void first_frame(struct imv_source *src)
           /* flags */ GIF_LOAD256);
     } else {
       report_error(src);
-      return;
+      return -1;
     }
 
     if (!private->multibitmap) {
       report_error(src);
-      return;
+      return -1;
     }
 
     FIBITMAP *frame = FreeImage_LockPage(private->multibitmap, 0);
@@ -147,7 +157,7 @@ static void first_frame(struct imv_source *src)
     }
     if (!fibitmap) {
       report_error(src);
-      return;
+      return -1;
     }
     bmp = FreeImage_ConvertTo32Bits(fibitmap);
     FreeImage_Unload(fibitmap);
@@ -155,16 +165,22 @@ static void first_frame(struct imv_source *src)
 
   src->width = FreeImage_GetWidth(bmp);
   src->height = FreeImage_GetHeight(bmp);
-  send_bitmap(src, bmp, frametime);
   private->last_frame = bmp;
+  send_bitmap(src, bmp, frametime);
+  return 0;
 }
 
-static void next_frame(struct imv_source *src)
+static int next_frame(struct imv_source *src)
 {
+  /* Don't run if this source is already active */
+  if (pthread_mutex_trylock(&src->busy)) {
+    return -1;
+  }
+
   struct private *private = src->private;
   if (src->num_frames == 1) {
     send_bitmap(src, private->last_frame, 0);
-    return;
+    return 0;
   }
 
   FITAG *tag = NULL;
@@ -250,6 +266,7 @@ static void next_frame(struct imv_source *src)
   src->next_frame = (src->next_frame + 1) % src->num_frames;
 
   send_bitmap(src, private->last_frame, frametime);
+  return 0;
 }
 
 static enum backend_result open_path(const char *path, struct imv_source **src)
@@ -268,6 +285,7 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   source->width = 0;
   source->height = 0;
   source->num_frames = 0;
+  pthread_mutex_init(&source->busy, NULL);
   source->load_first_frame = &first_frame;
   source->load_next_frame = &next_frame;
   source->free = &source_free;
@@ -299,6 +317,7 @@ static enum backend_result open_memory(void *data, size_t len, struct imv_source
   source->width = 0;
   source->height = 0;
   source->num_frames = 0;
+  pthread_mutex_init(&source->busy, NULL);
   source->load_first_frame = &first_frame;
   source->load_next_frame = &next_frame;
   source->free = &source_free;

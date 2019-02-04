@@ -63,6 +63,7 @@ static toff_t mem_size(thandle_t data)
 
 static void source_free(struct imv_source *src)
 {
+  pthread_mutex_lock(&src->busy);
   free(src->name);
   src->name = NULL;
 
@@ -73,6 +74,8 @@ static void source_free(struct imv_source *src)
   free(src->private);
   src->private = NULL;
 
+  pthread_mutex_unlock(&src->busy);
+  pthread_mutex_destroy(&src->busy);
   free(src);
 }
 
@@ -100,6 +103,7 @@ static void report_error(struct imv_source *src)
   msg.bitmap = NULL;
   msg.error = "Internal error";
 
+  pthread_mutex_unlock(&src->busy);
   src->callback(&msg);
 }
 
@@ -118,11 +122,17 @@ static void send_bitmap(struct imv_source *src, void *bitmap)
   msg.frametime = 0;
   msg.error = NULL;
 
+  pthread_mutex_unlock(&src->busy);
   src->callback(&msg);
 }
 
-static void load_image(struct imv_source *src)
+static int load_image(struct imv_source *src)
 {
+  /* Don't run if this source is already active */
+  if (pthread_mutex_trylock(&src->busy)) {
+    return -1;
+  }
+
   struct private *private = src->private;
 
   /* libtiff suggests using their own allocation routines to support systems
@@ -135,13 +145,14 @@ static void load_image(struct imv_source *src)
       bitmap, ORIENTATION_TOPLEFT, 0);
 
   /* 1 = success, unlike the rest of *nix */
-  if (rcode == 1) {
-    send_bitmap(src, bitmap);
-  } else {
+  if (rcode != 1) {
     free(bitmap);
     report_error(src);
-    return;
+    return -1;
   }
+
+  send_bitmap(src, bitmap);
+  return 0;
 }
 
 static enum backend_result open_path(const char *path, struct imv_source **src)
@@ -164,6 +175,7 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   source->height = height;
   source->num_frames = 1;
   source->next_frame = 1;
+  pthread_mutex_init(&source->busy, NULL);
   source->load_first_frame = &load_image;
   source->load_next_frame = NULL;
   source->free = &source_free;
@@ -201,6 +213,7 @@ static enum backend_result open_memory(void *data, size_t len, struct imv_source
   source->height = height;
   source->num_frames = 1;
   source->next_frame = 1;
+  pthread_mutex_init(&source->busy, NULL);
   source->load_first_frame = &load_image;
   source->load_next_frame = NULL;
   source->free = &source_free;
