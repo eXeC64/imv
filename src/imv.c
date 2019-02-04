@@ -225,6 +225,38 @@ static bool add_bind(struct imv *imv, const char *keys, const char *commands)
   return success;
 }
 
+static int async_free_source_thread(void *raw)
+{
+  struct imv_source *src = raw;
+  src->free(src);
+  return 0;
+}
+
+static void async_free_source(struct imv_source *src)
+{
+  SDL_Thread *thread = SDL_CreateThread(async_free_source_thread,
+      "async_free_source", src);
+  SDL_DetachThread(thread);
+}
+
+static void async_load_first_frame(struct imv_source *src)
+{
+  typedef int (*thread_func)(void*);
+  SDL_Thread *thread = SDL_CreateThread((thread_func)src->load_first_frame,
+      "async_load_first_frame",
+      src);
+  SDL_DetachThread(thread);
+}
+
+static void async_load_next_frame(struct imv_source *src)
+{
+  typedef int (*thread_func)(void*);
+  SDL_Thread *thread = SDL_CreateThread((thread_func)src->load_next_frame,
+      "async_load_next_frame",
+      src);
+  SDL_DetachThread(thread);
+}
+
 static void source_callback(struct imv_source_message *msg)
 {
   struct imv *imv = msg->user_data;
@@ -748,12 +780,12 @@ int imv_run(struct imv *imv)
 
         if (result == BACKEND_SUCCESS) {
           if (imv->source) {
-            imv->source->free(imv->source);
+            async_free_source(imv->source);
           }
           imv->source = new_source;
           imv->source->callback = &source_callback;
           imv->source->user_data = imv;
-          imv->source->load_first_frame(imv->source);
+          async_load_first_frame(imv->source);
 
           imv->loading = true;
           imv_viewport_set_playing(imv->view, true);
@@ -800,7 +832,7 @@ int imv_run(struct imv *imv)
 
       /* Trigger loading of a new frame, now this one's being displayed */
       if (imv->source && imv->source->load_next_frame) {
-        imv->source->load_next_frame(imv->source);
+        async_load_next_frame(imv->source);
       }
     }
 
@@ -934,7 +966,7 @@ static void handle_new_image(struct imv *imv, struct imv_bitmap *bitmap, int fra
 
   /* If this is an animated image, we should kick off loading the next frame */
   if (imv->source && imv->source->load_next_frame && frametime) {
-    imv->source->load_next_frame(imv->source);
+    async_load_next_frame(imv->source);
   }
 }
 
@@ -1455,7 +1487,7 @@ void command_next_frame(struct list *args, const char *argstr, void *data)
   (void)argstr;
   struct imv *imv = data;
   if (imv->source && imv->source->load_next_frame) {
-    imv->source->load_next_frame(imv->source);
+    async_load_next_frame(imv->source);
     imv->next_frame_due = 1; /* Earliest possible non-zero timestamp */
   }
 }
