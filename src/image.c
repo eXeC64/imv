@@ -1,5 +1,7 @@
 #include "image.h"
 
+#include <stdbool.h>
+
 struct imv_image {
   int width;              /* width of the image overall */
   int height;             /* height of the image overall */
@@ -86,28 +88,29 @@ int imv_image_set_bitmap(struct imv_image *image, struct imv_bitmap *bmp)
   image->chunks = malloc(sizeof(SDL_Texture*) * image->num_chunks);
 
   const int format = convert_pixelformat(bmp->format);
-  int failed_at = -1;
+  size_t failed_at = -1;
   for(int y = 0; y < image->num_chunks_tall; ++y) {
     for(int x = 0; x < image->num_chunks_wide; ++x) {
-      const int is_last_h_chunk = (x == image->num_chunks_wide - 1);
-      const int is_last_v_chunk = (y == image->num_chunks_tall - 1);
-      image->chunks[x + y * image->num_chunks_wide] =
+      const bool is_last_h_chunk = (x == image->num_chunks_wide - 1);
+      const bool is_last_v_chunk = (y == image->num_chunks_tall - 1);
+      const size_t index = x + y * image->num_chunks_wide;
+      image->chunks[index] =
         SDL_CreateTexture(image->renderer,
           format,
           SDL_TEXTUREACCESS_STATIC,
           is_last_h_chunk ? image->last_chunk_width : image->chunk_width,
           is_last_v_chunk ? image->last_chunk_height : image->chunk_height);
-      SDL_SetTextureBlendMode(image->chunks[x + y * image->num_chunks_wide],
+      SDL_SetTextureBlendMode(image->chunks[index],
           SDL_BLENDMODE_BLEND);
-      if(image->chunks[x + y * image->num_chunks_wide] == NULL) {
+      if (image->chunks[index] == NULL) {
         failed_at = x + y * image->num_chunks_wide;
         break;
       }
     }
   }
 
-  if(failed_at != -1) {
-    for(int i = 0; i <= failed_at; ++i) {
+  if (failed_at != (size_t)-1) {
+    for (size_t i = 0; i < failed_at; ++i) {
       SDL_DestroyTexture(image->chunks[i]);
     }
     free(image->chunks);
@@ -116,8 +119,8 @@ int imv_image_set_bitmap(struct imv_image *image, struct imv_bitmap *bmp)
     return 1;
   }
 
-  for(int y = 0; y < image->num_chunks_tall; ++y) {
-    for(int x = 0; x < image->num_chunks_wide; ++x) {
+  for (int y = 0; y < image->num_chunks_tall; ++y) {
+    for (int x = 0; x < image->num_chunks_wide; ++x) {
       ptrdiff_t offset = 4 * x * image->chunk_width +
         y * 4 * image->width * image->chunk_height;
       unsigned char* addr = bmp->data + offset;
