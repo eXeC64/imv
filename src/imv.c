@@ -309,6 +309,7 @@ struct imv *imv_create(void)
   imv->need_rescale = true;
   imv->recursive_load = false;
   imv->scaling_mode = SCALING_FULL;
+  imv->background_type = BACKGROUND_SOLID;
   imv->loop_input = true;
   imv->list_files_at_exit = false;
   imv->paths_from_stdin = false;
