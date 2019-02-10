@@ -59,29 +59,76 @@ struct backend_chain {
 };
 
 struct imv {
+  /* set to true to trigger clean exit */
   bool quit;
+
+  /* indicates a new image is being loaded */
   bool loading;
+
+  /* fullscreen state */
   bool fullscreen;
+
+  /* initial window dimensions */
   int initial_width;
   int initial_height;
+
+  /* display some textual info onscreen */
   bool overlay_enabled;
+
+  /* method for scaling up images: interpolate or nearest neighbour */
   enum upscaling_method upscaling_method;
+
+  /* for multiple monitors, should we stay fullscreen if we lose focus? */
   bool stay_fullscreen_on_focus_loss;
+
+  /* dirty state flags */
   bool need_redraw;
   bool need_rescale;
+
+  /* traverse sub-directories for more images */
   bool recursive_load;
+
+  /* 'next' on the last image goes back to the first */
   bool loop_input;
+
+  /* print all paths to stdout on clean exit */
   bool list_files_at_exit;
+
+  /* read paths from stdin, as opposed to image data */
   bool paths_from_stdin;
+
+  /* scale up / down images to match window, or actual size */
   enum scaling_mode scaling_mode;
+
+  /* show a solid background colour, or chequerboard pattern */
   enum background_type background_type;
+  /* the aforementioned background colour */
   struct { unsigned char r, g, b; } background_color;
+
+  /* slideshow state tracking */
   unsigned long slideshow_image_duration;
   unsigned long slideshow_time_elapsed;
+
+  /* for animated images, the GetTicks() time to display the next frame */
   unsigned int next_frame_due;
+  /* how long the next frame to be put onscreen should be displayed for */
   int next_frame_duration;
+  /* the next frame of an animated image, pre-fetched */
   struct imv_bitmap *next_frame;
+
+  /* overlay font name */
   char *font_name;
+  /* buffer for storing input commands, NULL when not in command mode */
+  char *input_buffer;
+
+  /* if specified by user, the path of the first image to display */
+  char *starting_path;
+
+  /* the user-specified format strings for the overlay and window title */
+  char *title_text;
+  char *overlay_text;
+
+  /* imv subsystems */
   struct imv_binds *binds;
   struct imv_navigator *navigator;
   struct backend_chain *backends;
@@ -90,13 +137,12 @@ struct imv {
   struct imv_commands *commands;
   struct imv_image *image;
   struct imv_viewport *view;
+
+  /* if reading an image from stdin, this is the buffer for it */
   void *stdin_image_data;
   size_t stdin_image_data_len;
-  char *input_buffer;
-  char *starting_path;
-  char *title_text;
-  char *overlay_text;
 
+  /* SDL subsystems */
   SDL_Window *window;
   SDL_Renderer *renderer;
   TTF_Font *font;
