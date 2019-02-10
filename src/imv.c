@@ -296,40 +296,17 @@ static void source_callback(struct imv_source_message *msg)
 
 struct imv *imv_create(void)
 {
-  struct imv *imv = malloc(sizeof *imv);
-  imv->quit = false;
-  imv->loading = false;
-  imv->fullscreen = false;
+  struct imv *imv = calloc(1, sizeof *imv);
   imv->initial_width = 1280;
   imv->initial_height = 720;
-  imv->overlay_enabled = false;
-  imv->upscaling_method = UPSCALING_LINEAR;
-  imv->stay_fullscreen_on_focus_loss = false;
   imv->need_redraw = true;
   imv->need_rescale = true;
-  imv->recursive_load = false;
   imv->scaling_mode = SCALING_FULL;
-  imv->background_type = BACKGROUND_SOLID;
   imv->loop_input = true;
-  imv->list_files_at_exit = false;
-  imv->paths_from_stdin = false;
-  imv->background_color.r = imv->background_color.g = imv->background_color.b = 0;
-  imv->slideshow_image_duration = 0;
-  imv->slideshow_time_elapsed = 0;
-  imv->next_frame_due = 0;
-  imv->next_frame_duration = 0;
-  imv->next_frame = NULL;
   imv->font_name = strdup("Monospace:24");
   imv->binds = imv_binds_create();
   imv->navigator = imv_navigator_create();
-  imv->backends = NULL;
-  imv->source = NULL;
-  imv->last_source = NULL;
   imv->commands = imv_commands_create();
-  imv->stdin_image_data = NULL;
-  imv->stdin_image_data_len = 0;
-  imv->input_buffer = NULL;
-  imv->starting_path = NULL;
   imv->title_text = strdup(
       "imv - [${imv_current_index}/${imv_file_count}]"
       " [${imv_width}x${imv_height}] [${imv_scale}%]"
@@ -340,12 +317,6 @@ struct imv *imv_create(void)
       " [${imv_width}x${imv_height}] [${imv_scale}%]"
       " $imv_current_file [$imv_scaling_mode]"
   );
-  imv->window = NULL;
-  imv->renderer = NULL;
-  imv->font = NULL;
-  imv->background_image = NULL;
-  imv->sdl_init = false;
-  imv->ttf_init = false;
 
   imv_command_register(imv->commands, "quit", &command_quit);
   imv_command_register(imv->commands, "pan", &command_pan);
