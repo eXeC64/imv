@@ -18,7 +18,7 @@ struct imv_image {
 
 struct imv_image *imv_image_create(SDL_Renderer *r)
 {
-  struct imv_image *image = malloc(sizeof(struct imv_image));
+  struct imv_image *image = malloc(sizeof *image);
   memset(image, 0, sizeof(struct imv_image));
   image->renderer = r;
 

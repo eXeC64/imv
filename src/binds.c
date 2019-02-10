@@ -42,7 +42,7 @@ static void destroy_bind_node(struct bind_node *bn)
 
 struct imv_binds *imv_binds_create(void)
 {
-  struct imv_binds *binds = malloc(sizeof(struct imv_binds));
+  struct imv_binds *binds = malloc(sizeof *binds);
   init_bind_node(&binds->bind_tree);
   binds->keys = list_create();
   return binds;
@@ -82,7 +82,7 @@ enum bind_result imv_binds_add(struct imv_binds *binds, const struct list *keys,
     int child_index = list_find(node->suffixes, &compare_node_key, keys->items[i]);
     if(child_index == -1) {
       /* Create our new node */
-      next_node = malloc(sizeof(struct bind_node));
+      next_node = malloc(sizeof *next_node);
       init_bind_node(next_node);
       next_node->key = keys->items[i];
       list_append(node->suffixes, next_node);

@@ -36,7 +36,7 @@ static void source_free(struct imv_source *src)
 
 static struct imv_bitmap *to_imv_bitmap(GdkPixbuf *bitmap)
 {
-  struct imv_bitmap *bmp = malloc(sizeof(struct imv_bitmap));
+  struct imv_bitmap *bmp = malloc(sizeof *bmp);
   bmp->width = gdk_pixbuf_get_width(bitmap);
   bmp->height = gdk_pixbuf_get_height(bitmap);
   bmp->format = IMV_ARGB;
@@ -141,11 +141,11 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
     return BACKEND_UNSUPPORTED;
   }
 
-  struct private *private = malloc(sizeof(struct private));
+  struct private *private = malloc(sizeof *private);
   private->data = NULL;
   private->len = 0;
 
-  struct imv_source *source = calloc(1, sizeof(struct imv_source));
+  struct imv_source *source = calloc(1, sizeof *source);
   source->name = strdup(path);
 
   source->width = 1024;
@@ -174,11 +174,11 @@ static enum backend_result open_memory(void *data, size_t len, struct imv_source
     return BACKEND_UNSUPPORTED;
   }
 
-  struct private *private = malloc(sizeof(struct private));
+  struct private *private = malloc(sizeof *private);
   private->data = data;
   private->len = len;
 
-  struct imv_source *source = calloc(1, sizeof(struct imv_source));
+  struct imv_source *source = calloc(1, sizeof *source);
   source->name = strdup("-");
 
   source->width = 1024;

@@ -9,7 +9,7 @@ struct command {
 
 struct imv_commands *imv_commands_create(void)
 {
-  struct imv_commands *cmds = malloc(sizeof(struct imv_commands));
+  struct imv_commands *cmds = malloc(sizeof *cmds);
   cmds->command_list = list_create();
   return cmds;
 }
@@ -30,7 +30,7 @@ void imv_commands_free(struct imv_commands *cmds)
 
 void imv_command_register(struct imv_commands *cmds, const char *command, void (*handler)(struct list*, const char*, void*))
 {
-  struct command *cmd = malloc(sizeof(struct command));
+  struct command *cmd = malloc(sizeof *cmd);
   cmd->command = strdup(command);
   cmd->handler = handler;
   cmd->alias = NULL;
@@ -39,7 +39,7 @@ void imv_command_register(struct imv_commands *cmds, const char *command, void (
 
 void imv_command_alias(struct imv_commands *cmds, const char *command, const char *alias)
 {
-  struct command *cmd = malloc(sizeof(struct command));
+  struct command *cmd = malloc(sizeof *cmd);
   cmd->command = strdup(command);
   cmd->handler = NULL;
   cmd->alias = strdup(alias);

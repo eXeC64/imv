@@ -2,7 +2,7 @@
 
 struct list *list_create(void)
 {
-  struct list *list = malloc(sizeof(struct list));
+  struct list *list = malloc(sizeof *list);
   list->len = 0;
   list->cap = 64;
   list->items = malloc(sizeof(void*) * list->cap);

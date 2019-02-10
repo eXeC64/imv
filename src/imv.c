@@ -296,7 +296,7 @@ static void source_callback(struct imv_source_message *msg)
 
 struct imv *imv_create(void)
 {
-  struct imv *imv = malloc(sizeof(struct imv));
+  struct imv *imv = malloc(sizeof *imv);
   imv->quit = false;
   imv->loading = false;
   imv->fullscreen = false;
@@ -444,7 +444,7 @@ void imv_free(struct imv *imv)
 
 void imv_install_backend(struct imv *imv, const struct imv_backend *backend)
 {
-  struct backend_chain *chain = malloc(sizeof(struct backend_chain));
+  struct backend_chain *chain = malloc(sizeof *chain);
   chain->backend = backend;
   chain->next = imv->backends;
   imv->backends = chain;

@@ -27,7 +27,7 @@ struct imv_navigator {
 
 struct imv_navigator *imv_navigator_create(void)
 {
-  struct imv_navigator *nav = malloc(sizeof(struct imv_navigator));
+  struct imv_navigator *nav = malloc(sizeof *nav);
   memset(nav, 0, sizeof(struct imv_navigator));
   nav->last_move_direction = 1;
   return nav;

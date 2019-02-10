@@ -45,7 +45,7 @@ static void source_free(struct imv_source *src)
 
 static struct imv_bitmap *to_imv_bitmap(int width, int height, void *bitmap)
 {
-  struct imv_bitmap *bmp = malloc(sizeof(struct imv_bitmap));
+  struct imv_bitmap *bmp = malloc(sizeof *bmp);
   bmp->width = width;
   bmp->height = height;
   bmp->format = IMV_ABGR;
@@ -153,7 +153,7 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
     return BACKEND_UNSUPPORTED;
   }
 
-  struct imv_source *source = calloc(1, sizeof(struct imv_source));
+  struct imv_source *source = calloc(1, sizeof *source);
   source->name = strdup(path);
   source->width = width;
   source->height = height;
@@ -193,7 +193,7 @@ static enum backend_result open_memory(void *data, size_t len, struct imv_source
     return BACKEND_UNSUPPORTED;
   }
 
-  struct imv_source *source = calloc(1, sizeof(struct imv_source));
+  struct imv_source *source = calloc(1, sizeof *source);
   source->name = strdup("-");
   source->width = width;
   source->height = height;

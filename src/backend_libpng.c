@@ -38,7 +38,7 @@ static void source_free(struct imv_source *src)
 
 static struct imv_bitmap *to_imv_bitmap(int width, int height, void *bitmap)
 {
-  struct imv_bitmap *bmp = malloc(sizeof(struct imv_bitmap));
+  struct imv_bitmap *bmp = malloc(sizeof *bmp);
   bmp->width = width;
   bmp->height = height;
   bmp->format = IMV_ABGR;
@@ -132,7 +132,7 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
     return BACKEND_UNSUPPORTED;
   }
 
-  struct private *private = malloc(sizeof(struct private));
+  struct private *private = malloc(sizeof *private);
   private->file = f;
   private->png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   if (!private->png) {
@@ -165,7 +165,7 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   png_set_filler(private->png, 0xff, PNG_FILLER_AFTER);
   png_read_update_info(private->png, private->info);
 
-  struct imv_source *source = calloc(1, sizeof(struct imv_source));
+  struct imv_source *source = calloc(1, sizeof *source);
   source->name = strdup(path);
   if (setjmp(png_jmpbuf(private->png))) {
     free(source->name);

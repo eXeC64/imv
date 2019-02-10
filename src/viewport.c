@@ -12,7 +12,7 @@ struct imv_viewport {
 
 struct imv_viewport *imv_viewport_create(SDL_Window *window)
 {
-  struct imv_viewport *view = malloc(sizeof(struct imv_viewport));
+  struct imv_viewport *view = malloc(sizeof *view);
   view->window = window;
   view->scale = 1;
   view->x = view->y = view->fullscreen = view->redraw = 0;

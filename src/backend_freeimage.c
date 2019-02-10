@@ -50,7 +50,7 @@ static void source_free(struct imv_source *src)
 
 static struct imv_bitmap *to_imv_bitmap(FIBITMAP *in_bmp)
 {
-  struct imv_bitmap *bmp = malloc(sizeof(struct imv_bitmap));
+  struct imv_bitmap *bmp = malloc(sizeof *bmp);
   bmp->width = FreeImage_GetWidth(in_bmp);
   bmp->height = FreeImage_GetHeight(in_bmp);
   bmp->format = IMV_ARGB;
@@ -277,10 +277,10 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
     return BACKEND_UNSUPPORTED;
   }
 
-  struct private *private = calloc(sizeof(struct private), 1);
+  struct private *private = calloc(1, sizeof(struct private));
   private->format = fmt;
 
-  struct imv_source *source = calloc(sizeof(struct imv_source), 1);
+  struct imv_source *source = calloc(1, sizeof *source);
   source->name = strdup(path);
   source->width = 0;
   source->height = 0;
@@ -308,11 +308,11 @@ static enum backend_result open_memory(void *data, size_t len, struct imv_source
     return BACKEND_UNSUPPORTED;
   }
 
-  struct private *private = calloc(sizeof(struct private), 1);
+  struct private *private = calloc(1, sizeof(struct private));
   private->format = fmt;
   private->memory = fmem;
 
-  struct imv_source *source = calloc(sizeof(struct imv_source), 1);
+  struct imv_source *source = calloc(1, sizeof *source);
   source->name = NULL;
   source->width = 0;
   source->height = 0;
