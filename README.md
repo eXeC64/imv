@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/eXeC64/imv.svg?branch=master)](https://travis-ci.org/eXeC64/imv)
+[![builds.sr.ht status](https://builds.sr.ht/~exec64/imv.svg)](https://builds.sr.ht/~exec64/imv?)
 imv - X11/Wayland Image Viewer
 ==============================
 
