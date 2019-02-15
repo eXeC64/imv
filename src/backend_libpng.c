@@ -1,7 +1,6 @@
 #include "backend_libpng.h"
 #include "backend.h"
 #include "source.h"
-#include <alloca.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -98,7 +97,7 @@ static int load_image(struct imv_source *src)
     return -1;
   }
 
-  png_bytep *rows = alloca(sizeof(png_bytep) * src->height);
+  png_bytep *rows = malloc(sizeof(png_bytep) * src->height);
   size_t row_len = png_get_rowbytes(private->png, private->info);
   rows[0] = malloc(src->height * row_len);
   for (int y = 1; y < src->height; ++y) {
@@ -107,14 +106,17 @@ static int load_image(struct imv_source *src)
 
   if (setjmp(png_jmpbuf(private->png))) {
     free(rows[0]);
+    free(rows);
     report_error(src);
     return -1;
   }
 
   png_read_image(private->png, rows);
+  void *bmp = rows[0];
+  free(rows);
   fclose(private->file);
   private->file = NULL;
-  send_bitmap(src, rows[0]);
+  send_bitmap(src, bmp);
   return 0;
 }
 
