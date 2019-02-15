@@ -1,0 +1,26 @@
+image: fedora/latest
+packages:
+  - SDL2-devel
+  - SDL2_ttf-devel
+  - clang
+  - freeimage-devel
+  - libcmocka-devel
+  - libpng-devel
+  - librsvg2-devel
+  - libtiff-devel
+  - turbojpeg-devel
+sources:
+  - https://git.sr.ht/~exec64/imv
+tasks:
+  - configure: |
+      cd imv
+      sed -i -e 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk
+      cat config.mk
+  - gcc: |
+      cd imv
+      CC=gcc BUILDDIR=gcc make
+      CC=gcc BUILDDIR=gcc make check
+  - clang: |
+      cd imv
+      CC=clang BUILDDIR=clang make
+      CC=clang BUILDDIR=clang make check

@@ -1,0 +1,26 @@
+image: archlinux
+packages:
+  - clang
+  - cmocka
+  - freeimage
+  - libjpeg-turbo
+  - libpng
+  - librsvg
+  - libtiff
+  - sdl2
+  - sdl2_ttf
+sources:
+  - https://git.sr.ht/~exec64/imv
+tasks:
+  - configure: |
+      cd imv
+      sed -i -e 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk
+      cat config.mk
+  - gcc: |
+      cd imv
+      CC=gcc BUILDDIR=gcc make
+      CC=gcc BUILDDIR=gcc make check
+  - clang: |
+      cd imv
+      CC=clang BUILDDIR=clang make
+      CC=clang BUILDDIR=clang make check

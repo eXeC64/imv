@@ -1,0 +1,26 @@
+image: debian/stable
+packages:
+  - clang
+  - libcmocka-dev
+  - libfreeimage-dev
+  - libpng-dev
+  - librsvg2-dev
+  - libsdl2-dev
+  - libsdl2-ttf-dev
+  - libtiff-dev
+  - libturbojpeg-dev
+sources:
+  - https://git.sr.ht/~exec64/imv
+tasks:
+  - configure: |
+      cd imv
+      sed -i -e 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk
+      cat config.mk
+  - gcc: |
+      cd imv
+      CC=gcc BUILDDIR=gcc make
+      CC=gcc BUILDDIR=gcc make check
+  - clang: |
+      cd imv
+      CC=clang BUILDDIR=clang make
+      CC=clang BUILDDIR=clang make check
