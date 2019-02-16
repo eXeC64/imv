@@ -128,6 +128,12 @@ struct imv {
   char *title_text;
   char *overlay_text;
 
+  /* when true, imv will ignore all window events until it encounters a
+   * ENABLE_INPUT user-event. This is required to overcome a bug where
+   * SDL will send input events to us from before we gained focus
+   */
+  bool ignore_window_events;
+
   /* imv subsystems */
   struct imv_binds *binds;
   struct imv_navigator *navigator;
@@ -153,6 +159,7 @@ struct imv {
     unsigned int NEW_IMAGE;
     unsigned int BAD_IMAGE;
     unsigned int NEW_PATH;
+    unsigned int ENABLE_INPUT;
   } events;
   struct {
     int width;
@@ -911,6 +918,7 @@ static bool setup_window(struct imv *imv)
   imv->events.NEW_IMAGE = SDL_RegisterEvents(1);
   imv->events.BAD_IMAGE = SDL_RegisterEvents(1);
   imv->events.NEW_PATH = SDL_RegisterEvents(1);
+  imv->events.ENABLE_INPUT = SDL_RegisterEvents(1);
 
   imv->sdl_init = true;
 
@@ -1026,10 +1034,20 @@ static void handle_event(struct imv *imv, SDL_Event *event)
     }
 
     imv_navigator_remove(imv->navigator, err_path);
+    return;
   } else if (event->type == imv->events.NEW_PATH) {
     /* received a new path from the stdin reading thread */
     imv_add_path(imv, event->user.data1);
     free(event->user.data1);
+    /* need to update image count */
+    imv->need_redraw = true;
+    return;
+  } else if (event->type == imv->events.ENABLE_INPUT) {
+    imv->ignore_window_events = false;
+    return;
+  } else if (imv->ignore_window_events) {
+    /* Don't try and process this input event, we're in event ignoring mode */
+    return;
   }
 
   switch (event->type) {
@@ -1102,12 +1120,17 @@ static void handle_event(struct imv *imv, SDL_Event *event)
       /* For some reason SDL passes events to us that occurred before we
        * gained focus, and passes them *after* the focus gained event.
        * Due to behavioural quirks from such events, whenever we gain focus
-       * we have to clear the event queue. It's hacky, but works without
-       * any visible side effects.
+       * we have to ignore all window events already in the queue.
        */
       if (event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
-        SDL_PumpEvents();
-        SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+        /* disable window event handling */
+        imv->ignore_window_events = true;
+        /* push an event to the back of the event queue to re-enable
+         * window event handling */
+        SDL_Event event;
+        SDL_zero(event);
+        event.type = imv->events.ENABLE_INPUT;
+        SDL_PushEvent(&event);
       }
 
       imv_viewport_update(imv->view, imv->image);
