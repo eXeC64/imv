@@ -24,6 +24,11 @@ Options
 
 The *[options]* section accepts the following settings:
 
+*autoresize* = <none|resize|recenter>::
+	Sets the resizing behaviour when changing image. 'none' does nothing, and
+	is the default. 'resize' will resize the window to fit the image.
+	'recenter' will resize and recenter the window.
+
 *background* = <hex-code|'checks'>::
 	Set the background in imv. Can either be a 6-digit hexadecimal colour code,
 	or 'checks' for a chequered background. Defaults to '000000'

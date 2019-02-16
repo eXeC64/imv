@@ -60,6 +60,12 @@ Options
 *-u* <linear|nearest_neighbour>::
 	Set upscaling method used by imv.
 
+*-w*::
+	Enable automatic resizing of the window to fit each image.
+
+*-W*::
+	Enable automatic resizing and recentering of the window to fit each image.
+
 *-x*::
 	Disable looping of input paths.
 
