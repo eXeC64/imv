@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef IMV_BACKEND_LIBPNG
-
 #include <png.h>
 
 struct private {
@@ -206,12 +204,3 @@ const struct imv_backend *imv_backend_libpng(void)
 {
   return &libpng_backend;
 }
-
-#else
-
-const struct imv_backend *imv_backend_libpng(void)
-{
-  return NULL;
-}
-
-#endif

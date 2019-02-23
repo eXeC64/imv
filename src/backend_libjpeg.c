@@ -8,8 +8,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#ifdef IMV_BACKEND_LIBJPEG
-
 #include <turbojpeg.h>
 
 struct private {
@@ -227,12 +225,3 @@ const struct imv_backend *imv_backend_libjpeg(void)
 {
   return &libjpeg_backend;
 }
-
-#else
-
-const struct imv_backend *imv_backend_libjpeg(void)
-{
-  return NULL;
-}
-
-#endif

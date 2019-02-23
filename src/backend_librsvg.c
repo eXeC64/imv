@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef IMV_BACKEND_LIBRSVG
-
 #include <librsvg/rsvg.h>
 
 /* Some systems like GNU/Hurd don't define PATH_MAX */
@@ -210,12 +208,3 @@ const struct imv_backend *imv_backend_librsvg(void)
 {
   return &librsvg_backend;
 }
-
-#else
-
-const struct imv_backend *imv_backend_librsvg(void)
-{
-  return NULL;
-}
-
-#endif

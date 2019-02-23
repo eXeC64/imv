@@ -8,8 +8,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#ifdef IMV_BACKEND_LIBTIFF
-
 #include <tiffio.h>
 
 struct private {
@@ -238,12 +236,3 @@ const struct imv_backend *imv_backend_libtiff(void)
 {
   return &libtiff_backend;
 }
-
-#else
-
-const struct imv_backend *imv_backend_libtiff(void)
-{
-  return NULL;
-}
-
-#endif

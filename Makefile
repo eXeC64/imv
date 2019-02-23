@@ -16,39 +16,59 @@ override LIBS += -lSDL2_ttf -lfontconfig -lpthread
 BUILDDIR ?= build
 TARGET := $(BUILDDIR)/imv
 
-SOURCES := $(wildcard src/*.c)
-OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
-TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(wildcard test/*.c))
+SOURCES := src/main.c
 
-VERSION != git describe --dirty --always --tags 2> /dev/null || echo v3.0.0
-
-override CPPFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
+SOURCES += src/binds.c
+SOURCES += src/bitmap.c
+SOURCES += src/commands.c
+SOURCES += src/image.c
+SOURCES += src/imv.c
+SOURCES += src/ini.c
+SOURCES += src/list.c
+SOURCES += src/navigator.c
+SOURCES += src/util.c
+SOURCES += src/viewport.c
 
 # Add backends to build as configured
 ifeq ($(BACKEND_FREEIMAGE),yes)
+	SOURCES += src/backend_freeimage.c
 	override CPPFLAGS += -DIMV_BACKEND_FREEIMAGE
 	override LIBS += -lfreeimage
 endif
 
 ifeq ($(BACKEND_LIBTIFF),yes)
+	SOURCES += src/backend_libtiff.c
 	override CPPFLAGS += -DIMV_BACKEND_LIBTIFF
 	override LIBS += -ltiff
 endif
 
 ifeq ($(BACKEND_LIBPNG),yes)
+	SOURCES += src/backend_libpng.c
 	override CPPFLAGS += -DIMV_BACKEND_LIBPNG
 	override LIBS += -lpng
 endif
 
 ifeq ($(BACKEND_LIBJPEG),yes)
+	SOURCES += src/backend_libjpeg.c
 	override CPPFLAGS += -DIMV_BACKEND_LIBJPEG
 	override LIBS += -lturbojpeg
 endif
 
 ifeq ($(BACKEND_LIBRSVG),yes)
+	SOURCES += src/backend_librsvg.c
 	override CPPFLAGS += -DIMV_BACKEND_LIBRSVG $(shell pkg-config --cflags librsvg-2.0)
 	override LIBS += $(shell pkg-config --libs librsvg-2.0)
 endif
+
+
+TEST_SOURCES := test/list.c test/navigator.c
+
+OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
+TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(TEST_SOURCES))
+
+VERSION != git describe --dirty --always --tags 2> /dev/null || echo v3.0.0
+
+override CPPFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
 
 TFLAGS ?= -g $(CFLAGS) $(CPPFLAGS) $(shell pkg-config --cflags cmocka)
 TLIBS := $(LIBS) $(shell pkg-config --libs cmocka)
@@ -69,7 +89,7 @@ $(BUILDDIR):
 $(BUILDDIR)/%.o: src/%.c Makefile
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
-$(BUILDDIR)/test_%: test/%.c $(filter-out src/main.c, $(wildcard src/*.c))
+$(BUILDDIR)/test_%: test/%.c $(filter-out src/main.c, $(SOURCES))
 	$(CC) -o $@ -Isrc $(TFLAGS) $^ $(LDFLAGS) $(TLIBS)
 
 check: $(BUILDDIR) $(TESTS)

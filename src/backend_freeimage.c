@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef IMV_BACKEND_FREEIMAGE
-
 #include <FreeImage.h>
 
 struct private {
@@ -342,12 +340,3 @@ const struct imv_backend *imv_backend_freeimage(void)
 {
   return &freeimage_backend;
 }
-
-#else
-
-const struct imv_backend *imv_backend_freeimage(void)
-{
-  return NULL;
-}
-
-#endif
