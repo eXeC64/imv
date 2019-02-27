@@ -569,17 +569,17 @@ static bool parse_upscaling_method(struct imv *imv, const char *method)
 static bool parse_resizing_mode(struct imv *imv, const char *method)
 {
   if (!strcmp(method, "none")) {
-    imv->upscaling_method = RESIZE_NONE;
+    imv->resize_mode = RESIZE_NONE;
     return true;
   }
 
   if (!strcmp(method, "resize")) {
-    imv->upscaling_method = RESIZE_ONLY;
+    imv->resize_mode = RESIZE_ONLY;
     return true;
   }
 
   if (!strcmp(method, "recenter")) {
-    imv->upscaling_method = RESIZE_CENTER;
+    imv->resize_mode = RESIZE_CENTER;
     return true;
   }
 
