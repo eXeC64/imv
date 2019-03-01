@@ -12,6 +12,7 @@ struct bind_node {
 struct imv_binds {
   struct bind_node bind_tree;
   struct list *keys;
+  bool aborting_sequence;
 };
 
 static int compare_node_key(const void* item, const void *key)
@@ -42,7 +43,7 @@ static void destroy_bind_node(struct bind_node *bn)
 
 struct imv_binds *imv_binds_create(void)
 {
-  struct imv_binds *binds = malloc(sizeof *binds);
+  struct imv_binds *binds = calloc(1, sizeof *binds);
   init_bind_node(&binds->bind_tree);
   binds->keys = list_create();
   return binds;
@@ -245,9 +246,21 @@ void imv_bind_clear_input(struct imv_binds *binds)
 
 struct list *imv_bind_handle_event(struct imv_binds *binds, const SDL_Event *event)
 {
-  if(event->key.keysym.sym == SDLK_ESCAPE) {
-    imv_bind_clear_input(binds);
-    return NULL;
+  /* If the user hits Escape twice in a row, treat that as backtracking out
+   * of the current key sequence. */
+  if (event->key.keysym.sym == SDLK_ESCAPE) {
+    if (binds->aborting_sequence) {
+      /* The last thing they hit was escape, so abort the current entry */
+      binds->aborting_sequence = false;
+      imv_bind_clear_input(binds);
+      return NULL;
+    } else {
+      /* Start the aborting sequence */
+      binds->aborting_sequence = true;
+    }
+  } else {
+    /* They didn't hit escape, if they were in an abort sequence, cancel it */
+    binds->aborting_sequence = false;
   }
 
   char buffer[128];
