@@ -126,7 +126,7 @@ static int load_image(struct imv_source *src)
 static enum backend_result open_path(const char *path, struct imv_source **src)
 {
   /* Look for an <SVG> tag near the start of the file */
-  char header[128];
+  char header[4096];
   FILE *f = fopen(path, "rb");
   if (!f) {
     return BACKEND_BAD_PATH;
@@ -165,9 +165,13 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
 static enum backend_result open_memory(void *data, size_t len, struct imv_source **src)
 {
   /* Look for an <SVG> tag near the start of the file */
-  char header[128];
-  memcpy(header, data, sizeof header);
-  header[(sizeof header) - 1] = 0;
+  char header[4096];
+  size_t header_len = sizeof header;
+  if (header_len > len) {
+    header_len = len;
+  }
+  memcpy(header, data, header_len);
+  header[header_len - 1] = 0;
   if (!strstr(header, "<SVG") && !strstr(header, "<svg")) {
     return BACKEND_UNSUPPORTED;
   }
