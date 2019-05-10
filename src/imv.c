@@ -644,7 +644,7 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
 
   int o;
 
-  while((o = getopt(argc, argv, "frdwWxhlu:s:n:b:t:")) != -1) {
+  while((o = getopt(argc, argv, "frdwWxhvlu:s:n:b:t:")) != -1) {
     switch(o) {
       case 'f': imv->fullscreen = true;                          break;
       case 'r': imv->recursive_load = true;                      break;
@@ -658,6 +658,10 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
         print_help(imv);
         imv->quit = true;
         return true;
+      case 'v': 
+        printf("Version: %s\n", IMV_VERSION);
+          imv->quit = true;
+          return false;
       case 's':
         if(!parse_scaling_mode(imv, optarg)) {
           fprintf(stderr, "Invalid scaling mode. Aborting.\n");

@@ -28,6 +28,9 @@ Options
 *-h*::
 	Show help message and quit.
 
+*-v*::
+	Show version and quit.
+
 *-b* <background>::
 	Set the background colour. Can either be a 6-digit hexadecimal colour code
 	or 'checks' to show a chequered background.
