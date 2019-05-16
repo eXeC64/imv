@@ -127,21 +127,21 @@ void imv_navigator_select_rel(struct imv_navigator *nav, int direction)
   }
 
   if (direction > 1) {
-    direction = 1;
+    direction = direction % nav->num_paths;
   } else if (direction < -1) {
-    direction = -1;
+    direction = direction % nav->num_paths;
   } else if (direction == 0) {
     return;
   }
 
   nav->cur_path += direction;
-  if (nav->cur_path == nav->num_paths) {
+  if (nav->cur_path >= nav->num_paths) {
     /* Wrap after the end of the list */
-    nav->cur_path = 0;
+    nav->cur_path = nav->cur_path - nav->num_paths;
     nav->wrapped = 1;
   } else if (nav->cur_path < 0) {
     /* Wrap before the start of the list */
-    nav->cur_path = nav->num_paths - 1;
+    nav->cur_path = nav->num_paths + nav->cur_path;
     nav->wrapped = 1;
   }
   nav->last_move_direction = direction;
