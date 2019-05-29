@@ -60,8 +60,10 @@ static int add_item(struct imv_navigator *nav, const char *path)
     }
     nav->paths = new_paths;
   }
-  if ((nav->paths[nav->num_paths] = strndup(path, PATH_MAX)) == NULL) {
-    return 1;
+  if ((nav->paths[nav->num_paths] = realpath(path, NULL)) == NULL) {
+    if ((nav->paths[nav->num_paths] = strndup(path, PATH_MAX)) == NULL) {
+      return 1;
+    }
   }
   nav->num_paths += 1;
   if (nav->num_paths == 1) {
