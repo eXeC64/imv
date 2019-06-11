@@ -1137,21 +1137,21 @@ static void handle_event(struct imv *imv, SDL_Event *event)
         return;
       }
 
-      switch (event->key.keysym.sym) {
-        case SDLK_SEMICOLON:
-          if (event->key.keysym.mod & KMOD_SHIFT) {
-            SDL_StartTextInput();
-            imv->input_buffer = malloc(command_buffer_len);
-            imv->input_buffer[0] = '\0';
-            imv->need_redraw = true;
-          }
-          break;
-        default: { /* braces to allow const char *cmd definition */
-          struct list *cmds = imv_bind_handle_event(imv->binds, event);
-          if (cmds) {
-            imv_command_exec_list(imv->commands, cmds, imv);
-          }
-        }
+      /* Hitting : opens command-entry mode, like vim */
+      if (event->key.keysym.sym == SDLK_SEMICOLON
+          && event->key.keysym.mod & KMOD_SHIFT) {
+        SDL_StartTextInput();
+        imv->input_buffer = malloc(command_buffer_len);
+        imv->input_buffer[0] = '\0';
+        imv->need_redraw = true;
+        return;
+      }
+
+      /* If none of the above, add the key to the current key sequence and
+       * see if that triggers a bind */
+      struct list *cmds = imv_bind_handle_event(imv->binds, event);
+      if (cmds) {
+        imv_command_exec_list(imv->commands, cmds, imv);
       }
       break;
     case SDL_MOUSEWHEEL:
