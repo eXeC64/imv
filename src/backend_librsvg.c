@@ -37,7 +37,7 @@ static struct imv_bitmap *to_imv_bitmap(GdkPixbuf *bitmap)
   struct imv_bitmap *bmp = malloc(sizeof *bmp);
   bmp->width = gdk_pixbuf_get_width(bitmap);
   bmp->height = gdk_pixbuf_get_height(bitmap);
-  bmp->format = IMV_ARGB;
+  bmp->format = IMV_ABGR;
   size_t len = bmp->width * bmp->height * 4;
   bmp->data = malloc(len);
   memcpy(bmp->data, gdk_pixbuf_get_pixels(bitmap), len);
