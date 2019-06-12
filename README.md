@@ -121,4 +121,4 @@ Tests
 
 License
 -------
-`imv`'s source is published under the [MIT](LICENSE.MIT) license.
+`imv`'s source is published under the [MIT](LICENSE) license.
