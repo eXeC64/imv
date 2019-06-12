@@ -964,7 +964,7 @@ static bool setup_window(struct imv *imv)
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         imv->initial_width, imv->initial_height,
-        SDL_WINDOW_RESIZABLE);
+        SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
   if(!imv->window) {
     fprintf(stderr, "SDL Failed to create window: %s\n", SDL_GetError());
@@ -1001,7 +1001,7 @@ static bool setup_window(struct imv *imv)
   }
 
   imv->image = imv_image_create(imv->renderer);
-  imv->view = imv_viewport_create(imv->window);
+  imv->view = imv_viewport_create(imv->window, imv->renderer);
 
   /* put us in fullscren mode to begin with if requested */
   if(imv->fullscreen) {

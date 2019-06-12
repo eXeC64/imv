@@ -14,7 +14,7 @@ enum imv_zoom_source {
 };
 
 /* Creates an instance of imv_viewport */
-struct imv_viewport *imv_viewport_create(SDL_Window *window);
+struct imv_viewport *imv_viewport_create(SDL_Window *window, SDL_Renderer *renderer);
 
 /* Cleans up an imv_viewport instance */
 void imv_viewport_free(struct imv_viewport *view);
