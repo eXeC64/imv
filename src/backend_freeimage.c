@@ -2,6 +2,7 @@
 #include "backend.h"
 #include "source.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -60,11 +61,7 @@ static struct imv_bitmap *to_imv_bitmap(FIBITMAP *in_bmp)
 
 static void report_error(struct imv_source *src)
 {
-  if (!src->callback) {
-    fprintf(stderr, "imv_source(%s) has no callback configured. "
-                    "Discarding error.\n", src->name);
-    return;
-  }
+  assert(src->callback);
 
   struct imv_source_message msg;
   msg.source = src;
@@ -78,11 +75,7 @@ static void report_error(struct imv_source *src)
 
 static void send_bitmap(struct imv_source *src, FIBITMAP *fibitmap, int frametime)
 {
-  if (!src->callback) {
-    fprintf(stderr, "imv_source(%s) has no callback configured. "
-                    "Discarding result.\n", src->name);
-    return;
-  }
+  assert(src->callback);
 
   struct imv_source_message msg;
   msg.source = src;

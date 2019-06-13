@@ -1,4 +1,5 @@
 #include "image.h"
+#include "log.h"
 
 #include <stdbool.h>
 
@@ -53,7 +54,7 @@ static int convert_pixelformat(enum imv_pixelformat fmt)
   } else if (fmt == IMV_ABGR) {
     return SDL_PIXELFORMAT_ABGR8888;
   } else {
-    fprintf(stderr, "Unknown pixel format. Defaulting to ARGB\n");
+    imv_log(IMV_WARNING, "Unknown pixel format. Defaulting to ARGB\n");
     return SDL_PIXELFORMAT_ARGB8888;
   }
 }

@@ -1,5 +1,6 @@
 #include "imv.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <getopt.h>
 #include <limits.h>
@@ -12,16 +13,17 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 
+#include "backend.h"
 #include "binds.h"
 #include "commands.h"
+#include "image.h"
 #include "ini.h"
 #include "list.h"
-#include "source.h"
-#include "backend.h"
-#include "image.h"
+#include "log.h"
 #include "navigator.h"
-#include "viewport.h"
+#include "source.h"
 #include "util.h"
+#include "viewport.h"
 
 /* Some systems like GNU/Hurd don't define PATH_MAX */
 #ifndef PATH_MAX
@@ -243,7 +245,7 @@ static bool add_bind(struct imv *imv, const char *keys, const char *commands)
 {
   struct list *list = imv_bind_parse_keys(keys);
   if(!list) {
-    fprintf(stderr, "Invalid key combination");
+    imv_log(IMV_ERROR, "Invalid key combination");
     return false;
   }
 
@@ -258,7 +260,7 @@ static bool add_bind(struct imv *imv, const char *keys, const char *commands)
     split_commands(commands, &next_command, &command_len);
 
     if (command_len >= sizeof command_buf) {
-      fprintf(stderr, "Command exceeded max length, not binding: %.*s\n", (int)command_len, commands);
+      imv_log(IMV_ERROR, "Command exceeded max length, not binding: %.*s\n", (int)command_len, commands);
       imv_binds_clear_key(imv->binds, list);
       success = false;
       break;
@@ -269,15 +271,15 @@ static bool add_bind(struct imv *imv, const char *keys, const char *commands)
     enum bind_result result = imv_binds_add(imv->binds, list, command_buf);
 
     if (result == BIND_INVALID_KEYS) {
-      fprintf(stderr, "Invalid keys to bind to");
+      imv_log(IMV_ERROR, "Invalid keys to bind to");
       success = false;
       break;
     } else if (result == BIND_INVALID_COMMAND) {
-      fprintf(stderr, "No command given to bind to");
+      imv_log(IMV_ERROR, "No command given to bind to");
       success = false;
       break;
     } else if (result == BIND_CONFLICTS) {
-      fprintf(stderr, "Key combination conflicts with existing bind");
+      imv_log(IMV_ERROR, "Key combination conflicts with existing bind");
       success = false;
       break;
     }
@@ -497,7 +499,7 @@ static bool parse_bg(struct imv *imv, const char *bg)
     char *ep;
     uint32_t n = strtoul(bg, &ep, 16);
     if(*ep != '\0' || ep - bg != 6 || n > 0xFFFFFF) {
-      fprintf(stderr, "Invalid hex color: '%s'\n", bg);
+      imv_log(IMV_ERROR, "Invalid hex color: '%s'\n", bg);
       return false;
     }
     imv->background_color.b = n & 0xFF;
@@ -525,7 +527,7 @@ static bool parse_slideshow_duration(struct imv *imv, const char *duration)
     }
   }
   if (imv->slideshow_image_duration == ULONG_MAX) {
-    fprintf(stderr, "Wrong slideshow duration '%s'. Aborting.\n", optarg);
+    imv_log(IMV_ERROR, "Wrong slideshow duration '%s'. Aborting.\n", optarg);
     return false;
   }
   return true;
@@ -590,7 +592,7 @@ static int load_paths_from_stdin(void *data)
 {
   struct imv *imv = data;
 
-  fprintf(stderr, "Reading paths from stdin...");
+  imv_log(IMV_INFO, "Reading paths from stdin...");
 
   char buf[PATH_MAX];
   while(fgets(buf, sizeof(buf), stdin) != NULL) {
@@ -664,30 +666,30 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
           return false;
       case 's':
         if(!parse_scaling_mode(imv, optarg)) {
-          fprintf(stderr, "Invalid scaling mode. Aborting.\n");
+          imv_log(IMV_ERROR, "Invalid scaling mode. Aborting.\n");
           return false;
         }
         break;
       case 'u':
         if(!parse_upscaling_method(imv, optarg)) {
-          fprintf(stderr, "Invalid upscaling method. Aborting.\n");
+          imv_log(IMV_ERROR, "Invalid upscaling method. Aborting.\n");
           return false;
         }
         break;
       case 'b':
         if(!parse_bg(imv, optarg)) {
-          fprintf(stderr, "Invalid background. Aborting.\n");
+          imv_log(IMV_ERROR, "Invalid background. Aborting.\n");
           return false;
         }
         break;
       case 't':
         if(!parse_slideshow_duration(imv, optarg)) {
-          fprintf(stderr, "Invalid slideshow duration. Aborting.\n");
+          imv_log(IMV_ERROR, "Invalid slideshow duration. Aborting.\n");
           return false;
         }
         break;
       case '?':
-        fprintf(stderr, "Unknown argument '%c'. Aborting.\n", optopt);
+        imv_log(IMV_ERROR, "Unknown argument '%c'. Aborting.\n", optopt);
         return false;
     }
   }
@@ -706,10 +708,10 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
       /* Special case: '-' denotes reading image data from stdin */
       if(!strcmp("-", argv[i])) {
         if(imv->paths_from_stdin) {
-          fprintf(stderr, "Can't read paths AND image data from stdin. Aborting.\n");
+          imv_log(IMV_ERROR, "Can't read paths AND image data from stdin. Aborting.\n");
           return false;
         } else if(data_from_stdin) {
-          fprintf(stderr, "Can't read image data from stdin twice. Aborting.\n");
+          imv_log(IMV_ERROR, "Can't read image data from stdin twice. Aborting.\n");
           return false;
         }
         data_from_stdin = true;
@@ -758,7 +760,7 @@ int imv_run(struct imv *imv)
     if(index >= 0) {
       imv_navigator_select_str(imv->navigator, index);
     } else {
-      fprintf(stderr, "Invalid starting image: %s\n", imv->starting_path);
+      imv_log(IMV_ERROR, "Invalid starting image: %s\n", imv->starting_path);
     }
   }
 
@@ -789,7 +791,7 @@ int imv_run(struct imv *imv)
 
     /* if we're out of images, and we're not expecting more from stdin, quit */
     if(!imv->paths_from_stdin && imv_navigator_length(imv->navigator) == 0) {
-      fprintf(stderr, "No input files left. Exiting.\n");
+      imv_log(IMV_INFO, "No input files left. Exiting.\n");
       imv->quit = true;
       continue;
     }
@@ -810,7 +812,7 @@ int imv_run(struct imv *imv)
         enum backend_result result = BACKEND_UNSUPPORTED;
 
         if (!imv->backends) {
-          fprintf(stderr, "No backends installed. Unable to load image.\n");
+          imv_log(IMV_ERROR, "No backends installed. Unable to load image.\n");
         }
         for (struct backend_chain *chain = imv->backends; chain; chain = chain->next) {
           const struct imv_backend *backend = chain->backend;
@@ -947,7 +949,7 @@ int imv_run(struct imv *imv)
 static bool setup_window(struct imv *imv)
 {
   if(SDL_Init(SDL_INIT_VIDEO) != 0) {
-    fprintf(stderr, "SDL Failed to Init: %s\n", SDL_GetError());
+    imv_log(IMV_ERROR, "SDL Failed to Init: %s\n", SDL_GetError());
     return false;
   }
 
@@ -967,14 +969,14 @@ static bool setup_window(struct imv *imv)
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
   if(!imv->window) {
-    fprintf(stderr, "SDL Failed to create window: %s\n", SDL_GetError());
+    imv_log(IMV_ERROR, "SDL Failed to create window: %s\n", SDL_GetError());
     return false;
   }
 
   /* we'll use SDL's built-in renderer, hardware accelerated if possible */
   imv->renderer = SDL_CreateRenderer(imv->window, -1, 0);
   if(!imv->renderer) {
-    fprintf(stderr, "SDL Failed to create renderer: %s\n", SDL_GetError());
+    imv_log(IMV_ERROR, "SDL Failed to create renderer: %s\n", SDL_GetError());
     return false;
   }
 
@@ -996,7 +998,7 @@ static bool setup_window(struct imv *imv)
   imv->ttf_init = true;
   imv->font = load_font(imv->font_name);
   if(!imv->font) {
-    fprintf(stderr, "Error loading font: %s\n", TTF_GetError());
+    imv_log(IMV_ERROR, "Error loading font: %s\n", TTF_GetError());
     return false;
   }
 
@@ -1078,7 +1080,7 @@ static void handle_event(struct imv *imv, SDL_Event *event)
         imv->stdin_image_data = NULL;
         imv->stdin_image_data_len = 0;
       }
-      fprintf(stderr, "Failed to load image from stdin.\n");
+      imv_log(IMV_ERROR, "Failed to load image from stdin.\n");
     }
 
     imv_navigator_remove(imv->navigator, err_path);
@@ -1404,7 +1406,7 @@ static int handle_ini_value(void *user, const char *section, const char *name,
     }
 
     /* No matches so far */
-    fprintf(stderr, "Ignoring unknown option: %s\n", name);
+    imv_log(IMV_WARNING, "Ignoring unknown option: %s\n", name);
     return 1;
   }
   return 0;
@@ -1420,10 +1422,10 @@ bool imv_load_config(struct imv *imv)
 
   const int err = ini_parse(path, handle_ini_value, imv);
   if (err == -1) {
-    fprintf(stderr, "Unable to open config file: %s\n", path);
+    imv_log(IMV_ERROR, "Unable to open config file: %s\n", path);
     return false;
   } else if (err > 0) {
-    fprintf(stderr, "Error in config file: %s:%d\n", path, err);
+    imv_log(IMV_ERROR, "Error in config file: %s:%d\n", path, err);
     return false;
   }
   free(path);

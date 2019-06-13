@@ -25,6 +25,7 @@ SOURCES += src/image.c
 SOURCES += src/imv.c
 SOURCES += src/ini.c
 SOURCES += src/list.c
+SOURCES += src/log.c
 SOURCES += src/navigator.c
 SOURCES += src/util.c
 SOURCES += src/viewport.c
