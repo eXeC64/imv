@@ -10,19 +10,23 @@
 #include <unistd.h>
 #include <wordexp.h>
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
+#define GLFW_EXPOSE_NATIVE_X11
+#define GLFW_EXPOSE_NATIVE_WAYLAND
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 
 #include "backend.h"
 #include "binds.h"
+#include "canvas.h"
 #include "commands.h"
+#include "console.h"
 #include "image.h"
 #include "ini.h"
+#include "keyboard.h"
 #include "list.h"
 #include "log.h"
 #include "navigator.h"
 #include "source.h"
-#include "util.h"
 #include "viewport.h"
 
 /* Some systems like GNU/Hurd don't define PATH_MAX */
@@ -35,12 +39,6 @@ enum scaling_mode {
   SCALING_DOWN,
   SCALING_FULL,
   SCALING_MODE_COUNT
-};
-
-enum upscaling_method {
-  UPSCALING_LINEAR,
-  UPSCALING_NEAREST_NEIGHBOUR,
-  UPSCALING_METHOD_COUNT,
 };
 
 static const char *scaling_label[] = {
@@ -65,6 +63,29 @@ enum resize_mode {
 struct backend_chain {
   const struct imv_backend *backend;
   struct backend_chain *next;
+};
+
+enum internal_event_type {
+  NEW_IMAGE,
+  BAD_IMAGE,
+  NEW_PATH
+};
+
+struct internal_event {
+  enum internal_event_type type;
+  union {
+    struct {
+      struct imv_image *image;
+      int frametime;
+      bool is_new_image;
+    } new_image;
+    struct {
+      char *error;
+    } bad_image;
+    struct {
+      char *path;
+    } new_path;
+  } data;
 };
 
 struct imv {
@@ -113,26 +134,40 @@ struct imv {
   /* scale up / down images to match window, or actual size */
   enum scaling_mode scaling_mode;
 
-  /* show a solid background colour, or chequerboard pattern */
-  enum background_type background_type;
-  /* the aforementioned background colour */
-  struct { unsigned char r, g, b; } background_color;
+  struct {
+    /* show a solid background colour, or chequerboard pattern */
+    enum background_type type;
+    /* the aforementioned background colour */
+    struct { unsigned char r, g, b; } color;
+  } background;
 
   /* slideshow state tracking */
-  unsigned long slideshow_image_duration;
-  unsigned long slideshow_time_elapsed;
+  struct {
+    double duration;
+    double elapsed;
+  } slideshow;
 
-  /* for animated images, the GetTicks() time to display the next frame */
-  unsigned int next_frame_due;
-  /* how long the next frame to be put onscreen should be displayed for */
-  int next_frame_duration;
-  /* the next frame of an animated image, pre-fetched */
-  struct imv_bitmap *next_frame;
+  struct {
+    /* for animated images, the getTime() time to display the next frame */
+    double due;
+    /* how long the next frame to be put onscreen should be displayed for */
+    double duration;
+    /* the next frame of an animated image, pre-fetched */
+    struct imv_image *image;
+  } next_frame;
 
-  /* overlay font name */
-  char *font_name;
-  /* buffer for storing input commands, NULL when not in command mode */
-  char *input_buffer;
+  struct imv_image *current_image;
+
+  struct {
+    double x;
+    double y;
+  } last_cursor_position;
+
+  /* overlay font */
+  struct {
+    char *name;
+    int size;
+  } font;
 
   /* if specified by user, the path of the first image to display */
   char *starting_path;
@@ -141,43 +176,26 @@ struct imv {
   char *title_text;
   char *overlay_text;
 
-  /* when true, imv will ignore all window events until it encounters a
-   * ENABLE_INPUT user-event. This is required to overcome a bug where
-   * SDL will send input events to us from before we gained focus
-   */
-  bool ignore_window_events;
-
   /* imv subsystems */
   struct imv_binds *binds;
   struct imv_navigator *navigator;
   struct backend_chain *backends;
-  struct imv_source *source;
+  struct imv_source *current_source;
   struct imv_source *last_source;
   struct imv_commands *commands;
-  struct imv_image *image;
+  struct imv_console *console;
   struct imv_viewport *view;
+  struct imv_keyboard *keyboard;
+  struct imv_canvas *canvas;
 
   /* if reading an image from stdin, this is the buffer for it */
   void *stdin_image_data;
   size_t stdin_image_data_len;
 
-  /* SDL subsystems */
-  SDL_Window *window;
-  SDL_Renderer *renderer;
-  TTF_Font *font;
-  SDL_Texture *background_image;
-  bool sdl_init;
-  bool ttf_init;
-  struct {
-    unsigned int NEW_IMAGE;
-    unsigned int BAD_IMAGE;
-    unsigned int NEW_PATH;
-    unsigned int ENABLE_INPUT;
-  } events;
-  struct {
-    int width;
-    int height;
-  } current_image;
+  GLFWwindow *window;
+  bool glfw_init;
+  struct list *internal_events;
+  pthread_mutex_t internal_events_mutex;
 };
 
 void command_quit(struct list *args, const char *argstr, void *data);
@@ -198,11 +216,11 @@ void command_set_scaling_mode(struct list *args, const char *argstr, void *data)
 void command_set_slideshow_duration(struct list *args, const char *argstr, void *data);
 
 static bool setup_window(struct imv *imv);
-static void handle_event(struct imv *imv, SDL_Event *event);
+static void consume_internal_event(struct imv *imv, struct internal_event *event);
 static void render_window(struct imv *imv);
 static void update_env_vars(struct imv *imv);
 static size_t generate_env_text(struct imv *imv, char *buf, size_t len, const char *format);
-
+static size_t read_from_stdin(void **buffer);
 
 /* Finds the next split between commands in a string (';'). Provides a pointer
  * to the next character after the delimiter as out, or a pointer to '\0' if
@@ -244,7 +262,7 @@ static void split_commands(const char *start, const char **out, size_t *len)
 static bool add_bind(struct imv *imv, const char *keys, const char *commands)
 {
   struct list *list = imv_bind_parse_keys(keys);
-  if(!list) {
+  if (!list) {
     imv_log(IMV_ERROR, "Invalid key combination");
     return false;
   }
@@ -291,77 +309,196 @@ static bool add_bind(struct imv *imv, const char *keys, const char *commands)
   return success;
 }
 
-static int async_free_source_thread(void *raw)
+static void *async_free_source_thread(void *raw)
 {
   struct imv_source *src = raw;
   src->free(src);
-  return 0;
+  return NULL;
 }
 
 static void async_free_source(struct imv_source *src)
 {
-  SDL_Thread *thread = SDL_CreateThread(async_free_source_thread,
-      "async_free_source", src);
-  SDL_DetachThread(thread);
+  typedef void *(*thread_func)(void*);
+  pthread_t thread;
+  pthread_create(&thread, NULL, (thread_func)async_free_source_thread, src);
+  pthread_detach(thread);
 }
 
 static void async_load_first_frame(struct imv_source *src)
 {
-  typedef int (*thread_func)(void*);
-  SDL_Thread *thread = SDL_CreateThread((thread_func)src->load_first_frame,
-      "async_load_first_frame",
-      src);
-  SDL_DetachThread(thread);
+  typedef void *(*thread_func)(void*);
+  pthread_t thread;
+  pthread_create(&thread, NULL, (thread_func)src->load_first_frame, src);
+  pthread_detach(thread);
 }
 
 static void async_load_next_frame(struct imv_source *src)
 {
-  typedef int (*thread_func)(void*);
-  SDL_Thread *thread = SDL_CreateThread((thread_func)src->load_next_frame,
-      "async_load_next_frame",
-      src);
-  SDL_DetachThread(thread);
+  typedef void *(*thread_func)(void*);
+  pthread_t thread;
+  pthread_create(&thread, NULL, (thread_func)src->load_next_frame, src);
+  pthread_detach(thread);
 }
 
 static void source_callback(struct imv_source_message *msg)
 {
   struct imv *imv = msg->user_data;
-  if (msg->source != imv->source) {
+  if (msg->source != imv->current_source) {
     /* We received a message from an old source, tidy up contents
      * as required, but ignore it.
      */
-    if (msg->bitmap) {
-      imv_bitmap_free(msg->bitmap);
+    if (msg->image) {
+      imv_image_free(msg->image);
     }
     return;
   }
 
-  SDL_Event event;
-  SDL_zero(event);
+  struct internal_event *event = calloc(1, sizeof *event);
+  if (msg->image) {
+    event->type = NEW_IMAGE;
+    event->data.new_image.image = msg->image;
+    event->data.new_image.frametime = msg->frametime;
 
-  if (msg->bitmap) {
-    event.type = imv->events.NEW_IMAGE;
-    event.user.data1 = msg->bitmap;
-    event.user.code = msg->frametime;
-
-    /* Keep track of the last source to send us a bitmap in order to detect
+    /* Keep track of the last source to send us an image in order to detect
      * when we're getting a new image, as opposed to a new frame from the
      * same image.
      */
-    uintptr_t is_new_image = msg->source != imv->last_source;
-    event.user.data2 = (void*)is_new_image;
+    event->data.new_image.is_new_image = msg->source != imv->last_source;
     imv->last_source = msg->source;
   } else {
-    event.type = imv->events.BAD_IMAGE;
+    event->type = BAD_IMAGE;
     /* TODO: Something more elegant with error messages */
-    /* event.user.data1 = strdup(msg->error); */
+    event->data.bad_image.error = strdup(msg->error);
   }
 
-  SDL_PushEvent(&event);
+  pthread_mutex_lock(&imv->internal_events_mutex);
+  list_append(imv->internal_events, event);
+  pthread_mutex_unlock(&imv->internal_events_mutex);
+
+  glfwPostEmptyEvent();
+}
+
+static void command_callback(const char *text, void *data)
+{
+  struct imv *imv = data;
+  struct list *commands = list_create();
+  list_append(commands, strdup(text));
+  imv_command_exec_list(imv->commands, commands, imv);
+  list_deep_free(commands);
+  imv->need_redraw = true;
+}
+
+static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+  (void)key;
+  (void)mods;
+  struct imv *imv = glfwGetWindowUserPointer(window);
+
+  imv_keyboard_update_key(imv->keyboard, scancode, action == GLFW_PRESS);
+
+  if (action != GLFW_PRESS) {
+    return;
+  }
+
+  char keyname[128] = {0};
+  imv_keyboard_keyname(imv->keyboard, scancode, keyname, sizeof keyname);
+
+  if (imv_console_is_active(imv->console)) {
+
+    if (imv_console_key(imv->console, keyname)) {
+      imv->need_redraw = true;
+      return;
+    }
+
+    char text[128];
+    size_t len = imv_keyboard_get_text(imv->keyboard, scancode, text, sizeof text);
+    if (len >= sizeof text) {
+      imv_log(IMV_WARNING, "Keyboard input too large for input buffer. Discarding.\n");
+    } else {
+      imv_console_input(imv->console, text);
+    }
+
+  } else {
+    /* In regular mode see if we should enter command mode, otherwise send input
+     * to the bind system.
+     */
+    if (!strcmp("colon", keyname)) {
+      fprintf(stderr, "active console\n");
+      imv_console_activate(imv->console);
+      imv->need_redraw = true;
+      return;
+    }
+
+    char *keyname = imv_keyboard_describe_key(imv->keyboard, scancode);
+    if (!keyname) {
+      return;
+    }
+
+    struct list *cmds = imv_bind_handle_event(imv->binds, keyname);
+    if (cmds) {
+      imv_command_exec_list(imv->commands, cmds, imv);
+    }
+    fprintf(stderr, "user hit: '%s'\n", keyname);
+    free(keyname);
+  }
+
+  imv->need_redraw = true;
+}
+
+static void resize_callback(GLFWwindow *window, int width, int height)
+{
+  /* This callback is used for both window and framebuffer resize
+   * events, so ignore what it passes in and explicitly get the values
+   * we need for both.
+   */
+  (void)width;
+  (void)height;
+  struct imv *imv = glfwGetWindowUserPointer(window);
+  int ww, wh;
+  int bw, bh;
+  glfwGetWindowSize(imv->window, &ww, &wh);
+  glfwGetFramebufferSize(imv->window, &bw, &bh);
+  imv_viewport_update(imv->view, ww, wh, bw, bh, imv->current_image);
+  imv_canvas_resize(imv->canvas, bw, bh);
+  glViewport(0, 0, bw, bh);
+}
+
+static void scroll_callback(GLFWwindow *window, double x, double y)
+{
+  (void)x;
+  struct imv *imv = glfwGetWindowUserPointer(window);
+  imv_viewport_zoom(imv->view, imv->current_image, IMV_ZOOM_MOUSE,
+                    imv->last_cursor_position.x,
+                    imv->last_cursor_position.y, -y);
+}
+
+static void cursor_callback(GLFWwindow *window, double x, double y)
+{
+  struct imv *imv = glfwGetWindowUserPointer(window);
+
+  if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
+    const double dx = x - imv->last_cursor_position.x;
+    const double dy = y - imv->last_cursor_position.y;
+    imv_viewport_move(imv->view, dx, dy, imv->current_image);
+  }
+  imv->last_cursor_position.x = x;
+  imv->last_cursor_position.y = y;
+}
+
+
+static void log_to_stderr(enum imv_log_level level, const char *text, void *data)
+{
+  (void)data;
+  if (level >= IMV_INFO) {
+    fprintf(stderr, "%s", text);
+  }
 }
 
 struct imv *imv_create(void)
 {
+  /* Attach log to stderr */
+  imv_log_add_log_callback(&log_to_stderr, NULL);
+
   struct imv *imv = calloc(1, sizeof *imv);
   imv->initial_width = 1280;
   imv->initial_height = 720;
@@ -369,10 +506,13 @@ struct imv *imv_create(void)
   imv->need_rescale = true;
   imv->scaling_mode = SCALING_FULL;
   imv->loop_input = true;
-  imv->font_name = strdup("Monospace:24");
+  imv->font.name = strdup("Monospace");
+  imv->font.size = 24;
   imv->binds = imv_binds_create();
   imv->navigator = imv_navigator_create();
   imv->commands = imv_commands_create();
+  imv->console = imv_console_create();
+  imv_console_set_command_callback(imv->console, &command_callback, imv);
   imv->title_text = strdup(
       "imv - [${imv_current_index}/${imv_file_count}]"
       " [${imv_width}x${imv_height}] [${imv_scale}%]"
@@ -383,6 +523,8 @@ struct imv *imv_create(void)
       " [${imv_width}x${imv_height}] [${imv_scale}%]"
       " $imv_current_file [$imv_scaling_mode]"
   );
+  imv->internal_events = list_create();
+  pthread_mutex_init(&imv->internal_events_mutex, NULL);
 
   imv_command_register(imv->commands, "quit", &command_quit);
   imv_command_register(imv->commands, "pan", &command_pan);
@@ -403,11 +545,11 @@ struct imv *imv_create(void)
 
   add_bind(imv, "q", "quit");
   add_bind(imv, "<Left>", "select_rel -1");
-  add_bind(imv, "<LeftSquareBracket>", "select_rel -1");
+  add_bind(imv, "<bracketleft>", "select_rel -1");
   add_bind(imv, "<Right>", "select_rel 1");
-  add_bind(imv, "<RightSquareBracket>", "select_rel 1");
+  add_bind(imv, "<bracketright>", "select_rel 1");
   add_bind(imv, "gg", "select_abs 0");
-  add_bind(imv, "<Shift+g>", "select_abs -1");
+  add_bind(imv, "<Shift+G>", "select_abs -1");
   add_bind(imv, "j", "pan 0 -50");
   add_bind(imv, "k", "pan 0 50");
   add_bind(imv, "h", "pan 50 0");
@@ -416,66 +558,56 @@ struct imv *imv_create(void)
   add_bind(imv, "f", "fullscreen");
   add_bind(imv, "d", "overlay");
   add_bind(imv, "p", "exec echo $imv_current_file");
-  add_bind(imv, "<Equals>", "zoom 1");
+  add_bind(imv, "<equal>", "zoom 1");
   add_bind(imv, "<Up>", "zoom 1");
-  add_bind(imv, "+", "zoom 1");
+  add_bind(imv, "<Shift+plus>", "zoom 1");
   add_bind(imv, "i", "zoom 1");
   add_bind(imv, "<Down>", "zoom -1");
-  add_bind(imv, "-", "zoom -1");
+  add_bind(imv, "<minus>", "zoom -1");
   add_bind(imv, "o", "zoom -1");
   add_bind(imv, "c", "center");
   add_bind(imv, "s", "scaling_mode next");
   add_bind(imv, "a", "zoom actual");
   add_bind(imv, "r", "reset");
-  add_bind(imv, ".", "next_frame");
-  add_bind(imv, "<Space>", "toggle_playing");
+  add_bind(imv, "<period>", "next_frame");
+  add_bind(imv, "<space>", "toggle_playing");
   add_bind(imv, "t", "slideshow_duration +1");
-  add_bind(imv, "<Shift+t>", "slideshow_duration -1");
+  add_bind(imv, "<Shift+T>", "slideshow_duration -1");
 
   return imv;
 }
 
 void imv_free(struct imv *imv)
 {
-  free(imv->font_name);
+  free(imv->font.name);
   free(imv->title_text);
   free(imv->overlay_text);
   imv_binds_free(imv->binds);
   imv_navigator_free(imv->navigator);
-  if (imv->source) {
-    imv->source->free(imv->source);
+  if (imv->current_source) {
+    imv->current_source->free(imv->current_source);
   }
   imv_commands_free(imv->commands);
+  imv_console_free(imv->console);
   imv_viewport_free(imv->view);
-  if (imv->image) {
-    imv_image_free(imv->image);
+  imv_keyboard_free(imv->keyboard);
+  imv_canvas_free(imv->canvas);
+  if (imv->current_image) {
+    imv_image_free(imv->current_image);
   }
-  if (imv->next_frame) {
-    imv_bitmap_free(imv->next_frame);
+  if (imv->next_frame.image) {
+    imv_image_free(imv->next_frame.image);
   }
-  if(imv->stdin_image_data) {
+  if (imv->stdin_image_data) {
     free(imv->stdin_image_data);
   }
-  if(imv->input_buffer) {
-    free(imv->input_buffer);
+  list_free(imv->internal_events);
+  pthread_mutex_destroy(&imv->internal_events_mutex);
+  if (imv->window) {
+    glfwDestroyWindow(imv->window);
   }
-  if(imv->renderer) {
-    SDL_DestroyRenderer(imv->renderer);
-  }
-  if(imv->window) {
-    SDL_DestroyWindow(imv->window);
-  }
-  if(imv->background_image) {
-    SDL_DestroyTexture(imv->background_image);
-  }
-  if(imv->font) {
-    TTF_CloseFont(imv->font);
-  }
-  if(imv->ttf_init) {
-    TTF_Quit();
-  }
-  if(imv->sdl_init) {
-    SDL_Quit();
+  if (imv->glfw_init) {
+    glfwTerminate();
   }
   free(imv);
 }
@@ -490,21 +622,21 @@ void imv_install_backend(struct imv *imv, const struct imv_backend *backend)
 
 static bool parse_bg(struct imv *imv, const char *bg)
 {
-  if(strcmp("checks", bg) == 0) {
-    imv->background_type = BACKGROUND_CHEQUERED;
+  if (strcmp("checks", bg) == 0) {
+    imv->background.type = BACKGROUND_CHEQUERED;
   } else {
-    imv->background_type = BACKGROUND_SOLID;
-    if(*bg == '#')
+    imv->background.type = BACKGROUND_SOLID;
+    if (*bg == '#')
       ++bg;
     char *ep;
     uint32_t n = strtoul(bg, &ep, 16);
-    if(*ep != '\0' || ep - bg != 6 || n > 0xFFFFFF) {
+    if (*ep != '\0' || ep - bg != 6 || n > 0xFFFFFF) {
       imv_log(IMV_ERROR, "Invalid hex color: '%s'\n", bg);
       return false;
     }
-    imv->background_color.b = n & 0xFF;
-    imv->background_color.g = (n >> 8) & 0xFF;
-    imv->background_color.r = (n >> 16);
+    imv->background.color.b = n & 0xFF;
+    imv->background.color.g = (n >> 8) & 0xFF;
+    imv->background.color.r = (n >> 16);
   }
   return true;
 }
@@ -512,24 +644,7 @@ static bool parse_bg(struct imv *imv, const char *bg)
 static bool parse_slideshow_duration(struct imv *imv, const char *duration)
 {
   char *decimal;
-  imv->slideshow_image_duration = strtoul(duration, &decimal, 10);
-  imv->slideshow_image_duration *= 1000;
-  if (*decimal == '.') {
-    char *ep;
-    long delay = strtoul(++decimal, &ep, 10);
-    for (int i = 3 - (ep - decimal); i; i--) {
-      delay *= 10;
-    }
-    if (delay < 1000) {
-      imv->slideshow_image_duration += delay;
-    } else {
-      imv->slideshow_image_duration = ULONG_MAX;
-    }
-  }
-  if (imv->slideshow_image_duration == ULONG_MAX) {
-    imv_log(IMV_ERROR, "Wrong slideshow duration '%s'. Aborting.\n", optarg);
-    return false;
-  }
+  imv->slideshow.duration = strtod(duration, &decimal);
   return true;
 }
 
@@ -588,28 +703,31 @@ static bool parse_resizing_mode(struct imv *imv, const char *method)
   return false;
 }
 
-static int load_paths_from_stdin(void *data)
+static void *load_paths_from_stdin(void *data)
 {
   struct imv *imv = data;
 
   imv_log(IMV_INFO, "Reading paths from stdin...");
 
   char buf[PATH_MAX];
-  while(fgets(buf, sizeof(buf), stdin) != NULL) {
+  while (fgets(buf, sizeof(buf), stdin) != NULL) {
     size_t len = strlen(buf);
-    if(buf[len-1] == '\n') {
+    if (buf[len-1] == '\n') {
       buf[--len] = 0;
     }
-    if(len > 0) {
-      /* return the path via SDL event queue */
-      SDL_Event event;
-      SDL_zero(event);
-      event.type = imv->events.NEW_PATH;
-      event.user.data1 = strdup(buf);
-      SDL_PushEvent(&event);
+    if (len > 0) {
+      struct internal_event *event = calloc(1, sizeof *event);
+      event->type = NEW_PATH;
+      event->data.new_path.path = strdup(buf);
+
+      pthread_mutex_lock(&imv->internal_events_mutex);
+      list_append(imv->internal_events, event);
+      pthread_mutex_unlock(&imv->internal_events_mutex);
+
+      glfwPostEmptyEvent();
     }
   }
-  return 0;
+  return NULL;
 }
 
 static void print_help(struct imv *imv)
@@ -646,7 +764,8 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
 
   int o;
 
-  while((o = getopt(argc, argv, "frdwWxhvlu:s:n:b:t:")) != -1) {
+ /* TODO getopt_long */
+  while ((o = getopt(argc, argv, "frdwWxhvlu:s:n:b:t:")) != -1) {
     switch(o) {
       case 'f': imv->fullscreen = true;                          break;
       case 'r': imv->recursive_load = true;                      break;
@@ -660,30 +779,30 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
         print_help(imv);
         imv->quit = true;
         return true;
-      case 'v': 
+      case 'v':
         printf("Version: %s\n", IMV_VERSION);
           imv->quit = true;
           return false;
       case 's':
-        if(!parse_scaling_mode(imv, optarg)) {
+        if (!parse_scaling_mode(imv, optarg)) {
           imv_log(IMV_ERROR, "Invalid scaling mode. Aborting.\n");
           return false;
         }
         break;
       case 'u':
-        if(!parse_upscaling_method(imv, optarg)) {
+        if (!parse_upscaling_method(imv, optarg)) {
           imv_log(IMV_ERROR, "Invalid upscaling method. Aborting.\n");
           return false;
         }
         break;
       case 'b':
-        if(!parse_bg(imv, optarg)) {
+        if (!parse_bg(imv, optarg)) {
           imv_log(IMV_ERROR, "Invalid background. Aborting.\n");
           return false;
         }
         break;
       case 't':
-        if(!parse_slideshow_duration(imv, optarg)) {
+        if (!parse_slideshow_duration(imv, optarg)) {
           imv_log(IMV_ERROR, "Invalid slideshow duration. Aborting.\n");
           return false;
         }
@@ -698,19 +817,19 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
   argv += optind;
 
   /* if no paths are given as args, expect them from stdin */
-  if(argc == 0) {
+  if (argc == 0) {
     imv->paths_from_stdin = true;
   } else {
     /* otherwise, add the paths */
     bool data_from_stdin = false;
-    for(int i = 0; i < argc; ++i) {
+    for (int i = 0; i < argc; ++i) {
 
       /* Special case: '-' denotes reading image data from stdin */
-      if(!strcmp("-", argv[i])) {
-        if(imv->paths_from_stdin) {
+      if (!strcmp("-", argv[i])) {
+        if (imv->paths_from_stdin) {
           imv_log(IMV_ERROR, "Can't read paths AND image data from stdin. Aborting.\n");
           return false;
-        } else if(data_from_stdin) {
+        } else if (data_from_stdin) {
           imv_log(IMV_ERROR, "Can't read image data from stdin twice. Aborting.\n");
           return false;
         }
@@ -733,64 +852,67 @@ void imv_add_path(struct imv *imv, const char *path)
 
 int imv_run(struct imv *imv)
 {
-  if(imv->quit)
+  if (imv->quit)
     return 0;
 
-  if(!setup_window(imv))
+  if (!setup_window(imv))
     return 1;
 
   /* if loading paths from stdin, kick off a thread to do that - we'll receive
-   * events back via SDL */
-  if(imv->paths_from_stdin) {
-    SDL_Thread *thread;
-    thread = SDL_CreateThread(load_paths_from_stdin, "load_paths_from_stdin", imv);
-    SDL_DetachThread(thread);
+   * events back via internal events */
+  if (imv->paths_from_stdin) {
+    pthread_t thread;
+    pthread_create(&thread, NULL, load_paths_from_stdin, imv);
+    pthread_detach(thread);
   }
 
-  if(imv->starting_path) {
+  if (imv->starting_path) {
     int index = imv_navigator_find_path(imv->navigator, imv->starting_path);
-    if(index == -1) {
+    if (index == -1) {
       index = (int) strtol(imv->starting_path, NULL, 10);
       index -= 1; /* input is 1-indexed, internally we're 0 indexed */
-      if(errno == EINVAL) {
+      if (errno == EINVAL) {
         index = -1;
       }
     }
 
-    if(index >= 0) {
+    if (index >= 0) {
       imv_navigator_select_str(imv->navigator, index);
     } else {
       imv_log(IMV_ERROR, "Invalid starting image: %s\n", imv->starting_path);
     }
   }
 
-  /* cache current image's dimensions */
-  imv->current_image.width = 0;
-  imv->current_image.height = 0;
-
   /* time keeping */
-  unsigned int last_time = SDL_GetTicks();
-  unsigned int current_time;
+  double last_time = glfwGetTime();
+  double current_time;
 
-  while(!imv->quit) {
 
-    SDL_Event e;
-    while(!imv->quit && SDL_PollEvent(&e)) {
-      handle_event(imv, &e);
+  while (!imv->quit && !glfwWindowShouldClose(imv->window)) {
+
+    glfwPollEvents();
+
+    /* Handle any new internal events */
+    pthread_mutex_lock(&imv->internal_events_mutex);
+    while (imv->internal_events->len > 0) {
+      struct internal_event *event = imv->internal_events->items[0];
+      consume_internal_event(imv, event);
+      list_remove(imv->internal_events, 0);
     }
+    pthread_mutex_unlock(&imv->internal_events_mutex);
 
     /* if we're quitting, don't bother drawing any more images */
-    if(imv->quit) {
+    if (imv->quit) {
       break;
     }
 
     /* Check if navigator wrapped around paths lists */
-    if(!imv->loop_input && imv_navigator_wrapped(imv->navigator)) {
+    if (!imv->loop_input && imv_navigator_wrapped(imv->navigator)) {
       break;
     }
 
     /* if we're out of images, and we're not expecting more from stdin, quit */
-    if(!imv->paths_from_stdin && imv_navigator_length(imv->navigator) == 0) {
+    if (!imv->paths_from_stdin && imv_navigator_length(imv->navigator) == 0) {
       imv_log(IMV_INFO, "No input files left. Exiting.\n");
       imv->quit = true;
       continue;
@@ -804,7 +926,7 @@ int imv_run(struct imv *imv)
     while (imv_navigator_poll_changed(imv->navigator)) {
       const char *current_path = imv_navigator_selection(imv->navigator);
       /* check we got a path back */
-      if(strcmp("", current_path)) {
+      if (strcmp("", current_path)) {
 
         const bool path_is_stdin = !strcmp("-", current_path);
         struct imv_source *new_source;
@@ -843,20 +965,20 @@ int imv_run(struct imv *imv)
         }
 
         if (result == BACKEND_SUCCESS) {
-          if (imv->source) {
-            async_free_source(imv->source);
+          if (imv->current_source) {
+            async_free_source(imv->current_source);
           }
-          imv->source = new_source;
-          imv->source->callback = &source_callback;
-          imv->source->user_data = imv;
-          async_load_first_frame(imv->source);
+          imv->current_source = new_source;
+          imv->current_source->callback = &source_callback;
+          imv->current_source->user_data = imv;
+          async_load_first_frame(imv->current_source);
 
           imv->loading = true;
           imv_viewport_set_playing(imv->view, true);
 
           char title[1024];
           generate_env_text(imv, title, sizeof title, imv->title_text);
-          imv_viewport_set_title(imv->view, title);
+          glfwSetWindowTitle(imv->window, title);
         } else {
           /* Error loading path so remove it from the navigator */
           imv_navigator_remove(imv->navigator, current_path);
@@ -864,82 +986,96 @@ int imv_run(struct imv *imv)
       }
     }
 
-    if(imv->need_rescale) {
+    if (imv->need_rescale) {
       int ww, wh;
-      SDL_GetWindowSize(imv->window, &ww, &wh);
+      glfwGetWindowSize(imv->window, &ww, &wh);
 
       imv->need_rescale = false;
-      if(imv->scaling_mode == SCALING_NONE ||
+      if (imv->scaling_mode == SCALING_NONE ||
           (imv->scaling_mode == SCALING_DOWN
-           && ww > imv->current_image.width
-           && wh > imv->current_image.height)) {
-        imv_viewport_scale_to_actual(imv->view, imv->image);
+           && ww > imv_image_width(imv->current_image)
+           && wh > imv_image_height(imv->current_image))) {
+        imv_viewport_scale_to_actual(imv->view, imv->current_image);
       } else {
-        imv_viewport_scale_to_window(imv->view, imv->image);
+        imv_viewport_scale_to_window(imv->view, imv->current_image);
       }
     }
 
-    current_time = SDL_GetTicks();
+    current_time = glfwGetTime();
 
     /* Check if a new frame is due */
-    if (imv_viewport_is_playing(imv->view) && imv->next_frame
-        && imv->next_frame_due && imv->next_frame_due <= current_time) {
-      imv_image_set_bitmap(imv->image, imv->next_frame);
-      imv->current_image.width = imv->next_frame->width;
-      imv->current_image.height = imv->next_frame->height;
-      imv_bitmap_free(imv->next_frame);
-      imv->next_frame = NULL;
-      imv->next_frame_due = current_time + imv->next_frame_duration;
-      imv->next_frame_duration = 0;
+    if (imv_viewport_is_playing(imv->view) && imv->next_frame.image
+        && imv->next_frame.due && imv->next_frame.due <= current_time) {
+      if (imv->current_image) {
+        imv_image_free(imv->current_image);
+      }
+      imv->current_image = imv->next_frame.image;
+      imv->next_frame.image = NULL;
+      imv->next_frame.due = current_time + imv->next_frame.duration;
+      imv->next_frame.duration = 0;
 
       imv->need_redraw = true;
 
       /* Trigger loading of a new frame, now this one's being displayed */
-      if (imv->source && imv->source->load_next_frame) {
-        async_load_next_frame(imv->source);
+      if (imv->current_source && imv->current_source->load_next_frame) {
+        async_load_next_frame(imv->current_source);
       }
     }
 
     /* handle slideshow */
-    if(imv->slideshow_image_duration != 0) {
-      unsigned int dt = current_time - last_time;
+    if (imv->slideshow.duration != 0.0) {
+      double dt = current_time - last_time;
 
-      imv->slideshow_time_elapsed += dt;
-      imv->need_redraw = true; /* need to update display */
-      if(imv->slideshow_time_elapsed >= imv->slideshow_image_duration) {
+      imv->slideshow.elapsed += dt;
+      /* imv->need_redraw = true; /1* need to update display *1/ */
+      if (imv->slideshow.elapsed >= imv->slideshow.duration) {
         imv_navigator_select_rel(imv->navigator, 1);
-        imv->slideshow_time_elapsed = 0;
+        imv->slideshow.elapsed = 0;
       }
     }
 
     last_time = current_time;
 
     /* check if the viewport needs a redraw */
-    if(imv_viewport_needs_redraw(imv->view)) {
+    if (imv_viewport_needs_redraw(imv->view)) {
       imv->need_redraw = true;
     }
 
-    if(imv->need_redraw) {
+    if (imv->need_redraw) {
+      glClearColor(0.0, 0.0, 0.0, 1.0);
+      glClear(GL_COLOR_BUFFER_BIT);
       render_window(imv);
-      SDL_RenderPresent(imv->renderer);
+      glfwSwapBuffers(imv->window);
     }
 
     /* sleep until we have something to do */
-    unsigned int timeout = 1000; /* milliseconds */
+    double timeout = 1.0; /* seconds */
 
-    /* if we need to display the next frame of an animation soon we should
-     * limit our sleep until the next frame is due */
-    if (imv_viewport_is_playing(imv->view)
-        && imv->next_frame_due > current_time) {
-      timeout = imv->next_frame_due - current_time;
+    /* If we need to display the next frame of an animation soon we should
+     * limit our sleep until the next frame is due. If the frame is overdue,
+     * sleep for 1ms at a time to avoid a glfw race between WaitEvents and
+     * PostEmptyEvent.
+     */
+    if (imv_viewport_is_playing(imv->view) && imv->next_frame.due != 0.0) {
+      timeout = imv->next_frame.due - current_time;
+      if (timeout < 0.001) {
+        timeout = 0.001;
+      }
     }
 
-    /* go to sleep until an input event, etc. or the timeout expires */
-    SDL_WaitEventTimeout(NULL, timeout);
+    if (imv->slideshow.duration > 0) {
+      double timeleft = imv->slideshow.elapsed - imv->slideshow.duration;
+      if (timeleft > 0.0 && timeleft < timeout) {
+        timeout = timeleft + 0.005;
+      }
+    }
+
+    /* Go to sleep until an input/internal event or the timeout expires */
+    glfwWaitEventsTimeout(timeout);
   }
 
-  if(imv->list_files_at_exit) {
-    for(size_t i = 0; i < imv_navigator_length(imv->navigator); ++i)
+  if (imv->list_files_at_exit) {
+    for (size_t i = 0; i < imv_navigator_length(imv->navigator); ++i)
       puts(imv_navigator_at(imv->navigator, i));
   }
 
@@ -948,81 +1084,74 @@ int imv_run(struct imv *imv)
 
 static bool setup_window(struct imv *imv)
 {
-  if(SDL_Init(SDL_INIT_VIDEO) != 0) {
-    imv_log(IMV_ERROR, "SDL Failed to Init: %s\n", SDL_GetError());
+  if (!glfwInit()) {
+    const char *err = NULL;
+    glfwGetError(&err);
+    imv_log(IMV_ERROR, "glfw failed to init: %s\n", err);
     return false;
   }
 
-  /* register custom events */
-  imv->events.NEW_IMAGE = SDL_RegisterEvents(1);
-  imv->events.BAD_IMAGE = SDL_RegisterEvents(1);
-  imv->events.NEW_PATH = SDL_RegisterEvents(1);
-  imv->events.ENABLE_INPUT = SDL_RegisterEvents(1);
+  imv->glfw_init = true;
 
-  imv->sdl_init = true;
+  imv->window = glfwCreateWindow(imv->initial_width, imv->initial_height,
+                                 "imv",  NULL, NULL);
 
-  imv->window = SDL_CreateWindow(
-        "imv",
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
-        imv->initial_width, imv->initial_height,
-        SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-
-  if(!imv->window) {
-    imv_log(IMV_ERROR, "SDL Failed to create window: %s\n", SDL_GetError());
+  if (!imv->window) {
+    const char *err = NULL;
+    glfwGetError(&err);
+    imv_log(IMV_ERROR, "glfw failed to create window: %s\n", err);
     return false;
   }
 
-  /* we'll use SDL's built-in renderer, hardware accelerated if possible */
-  imv->renderer = SDL_CreateRenderer(imv->window, -1, 0);
-  if(!imv->renderer) {
-    imv_log(IMV_ERROR, "SDL Failed to create renderer: %s\n", SDL_GetError());
-    return false;
-  }
+  glfwSetWindowUserPointer(imv->window, imv);
+  glfwSetKeyCallback(imv->window, &key_callback);
+  glfwSetScrollCallback(imv->window, &scroll_callback);
+  glfwSetCursorPosCallback(imv->window, &cursor_callback);
+  glfwSetWindowSizeCallback(imv->window, &resize_callback);
+  glfwSetFramebufferSizeCallback(imv->window, &resize_callback);
 
-  /* use the appropriate resampling method */
-  SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,
-    imv->upscaling_method == UPSCALING_LINEAR? "1" : "0");
+  glfwMakeContextCurrent(imv->window);
 
   /* allow fullscreen to be maintained even when focus is lost */
-  SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS,
-      imv->stay_fullscreen_on_focus_loss ? "0" : "1");
+  glfwWindowHint(GLFW_AUTO_ICONIFY,
+      imv->stay_fullscreen_on_focus_loss ? GLFW_FALSE : GLFW_TRUE);
 
-  /* construct a chequered background image */
-  if(imv->background_type == BACKGROUND_CHEQUERED) {
-    imv->background_image = create_chequered(imv->renderer);
+  {
+    int ww, wh, bw, bh;
+    glfwGetWindowSize(imv->window, &ww, &wh);
+    glfwGetFramebufferSize(imv->window, &bw, &bh);
+    imv->view = imv_viewport_create(ww, wh, bw, bh);
   }
-
-  /* set up the required fonts and surfaces for displaying the overlay */
-  TTF_Init();
-  imv->ttf_init = true;
-  imv->font = load_font(imv->font_name);
-  if(!imv->font) {
-    imv_log(IMV_ERROR, "Error loading font: %s\n", TTF_GetError());
-    return false;
-  }
-
-  imv->image = imv_image_create(imv->renderer);
-  imv->view = imv_viewport_create(imv->window, imv->renderer);
 
   /* put us in fullscren mode to begin with if requested */
-  if(imv->fullscreen) {
-    imv_viewport_toggle_fullscreen(imv->view);
+  if (imv->fullscreen) {
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+    glfwSetWindowMonitor(imv->window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
   }
 
-  /* start outside of command mode */
-  SDL_StopTextInput();
+  {
+    imv->keyboard = imv_keyboard_create();
+    assert(imv->keyboard);
+  }
+
+  {
+    int ww, wh;
+    glfwGetWindowSize(imv->window, &ww, &wh);
+    imv->canvas = imv_canvas_create(ww, wh);
+    imv_canvas_font(imv->canvas, imv->font.name, imv->font.size);
+  }
 
   return true;
 }
 
 
-static void handle_new_image(struct imv *imv, struct imv_bitmap *bitmap, int frametime)
+static void handle_new_image(struct imv *imv, struct imv_image *image, int frametime)
 {
-  imv_image_set_bitmap(imv->image, bitmap);
-  imv->current_image.width = bitmap->width;
-  imv->current_image.height = bitmap->height;
-  imv_bitmap_free(bitmap);
+  if (imv->current_image) {
+    imv_image_free(imv->current_image);
+  }
+  imv->current_image = image;
   imv->need_redraw = true;
   imv->need_rescale = true;
   /* If autoresizing on every image is enabled, make sure we do so */
@@ -1031,49 +1160,47 @@ static void handle_new_image(struct imv *imv, struct imv_bitmap *bitmap, int fra
   }
   if (imv->need_resize) {
     imv->need_resize = false;
-    SDL_SetWindowSize(imv->window, imv->current_image.width, imv->current_image.height);
+    glfwSetWindowSize(imv->window, imv_image_width(image), imv_image_height(image));
     if (imv->resize_mode == RESIZE_CENTER) {
-      SDL_SetWindowPosition(imv->window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+      /* TODO centering */
+      /* glfwSetWindowPos(imv->window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED); */
     }
   }
   imv->loading = false;
-  imv->next_frame_due = frametime ? SDL_GetTicks() + frametime : 0;
-  imv->next_frame_duration = 0;
+  imv->next_frame.due = frametime ? glfwGetTime() + frametime * 0.001 : 0.0;
+  imv->next_frame.duration = 0.0;
 
   /* If this is an animated image, we should kick off loading the next frame */
-  if (imv->source && imv->source->load_next_frame && frametime) {
-    async_load_next_frame(imv->source);
+  if (imv->current_source && imv->current_source->load_next_frame && frametime) {
+    async_load_next_frame(imv->current_source);
   }
 }
 
-static void handle_new_frame(struct imv *imv, struct imv_bitmap *bitmap, int frametime)
+static void handle_new_frame(struct imv *imv, struct imv_image *image, int frametime)
 {
-  if (imv->next_frame) {
-    imv_bitmap_free(imv->next_frame);
+  if (imv->next_frame.image) {
+    imv_image_free(imv->next_frame.image);
   }
-  imv->next_frame = bitmap;
+  imv->next_frame.image = image;
 
-  imv->next_frame_duration = frametime;
+  imv->next_frame.duration = frametime * 0.001;
 }
 
-static void handle_event(struct imv *imv, SDL_Event *event)
+static void consume_internal_event(struct imv *imv, struct internal_event *event)
 {
-  const int command_buffer_len = 1024;
-
-  if (event->type == imv->events.NEW_IMAGE) {
-    /* new image vs just a new frame of the same image */
-    bool is_new_image = !!event->user.data2;
-    if (is_new_image) {
-      handle_new_image(imv, event->user.data1, event->user.code);
+  if (event->type == NEW_IMAGE) {
+    /* New image vs just a new frame of the same image */
+    if (event->data.new_image.is_new_image) {
+      handle_new_image(imv, event->data.new_image.image, event->data.new_image.frametime);
     } else {
-      handle_new_frame(imv, event->user.data1, event->user.code);
+      handle_new_frame(imv, event->data.new_image.image, event->data.new_image.frametime);
     }
-    return;
-  } else if (event->type == imv->events.BAD_IMAGE) {
-    /* an image failed to load, remove it from our image list */
+
+  } else if (event->type == BAD_IMAGE) {
+    /* An image failed to load, remove it from our image list */
     const char *err_path = imv_navigator_selection(imv->navigator);
 
-    /* special case: the image came from stdin */
+    /* Special case: the image came from stdin */
     if (strcmp(err_path, "-") == 0) {
       if (imv->stdin_image_data) {
         free(imv->stdin_image_data);
@@ -1084,170 +1211,77 @@ static void handle_event(struct imv *imv, SDL_Event *event)
     }
 
     imv_navigator_remove(imv->navigator, err_path);
-    return;
-  } else if (event->type == imv->events.NEW_PATH) {
-    /* received a new path from the stdin reading thread */
-    imv_add_path(imv, event->user.data1);
-    free(event->user.data1);
-    /* need to update image count */
+
+  } else if (event->type == NEW_PATH) {
+    /* Received a new path from the stdin reading thread */
+    imv_add_path(imv, event->data.new_path.path);
+    free(event->data.new_path.path);
+    /* Need to update image count in title */
     imv->need_redraw = true;
-    return;
-  } else if (event->type == imv->events.ENABLE_INPUT) {
-    imv->ignore_window_events = false;
-    return;
-  } else if (imv->ignore_window_events) {
-    /* Don't try and process this input event, we're in event ignoring mode */
-    return;
   }
 
-  switch (event->type) {
-    case SDL_QUIT:
-      imv_command_exec(imv->commands, "quit", imv);
-      break;
-    case SDL_TEXTINPUT:
-      strncat(imv->input_buffer, event->text.text, command_buffer_len - 1);
-      imv->need_redraw = true;
-      break;
-
-    case SDL_KEYDOWN:
-      SDL_ShowCursor(SDL_DISABLE);
-
-      if (imv->input_buffer) {
-        /* in command mode, update the buffer */
-        if (event->key.keysym.sym == SDLK_ESCAPE) {
-          SDL_StopTextInput();
-          free(imv->input_buffer);
-          imv->input_buffer = NULL;
-          imv->need_redraw = true;
-        } else if (event->key.keysym.sym == SDLK_RETURN) {
-          struct list *commands = list_create();
-          list_append(commands, imv->input_buffer);
-          imv_command_exec_list(imv->commands, commands, imv);
-          SDL_StopTextInput();
-          list_free(commands);
-          free(imv->input_buffer);
-          imv->input_buffer = NULL;
-          imv->need_redraw = true;
-        } else if (event->key.keysym.sym == SDLK_BACKSPACE) {
-          const size_t len = strlen(imv->input_buffer);
-          if (len > 0) {
-            imv->input_buffer[len - 1] = '\0';
-            imv->need_redraw = true;
-          }
-        }
-
-        return;
-      }
-
-      /* Hitting : opens command-entry mode, like vim */
-      if (event->key.keysym.sym == SDLK_SEMICOLON
-          && event->key.keysym.mod & KMOD_SHIFT) {
-        SDL_StartTextInput();
-        imv->input_buffer = malloc(command_buffer_len);
-        imv->input_buffer[0] = '\0';
-        imv->need_redraw = true;
-        return;
-      }
-
-      /* If none of the above, add the key to the current key sequence and
-       * see if that triggers a bind */
-      struct list *cmds = imv_bind_handle_event(imv->binds, event);
-      if (cmds) {
-        imv_command_exec_list(imv->commands, cmds, imv);
-      }
-      break;
-    case SDL_MOUSEWHEEL:
-      imv_viewport_zoom(imv->view, imv->image, IMV_ZOOM_MOUSE, event->wheel.y);
-      SDL_ShowCursor(SDL_ENABLE);
-      break;
-    case SDL_MOUSEMOTION:
-      if (event->motion.state & SDL_BUTTON_LMASK) {
-        imv_viewport_move(imv->view, event->motion.xrel, event->motion.yrel, imv->image);
-      }
-      SDL_ShowCursor(SDL_ENABLE);
-      break;
-    case SDL_WINDOWEVENT:
-      /* For some reason SDL passes events to us that occurred before we
-       * gained focus, and passes them *after* the focus gained event.
-       * Due to behavioural quirks from such events, whenever we gain focus
-       * we have to ignore all window events already in the queue.
-       */
-      if (event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
-        /* disable window event handling */
-        imv->ignore_window_events = true;
-        /* push an event to the back of the event queue to re-enable
-         * window event handling */
-        SDL_Event event;
-        SDL_zero(event);
-        event.type = imv->events.ENABLE_INPUT;
-        SDL_PushEvent(&event);
-      }
-
-      imv_viewport_update(imv->view, imv->image);
-      break;
-  }
+  free(event);
+  return;
 }
 
 static void render_window(struct imv *imv)
 {
   int ww, wh;
-  SDL_GetWindowSize(imv->window, &ww, &wh);
+  glfwGetWindowSize(imv->window, &ww, &wh);
 
   /* update window title */
   char title_text[1024];
   generate_env_text(imv, title_text, sizeof title_text, imv->title_text);
-  imv_viewport_set_title(imv->view, title_text);
+  glfwSetWindowTitle(imv->window, title_text);
 
   /* first we draw the background */
-  if(imv->background_type == BACKGROUND_SOLID) {
-    /* solid background */
-    SDL_SetRenderDrawColor(imv->renderer,
-        imv->background_color.r,
-        imv->background_color.g,
-        imv->background_color.b,
-        255);
-    SDL_RenderClear(imv->renderer);
+  if (imv->background.type == BACKGROUND_SOLID) {
+    imv_canvas_clear(imv->canvas);
+    imv_canvas_color(imv->canvas,
+        imv->background.color.r,
+        imv->background.color.g,
+        imv->background.color.b,
+        1.0);
+    imv_canvas_fill(imv->canvas);
+    imv_canvas_draw(imv->canvas);
   } else {
     /* chequered background */
-    int img_w, img_h;
-    SDL_QueryTexture(imv->background_image, NULL, NULL, &img_w, &img_h);
-    /* tile the image so it fills the window */
-    for(int y = 0; y < wh; y += img_h) {
-      for(int x = 0; x < ww; x += img_w) {
-        SDL_Rect dst_rect = {x,y,img_w,img_h};
-        SDL_RenderCopy(imv->renderer, imv->background_image, NULL, &dst_rect);
-      }
-    }
+    imv_canvas_fill_checkers(imv->canvas, 16);
+    imv_canvas_draw(imv->canvas);
   }
 
   /* draw our actual image */
-  {
+  if (imv->current_image) {
     int x, y;
     double scale;
     imv_viewport_get_offset(imv->view, &x, &y);
     imv_viewport_get_scale(imv->view, &scale);
-    imv_image_draw(imv->image, x, y, scale);
+    imv_canvas_draw_image(imv->canvas, imv->current_image, x, y, scale, imv->upscaling_method);
   }
 
+  imv_canvas_clear(imv->canvas);
+
   /* if the overlay needs to be drawn, draw that too */
-  if(imv->overlay_enabled && imv->font) {
-    SDL_Color fg = {255,255,255,255};
-    SDL_Color bg = {0,0,0,160};
+  if (imv->overlay_enabled) {
+    const int height = imv->font.size * 1.2;
+    imv_canvas_color(imv->canvas, 0, 0, 0, 0.75);
+    imv_canvas_fill_rectangle(imv->canvas, 0, 0, ww, height);
+    imv_canvas_color(imv->canvas, 1, 1, 1, 1);
     char overlay_text[1024];
     generate_env_text(imv, overlay_text, sizeof overlay_text, imv->overlay_text);
-    imv_printf(imv->renderer, imv->font, 0, 0, &fg, &bg, "%s", overlay_text);
+    imv_canvas_printf(imv->canvas, 0, 0, "%s", overlay_text);
   }
 
   /* draw command entry bar if needed */
-  if(imv->input_buffer && imv->font) {
-    SDL_Color fg = {255,255,255,255};
-    SDL_Color bg = {0,0,0,160};
-    imv_printf(imv->renderer,
-        imv->font,
-        0, wh - TTF_FontHeight(imv->font),
-        &fg, &bg,
-        ":%s", imv->input_buffer);
+  if (imv_console_prompt(imv->console)) {
+    const int height = imv->font.size * 1.2;
+    imv_canvas_color(imv->canvas, 0, 0, 0, 0.75);
+    imv_canvas_fill_rectangle(imv->canvas, 0, wh - height, ww, height);
+    imv_canvas_color(imv->canvas, 1, 1, 1, 1);
+    imv_canvas_printf(imv->canvas, 0, wh - height, ":%s|", imv_console_prompt(imv->console));
   }
+
+  imv_canvas_draw(imv->canvas);
 
   /* redraw complete, unset the flag */
   imv->need_redraw = false;
@@ -1265,9 +1299,9 @@ static char *get_config_path(void)
     "/etc/imv_config",
   };
 
-  for(size_t i = 0; i < sizeof(config_paths) / sizeof(char*); ++i) {
+  for (size_t i = 0; i < sizeof(config_paths) / sizeof(char*); ++i) {
     wordexp_t word;
-    if(wordexp(config_paths[i], &word, 0) == 0) {
+    if (wordexp(config_paths[i], &word, 0) == 0) {
       if (!word.we_wordv[0]) {
         wordfree(&word);
         continue;
@@ -1276,7 +1310,7 @@ static char *get_config_path(void)
       char *path = strdup(word.we_wordv[0]);
       wordfree(&word);
 
-      if(!path || access(path, R_OK) == -1) {
+      if (!path || access(path, R_OK) == -1) {
         free(path);
         continue;
       }
@@ -1301,6 +1335,7 @@ static int handle_ini_value(void *user, const char *section, const char *name,
                             const char *value)
 {
   struct imv *imv = user;
+  fprintf(stderr, "got section='%s' name='%s' value='%s'\n", section, name, value);
 
   if (!strcmp(section, "binds")) {
     return add_bind(imv, name, value);
@@ -1313,92 +1348,99 @@ static int handle_ini_value(void *user, const char *section, const char *name,
 
   if (!strcmp(section, "options")) {
 
-    if(!strcmp(name, "fullscreen")) {
+    if (!strcmp(name, "fullscreen")) {
       imv->fullscreen = parse_bool(value);
       return 1;
     }
 
-    if(!strcmp(name, "width")) {
+    if (!strcmp(name, "width")) {
       imv->initial_width = strtol(value, NULL, 10);
       return 1;
     }
-    if(!strcmp(name, "height")) {
+    if (!strcmp(name, "height")) {
       imv->initial_height = strtol(value, NULL, 10);
       return 1;
     }
 
-    if(!strcmp(name, "overlay")) {
+    if (!strcmp(name, "overlay")) {
       imv->overlay_enabled = parse_bool(value);
       return 1;
     }
 
-    if(!strcmp(name, "autoresize")) {
+    if (!strcmp(name, "autoresize")) {
       return parse_resizing_mode(imv, value);
     }
 
-    if(!strcmp(name, "upscaling_method")) {
+    if (!strcmp(name, "upscaling_method")) {
       return parse_upscaling_method(imv, value);
     }
 
-    if(!strcmp(name, "stay_fullscreen_on_focus_loss")) {
+    if (!strcmp(name, "stay_fullscreen_on_focus_loss")) {
       imv->stay_fullscreen_on_focus_loss = parse_bool(value);
       return 1;
     }
 
-    if(!strcmp(name, "recursive")) {
+    if (!strcmp(name, "recursive")) {
       imv->recursive_load = parse_bool(value);
       return 1;
     }
 
-    if(!strcmp(name, "loop_input")) {
+    if (!strcmp(name, "loop_input")) {
       imv->loop_input = parse_bool(value);
       return 1;
     }
 
-    if(!strcmp(name, "list_files_at_exit")) {
+    if (!strcmp(name, "list_files_at_exit")) {
       imv->list_files_at_exit = parse_bool(value);
       return 1;
     }
 
-    if(!strcmp(name, "scaling_mode")) {
+    if (!strcmp(name, "scaling_mode")) {
       return parse_scaling_mode(imv, value);
     }
 
-    if(!strcmp(name, "background")) {
-      if(!parse_bg(imv, value)) {
+    if (!strcmp(name, "background")) {
+      if (!parse_bg(imv, value)) {
         return false;
       }
       return 1;
     }
 
-    if(!strcmp(name, "slideshow_duration")) {
-      if(!parse_slideshow_duration(imv, value)) {
+    if (!strcmp(name, "slideshow_duration")) {
+      if (!parse_slideshow_duration(imv, value)) {
         return false;
       }
       return 1;
     }
 
-    if(!strcmp(name, "overlay_font")) {
-      free(imv->font_name);
-      imv->font_name = strdup(value);
+    if (!strcmp(name, "overlay_font")) {
+      free(imv->font.name);
+      imv->font.name = strdup(value);
+      char *sep = strchr(imv->font.name, ':');
+      if (sep) {
+        *sep = 0;
+        imv->font.size = atoi(sep + 1);
+      } else {
+        imv->font.size = 24;
+      }
       return 1;
     }
 
-    if(!strcmp(name, "overlay_text")) {
+    if (!strcmp(name, "overlay_text")) {
       free(imv->overlay_text);
       imv->overlay_text = strdup(value);
       return 1;
     }
 
-    if(!strcmp(name, "title_text")) {
+    if (!strcmp(name, "title_text")) {
       free(imv->title_text);
       imv->title_text = strdup(value);
       return 1;
     }
 
-    if(!strcmp(name, "suppress_default_binds")) {
+    if (!strcmp(name, "suppress_default_binds")) {
       const bool suppress_default_binds = parse_bool(value);
-      if(suppress_default_binds) {
+      if (suppress_default_binds) {
         /* clear out any default binds if requested */
         imv_binds_clear(imv->binds);
       }
@@ -1415,7 +1457,7 @@ static int handle_ini_value(void *user, const char *section, const char *name,
 bool imv_load_config(struct imv *imv)
 {
   char *path = get_config_path();
-  if(!path) {
+  if (!path) {
     /* no config, no problem - we have defaults */
     return true;
   }
@@ -1444,55 +1486,55 @@ void command_pan(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
   struct imv *imv = data;
-  if(args->len != 3) {
+  if (args->len != 3) {
     return;
   }
 
   long int x = strtol(args->items[1], NULL, 10);
   long int y = strtol(args->items[2], NULL, 10);
 
-  imv_viewport_move(imv->view, x, y, imv->image);
+  imv_viewport_move(imv->view, x, y, imv->current_image);
 }
 
 void command_select_rel(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
   struct imv *imv = data;
-  if(args->len != 2) {
+  if (args->len != 2) {
     return;
   }
 
   long int index = strtol(args->items[1], NULL, 10);
   imv_navigator_select_rel(imv->navigator, index);
 
-  imv->slideshow_time_elapsed = 0;
+  imv->slideshow.elapsed = 0;
 }
 
 void command_select_abs(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
   struct imv *imv = data;
-  if(args->len != 2) {
+  if (args->len != 2) {
     return;
   }
 
   long int index = strtol(args->items[1], NULL, 10);
   imv_navigator_select_abs(imv->navigator, index);
 
-  imv->slideshow_time_elapsed = 0;
+  imv->slideshow.elapsed = 0;
 }
 
 void command_zoom(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
   struct imv *imv = data;
-  if(args->len == 2) {
+  if (args->len == 2) {
     const char *str = args->items[1];
-    if(!strcmp(str, "actual")) {
-      imv_viewport_scale_to_actual(imv->view, imv->image);
+    if (!strcmp(str, "actual")) {
+      imv_viewport_scale_to_actual(imv->view, imv->current_image);
     } else {
       long int amount = strtol(args->items[1], NULL, 10);
-      imv_viewport_zoom(imv->view, imv->image, IMV_ZOOM_KEYBOARD, amount);
+      imv_viewport_zoom(imv->view, imv->current_image, IMV_ZOOM_KEYBOARD, 0, 0, amount);
     }
   }
 }
@@ -1513,8 +1555,8 @@ void command_open(struct list *args, const char *argstr, void *data)
     }
 
     wordexp_t word;
-    if(wordexp(args->items[i], &word, 0) == 0) {
-      for(size_t j = 0; j < word.we_wordc; ++j) {
+    if (wordexp(args->items[i], &word, 0) == 0) {
+      for (size_t j = 0; j < word.we_wordc; ++j) {
         imv_navigator_add(imv->navigator, word.we_wordv[j], recursive);
       }
       wordfree(&word);
@@ -1531,7 +1573,7 @@ void command_close(struct list *args, const char *argstr, void *data)
   imv_navigator_remove(imv->navigator, path);
   free(path);
 
-  imv->slideshow_time_elapsed = 0;
+  imv->slideshow.elapsed = 0;
 }
 
 void command_fullscreen(struct list *args, const char *argstr, void *data)
@@ -1539,7 +1581,17 @@ void command_fullscreen(struct list *args, const char *argstr, void *data)
   (void)args;
   (void)argstr;
   struct imv *imv = data;
-  imv_viewport_toggle_fullscreen(imv->view);
+
+
+  if (glfwGetWindowMonitor(imv->window)) {
+    glfwSetWindowMonitor(imv->window, NULL, 0, 0, imv->initial_width, imv->initial_height, GLFW_DONT_CARE);
+    imv->fullscreen = false;
+  } else {
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+    glfwSetWindowMonitor(imv->window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+    imv->fullscreen = true;
+  }
 }
 
 void command_overlay(struct list *args, const char *argstr, void *data)
@@ -1564,7 +1616,7 @@ void command_center(struct list *args, const char *argstr, void *data)
   (void)args;
   (void)argstr;
   struct imv *imv = data;
-  imv_viewport_center(imv->view, imv->image);
+  imv_viewport_center(imv->view, imv->current_image);
 }
 
 void command_reset(struct list *args, const char *argstr, void *data)
@@ -1581,9 +1633,9 @@ void command_next_frame(struct list *args, const char *argstr, void *data)
   (void)args;
   (void)argstr;
   struct imv *imv = data;
-  if (imv->source && imv->source->load_next_frame) {
-    async_load_next_frame(imv->source);
-    imv->next_frame_due = 1; /* Earliest possible non-zero timestamp */
+  if (imv->current_source && imv->current_source->load_next_frame) {
+    async_load_next_frame(imv->current_source);
+    imv->next_frame.due = 0.0001; /* Earliest possible non-zero timestamp */
   }
 }
 
@@ -1601,20 +1653,20 @@ void command_set_scaling_mode(struct list *args, const char *argstr, void *data)
   (void)argstr;
   struct imv *imv = data;
 
-  if(args->len != 2) {
+  if (args->len != 2) {
     return;
   }
 
   const char *mode = args->items[1];
 
-  if(!strcmp(mode, "next")) {
+  if (!strcmp(mode, "next")) {
     imv->scaling_mode++;
     imv->scaling_mode %= SCALING_MODE_COUNT;
-  } else if(!strcmp(mode, "none")) {
+  } else if (!strcmp(mode, "none")) {
     imv->scaling_mode = SCALING_NONE;
-  } else if(!strcmp(mode, "shrink")) {
+  } else if (!strcmp(mode, "shrink")) {
     imv->scaling_mode = SCALING_DOWN;
-  } else if(!strcmp(mode, "full")) {
+  } else if (!strcmp(mode, "full")) {
     imv->scaling_mode = SCALING_FULL;
   } else {
     /* no changes, don't bother to redraw */
@@ -1629,14 +1681,14 @@ void command_set_slideshow_duration(struct list *args, const char *argstr, void 
 {
   (void)argstr;
   struct imv *imv = data;
-  if(args->len == 2) {
-    long int delta = 1000 * strtol(args->items[1], NULL, 10);
+  if (args->len == 2) {
+    long int delta = strtol(args->items[1], NULL, 10);
 
     /* Ensure we can't go below 0 */
-    if(delta < 0 && (size_t)labs(delta) > imv->slideshow_image_duration) {
-      imv->slideshow_image_duration = 0;
+    if (delta < 0 && (size_t)labs(delta) > imv->slideshow.duration) {
+      imv->slideshow.duration = 0;
     } else {
-      imv->slideshow_image_duration += delta;
+      imv->slideshow.duration += delta;
     }
 
     imv->need_redraw = true;
@@ -1657,10 +1709,10 @@ static void update_env_vars(struct imv *imv)
   snprintf(str, sizeof str, "%zu", imv_navigator_length(imv->navigator));
   setenv("imv_file_count", str, 1);
 
-  snprintf(str, sizeof str, "%d", imv_image_width(imv->image));
+  snprintf(str, sizeof str, "%d", imv_image_width(imv->current_image));
   setenv("imv_width", str, 1);
 
-  snprintf(str, sizeof str, "%d", imv_image_height(imv->image));
+  snprintf(str, sizeof str, "%d", imv_image_height(imv->current_image));
   setenv("imv_height", str, 1);
 
   {
@@ -1670,10 +1722,10 @@ static void update_env_vars(struct imv *imv)
     setenv("imv_scale", str, 1);
   }
 
-  snprintf(str, sizeof str, "%zu", imv->slideshow_image_duration / 1000);
+  snprintf(str, sizeof str, "%f", imv->slideshow.duration);
   setenv("imv_slidshow_duration", str, 1);
 
-  snprintf(str, sizeof str, "%zu", imv->slideshow_time_elapsed / 1000);
+  snprintf(str, sizeof str, "%f", imv->slideshow.elapsed);
   setenv("imv_slidshow_elapsed", str, 1);
 }
 
@@ -1683,8 +1735,8 @@ static size_t generate_env_text(struct imv *imv, char *buf, size_t buf_len, cons
 
   size_t len = 0;
   wordexp_t word;
-  if(wordexp(format, &word, 0) == 0) {
-    for(size_t i = 0; i < word.we_wordc; ++i) {
+  if (wordexp(format, &word, 0) == 0) {
+    for (size_t i = 0; i < word.we_wordc; ++i) {
       len += snprintf(buf + len, buf_len - len, "%s ", word.we_wordv[i]);
     }
     wordfree(&word);
@@ -1694,5 +1746,35 @@ static size_t generate_env_text(struct imv *imv, char *buf, size_t buf_len, cons
 
   return len;
 }
+
+static size_t read_from_stdin(void **buffer)
+{
+  size_t len = 0;
+  ssize_t r;
+  size_t step = 4096; /* Arbitrary value of 4 KiB */
+  void *p;
+
+  errno = 0; /* clear errno */
+
+  for (*buffer = NULL; (*buffer = realloc((p = *buffer), len + step));
+      len += (size_t)r) {
+    if ((r = read(STDIN_FILENO, (uint8_t *)*buffer + len, step)) == -1) {
+      perror(NULL);
+      break;
+    } else if (r == 0) {
+      break;
+    }
+  }
+
+  /* realloc(3) leaves old buffer allocated in case of error */
+  if (*buffer == NULL && p != NULL) {
+    int save = errno;
+    free(p);
+    errno = save;
+    len = 0;
+  }
+  return len;
+}
+
 
 /* vim:set ts=2 sts=2 sw=2 et: */

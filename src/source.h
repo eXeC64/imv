@@ -3,7 +3,7 @@
 
 #include <pthread.h>
 #include <stdbool.h>
-#include "bitmap.h"
+#include "image.h"
 
 struct imv_source_message {
   /* Pointer to sender of message */
@@ -12,17 +12,17 @@ struct imv_source_message {
   /* User-supplied pointer */
   void *user_data;
 
-  /* Receiver is responsible for destroying bitmap */
-  struct imv_bitmap *bitmap;
+  /* Receiver is responsible for destroying image */
+  struct imv_image *image;
 
   /* If an animated gif, the frame's duration in milliseconds, else 0 */
   int frametime;
 
-  /* Error message if bitmap was NULL */
+  /* Error message if image was NULL */
   const char *error;
 };
 
-/* Generic source of one or more bitmaps. Essentially a single image file */
+/* Generic source of one or more images. Essentially a single image file */
 struct imv_source {
   /* usually the path of the image this is the source of */
   char *name; 
@@ -45,10 +45,10 @@ struct imv_source {
   pthread_mutex_t busy;
 
   /* Trigger loading of the first frame. Returns 0 on success. */
-  int (*load_first_frame)(struct imv_source *src);
+  void *(*load_first_frame)(struct imv_source *src);
 
   /* Trigger loading of next frame. Returns 0 on success. */
-  int (*load_next_frame)(struct imv_source *src);
+  void *(*load_next_frame)(struct imv_source *src);
 
   /* Safely free contents of this source. After this returns
    * it is safe to dealocate/overwrite the imv_source instance.

@@ -33,18 +33,6 @@ static void source_free(struct imv_source *src)
   free(src);
 }
 
-static struct imv_bitmap *to_imv_bitmap(GdkPixbuf *bitmap)
-{
-  struct imv_bitmap *bmp = malloc(sizeof *bmp);
-  bmp->width = gdk_pixbuf_get_width(bitmap);
-  bmp->height = gdk_pixbuf_get_height(bitmap);
-  bmp->format = IMV_ABGR;
-  size_t len = bmp->width * bmp->height * 4;
-  bmp->data = malloc(len);
-  memcpy(bmp->data, gdk_pixbuf_get_pixels(bitmap), len);
-  return bmp;
-}
-
 static void report_error(struct imv_source *src)
 {
   assert(src->callback);
@@ -52,22 +40,21 @@ static void report_error(struct imv_source *src)
   struct imv_source_message msg;
   msg.source = src;
   msg.user_data = src->user_data;
-  msg.bitmap = NULL;
+  msg.image = NULL;
   msg.error = "Internal error";
 
   pthread_mutex_unlock(&src->busy);
   src->callback(&msg);
 }
 
-
-static void send_bitmap(struct imv_source *src, GdkPixbuf *bitmap)
+static void send_svg(struct imv_source *src, RsvgHandle *handle)
 {
   assert(src->callback);
 
   struct imv_source_message msg;
   msg.source = src;
   msg.user_data = src->user_data;
-  msg.bitmap = to_imv_bitmap(bitmap);
+  msg.image = imv_image_create_from_svg(handle);
   msg.frametime = 0;
   msg.error = NULL;
 
@@ -75,11 +62,11 @@ static void send_bitmap(struct imv_source *src, GdkPixbuf *bitmap)
   src->callback(&msg);
 }
 
-static int load_image(struct imv_source *src)
+static void *load_image(struct imv_source *src)
 {
   /* Don't run if this source is already active */
   if (pthread_mutex_trylock(&src->busy)) {
-    return -1;
+    return NULL;
   }
 
   RsvgHandle *handle = NULL;
@@ -96,7 +83,7 @@ static int load_image(struct imv_source *src)
 
   if (!handle) {
     report_error(src);
-    return -1;
+    return NULL;
   }
 
   RsvgDimensionData dim;
@@ -104,16 +91,8 @@ static int load_image(struct imv_source *src)
   src->width = dim.width;
   src->height = dim.height;
 
-  GdkPixbuf *buf = rsvg_handle_get_pixbuf(handle);
-  if (!buf) {
-    rsvg_handle_close(handle, &error);
-    report_error(src);
-    return -1;
-  }
-
-  rsvg_handle_close(handle, &error);
-  send_bitmap(src, buf);
-  return 0;
+  send_svg(src, handle);
+  return NULL;
 }
 
 static enum backend_result open_path(const char *path, struct imv_source **src)

@@ -47,7 +47,7 @@ static void source_free(struct imv_source *src)
   free(src);
 }
 
-static struct imv_bitmap *to_imv_bitmap(FIBITMAP *in_bmp)
+static struct imv_image *to_image(FIBITMAP *in_bmp)
 {
   struct imv_bitmap *bmp = malloc(sizeof *bmp);
   bmp->width = FreeImage_GetWidth(in_bmp);
@@ -56,7 +56,8 @@ static struct imv_bitmap *to_imv_bitmap(FIBITMAP *in_bmp)
   bmp->data = malloc(4 * bmp->width * bmp->height);
   FreeImage_ConvertToRawBits(bmp->data, in_bmp, 4 * bmp->width, 32,
       FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-  return bmp;
+  struct imv_image *image = imv_image_create_from_bitmap(bmp);
+  return image;
 }
 
 static void report_error(struct imv_source *src)
@@ -66,7 +67,7 @@ static void report_error(struct imv_source *src)
   struct imv_source_message msg;
   msg.source = src;
   msg.user_data = src->user_data;
-  msg.bitmap = NULL;
+  msg.image = NULL;
   msg.error = "Internal error";
 
   pthread_mutex_unlock(&src->busy);
@@ -80,7 +81,7 @@ static void send_bitmap(struct imv_source *src, FIBITMAP *fibitmap, int frametim
   struct imv_source_message msg;
   msg.source = src;
   msg.user_data = src->user_data;
-  msg.bitmap = to_imv_bitmap(fibitmap);
+  msg.image = to_image(fibitmap);
   msg.frametime = frametime;
   msg.error = NULL;
 
@@ -88,11 +89,11 @@ static void send_bitmap(struct imv_source *src, FIBITMAP *fibitmap, int frametim
   src->callback(&msg);
 }
 
-static int first_frame(struct imv_source *src)
+static void *first_frame(struct imv_source *src)
 {
   /* Don't run if this source is already active */
   if (pthread_mutex_trylock(&src->busy)) {
-    return -1;
+    return NULL;
   }
 
   FIBITMAP *bmp = NULL;
@@ -114,12 +115,12 @@ static int first_frame(struct imv_source *src)
           /* flags */ GIF_LOAD256);
     } else {
       report_error(src);
-      return -1;
+      return NULL;
     }
 
     if (!private->multibitmap) {
       report_error(src);
-      return -1;
+      return NULL;
     }
 
     FIBITMAP *frame = FreeImage_LockPage(private->multibitmap, 0);
@@ -148,7 +149,7 @@ static int first_frame(struct imv_source *src)
     }
     if (!fibitmap) {
       report_error(src);
-      return -1;
+      return NULL;
     }
     bmp = FreeImage_ConvertTo32Bits(fibitmap);
     FreeImage_Unload(fibitmap);
@@ -158,20 +159,20 @@ static int first_frame(struct imv_source *src)
   src->height = FreeImage_GetHeight(bmp);
   private->last_frame = bmp;
   send_bitmap(src, bmp, frametime);
-  return 0;
+  return NULL;
 }
 
-static int next_frame(struct imv_source *src)
+static void *next_frame(struct imv_source *src)
 {
   /* Don't run if this source is already active */
   if (pthread_mutex_trylock(&src->busy)) {
-    return -1;
+    return NULL;
   }
 
   struct private *private = src->private;
   if (src->num_frames == 1) {
     send_bitmap(src, private->last_frame, 0);
-    return 0;
+    return NULL;
   }
 
   FITAG *tag = NULL;
@@ -257,7 +258,7 @@ static int next_frame(struct imv_source *src)
   src->next_frame = (src->next_frame + 1) % src->num_frames;
 
   send_bitmap(src, private->last_frame, frametime);
-  return 0;
+  return NULL;
 }
 
 static enum backend_result open_path(const char *path, struct imv_source **src)

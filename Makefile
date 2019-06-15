@@ -12,10 +12,9 @@ INSTALL_DATA ?= install -m 0644
 INSTALL_MAN ?= install -m 0644
 INSTALL_PROGRAM ?= install -m 0755
 
-override CFLAGS += -std=c99 -W -Wall -Wpedantic -Wextra
-override CPPFLAGS += $(shell sdl2-config --cflags) -D_XOPEN_SOURCE=700
-override LIBS := $(shell sdl2-config --libs)
-override LIBS += -lSDL2_ttf -lfontconfig -lpthread
+override CFLAGS += -std=c99 -W -Wall -Wpedantic -Wextra $(shell pkg-config --cflags pangocairo)
+override CPPFLAGS += -D_XOPEN_SOURCE=700
+override LIBS := -lglfw -lGL -lpthread -lxkbcommon $(shell pkg-config --libs pangocairo)
 
 BUILDDIR ?= build
 TARGET := $(BUILDDIR)/imv
@@ -24,14 +23,16 @@ SOURCES := src/main.c
 
 SOURCES += src/binds.c
 SOURCES += src/bitmap.c
+SOURCES += src/canvas.c
 SOURCES += src/commands.c
+SOURCES += src/console.c
 SOURCES += src/image.c
 SOURCES += src/imv.c
 SOURCES += src/ini.c
+SOURCES += src/keyboard.c
 SOURCES += src/list.c
 SOURCES += src/log.c
 SOURCES += src/navigator.c
-SOURCES += src/util.c
 SOURCES += src/viewport.c
 
 # Add backends to build as configured

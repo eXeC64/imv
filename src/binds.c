@@ -2,6 +2,7 @@
 #include "list.h"
 
 #include <stdbool.h>
+#include <stdio.h>
 
 struct bind_node {
   char *key; /* input key to reach this node */
@@ -186,69 +187,17 @@ static enum lookup_result bind_lookup(struct bind_node *node, struct list *keys,
   return LOOKUP_PARTIAL;
 }
 
-static int print_event(char *buf, size_t len, const SDL_Event *event)
-{
-  /* only accept keydown events */
-  if(event->type != SDL_KEYDOWN) {
-    buf[0] = 0;
-    return 0;
-  }
-
-  const SDL_KeyboardEvent *kevent = &event->key;
-
-  /* filter out modifier keys */
-  switch(kevent->keysym.sym) {
-    case SDLK_LCTRL:
-    case SDLK_RCTRL:
-    case SDLK_LALT:
-    case SDLK_RALT:
-    case SDLK_LSHIFT:
-    case SDLK_RSHIFT:
-      return 0;
-  }
-
-  /* Build prefix first: */
-  char prefix[32] = {0};
-  snprintf(prefix, sizeof prefix, "%s%s%s",
-      SDL_GetModState() & KMOD_CTRL ? "Ctrl+" : "",
-      SDL_GetModState() & KMOD_ALT ? "Meta+" : "",
-      SDL_GetModState() & KMOD_SHIFT ? "Shift+" : "");
-
-  /* Try plain old character input */
-  const char *keyname = SDL_GetKeyName(kevent->keysym.sym);
-  char singlekey[2] = {0};
-
-  /* Because '<' and '>' have special meaning in our syntax, and '=', '[', and
-   * ']' are restricted within ini files, we rename these.  */
-  if(!strcmp(keyname, "<")) {
-    keyname = "Less";
-  } else if(!strcmp(keyname, ">")) {
-    keyname = "Greater";
-  } else if(!strcmp(keyname, "=")) {
-    keyname = "Equals";
-  } else if(!strcmp(keyname, "[")) {
-    keyname = "LeftSquareBracket";
-  } else if(!strcmp(keyname, "]")) {
-    keyname = "RightSquareBracket";
-  } else if(strlen(keyname) == 1 && isalpha(*keyname)) {
-    singlekey[0] = tolower(*keyname);
-    keyname = singlekey;
-  }
-
-  return snprintf(buf, len, "%s%s", prefix, keyname);
-}
-
 void imv_bind_clear_input(struct imv_binds *binds)
 {
   list_deep_free(binds->keys);
   binds->keys = list_create();
 }
 
-struct list *imv_bind_handle_event(struct imv_binds *binds, const SDL_Event *event)
+struct list *imv_bind_handle_event(struct imv_binds *binds, const char *event)
 {
   /* If the user hits Escape twice in a row, treat that as backtracking out
    * of the current key sequence. */
-  if (event->key.keysym.sym == SDLK_ESCAPE) {
+  if (!strcmp("Escape", event)) {
     if (binds->aborting_sequence) {
       /* The last thing they hit was escape, so abort the current entry */
       binds->aborting_sequence = false;
@@ -263,12 +212,7 @@ struct list *imv_bind_handle_event(struct imv_binds *binds, const SDL_Event *eve
     binds->aborting_sequence = false;
   }
 
-  char buffer[128];
-  if (!print_event(buffer, sizeof(buffer), event)) {
-    /* invalid event - do nothing */
-    return NULL;
-  }
-  list_append(binds->keys, strdup(buffer));
+  list_append(binds->keys, strdup(event));
 
   struct list *commands = NULL;
   enum lookup_result result = bind_lookup(&binds->bind_tree, binds->keys, &commands);

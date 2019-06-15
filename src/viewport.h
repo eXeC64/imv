@@ -2,7 +2,6 @@
 #define IMV_VIEWPORT_H
 
 #include <stdbool.h>
-#include <SDL2/SDL.h>
 #include "image.h"
 
 struct imv_viewport;
@@ -14,13 +13,11 @@ enum imv_zoom_source {
 };
 
 /* Creates an instance of imv_viewport */
-struct imv_viewport *imv_viewport_create(SDL_Window *window, SDL_Renderer *renderer);
+struct imv_viewport *imv_viewport_create(int window_width, int window_height,
+                                         int buffer_width, int buffer_height);
 
 /* Cleans up an imv_viewport instance */
 void imv_viewport_free(struct imv_viewport *view);
-
-/* Toggle their viewport's fullscreen mode. Triggers a redraw */
-void imv_viewport_toggle_fullscreen(struct imv_viewport *view);
 
 /* Set playback of animated gifs */
 void imv_viewport_set_playing(struct imv_viewport *view, bool playing);
@@ -45,7 +42,7 @@ void imv_viewport_move(struct imv_viewport *view, int x, int y,
 /* Zoom the view by the given amount. imv_image* is used to get the image
  * dimensions */
 void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *image,
-                       enum imv_zoom_source, int amount);
+                       enum imv_zoom_source, int mouse_x, int mouse_y, int amount);
 
 /* Recenter the view to be in the middle of the image */
 void imv_viewport_center(struct imv_viewport *view,
@@ -62,11 +59,11 @@ void imv_viewport_scale_to_window(struct imv_viewport *view,
 /* Tell the viewport that it needs to be redrawn */
 void imv_viewport_set_redraw(struct imv_viewport *view);
 
-/* Set the title of the viewport */
-void imv_viewport_set_title(struct imv_viewport *view, char *title);
-
 /* Tell the viewport the window or image has changed */
-void imv_viewport_update(struct imv_viewport *view, struct imv_image *image);
+void imv_viewport_update(struct imv_viewport *view,
+                         int window_width, int window_height,
+                         int buffer_width, int buffer_height,
+                         struct imv_image *image);
 
 /* Poll whether we need to redraw */
 int imv_viewport_needs_redraw(struct imv_viewport *view);

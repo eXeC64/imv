@@ -35,14 +35,15 @@ static void source_free(struct imv_source *src)
   free(src);
 }
 
-static struct imv_bitmap *to_imv_bitmap(int width, int height, void *bitmap)
+static struct imv_image *to_image(int width, int height, void *bitmap)
 {
   struct imv_bitmap *bmp = malloc(sizeof *bmp);
   bmp->width = width;
   bmp->height = height;
   bmp->format = IMV_ABGR;
   bmp->data = bitmap;
-  return bmp;
+  struct imv_image *image = imv_image_create_from_bitmap(bmp);
+  return image;
 }
 
 static void report_error(struct imv_source *src)
@@ -52,7 +53,7 @@ static void report_error(struct imv_source *src)
   struct imv_source_message msg;
   msg.source = src;
   msg.user_data = src->user_data;
-  msg.bitmap = NULL;
+  msg.image = NULL;
   msg.error = "Internal error";
 
   pthread_mutex_unlock(&src->busy);
@@ -67,7 +68,7 @@ static void send_bitmap(struct imv_source *src, void *bitmap)
   struct imv_source_message msg;
   msg.source = src;
   msg.user_data = src->user_data;
-  msg.bitmap = to_imv_bitmap(src->width, src->height, bitmap);
+  msg.image = to_image(src->width, src->height, bitmap);
   msg.frametime = 0;
   msg.error = NULL;
 
@@ -75,18 +76,18 @@ static void send_bitmap(struct imv_source *src, void *bitmap)
   src->callback(&msg);
 }
 
-static int load_image(struct imv_source *src)
+static void *load_image(struct imv_source *src)
 {
   /* Don't run if this source is already active */
   if (pthread_mutex_trylock(&src->busy)) {
-    return -1;
+    return NULL;
   }
 
   struct private *private = src->private;
 
   if (setjmp(png_jmpbuf(private->png))) {
     report_error(src);
-    return -1;
+    return NULL;
   }
 
   png_bytep *rows = malloc(sizeof(png_bytep) * src->height);
@@ -100,7 +101,7 @@ static int load_image(struct imv_source *src)
     free(rows[0]);
     free(rows);
     report_error(src);
-    return -1;
+    return NULL;
   }
 
   png_read_image(private->png, rows);
@@ -109,7 +110,7 @@ static int load_image(struct imv_source *src)
   fclose(private->file);
   private->file = NULL;
   send_bitmap(src, bmp);
-  return 0;
+  return NULL;
 }
 
 static enum backend_result open_path(const char *path, struct imv_source **src)
