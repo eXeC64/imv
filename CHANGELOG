@@ -1,6 +1,22 @@
 imv Changelog
 =============
 
+v3.1.0 - 2019-06-17
+
+* Added support for multiple image loaders, allowing imv to use libraries other
+  than FreeImage. This adds support for SVGs, and in the future, other formats
+  as required.
+* Loaders added for libpng, libtiff, librsvg, libturbojpeg.
+* Added support for binding multiple commands to a single key
+* Support for hidpi rendering with SDL >= 2.0.10
+* Added -v flag to show version number
+* Allow 'Escape' to be bound, changing bind abort sequence to 2x'Escape'
+* Fixed bug where path list from stdin would sometime be truncated
+* New releases only published under the MIT license, with FreeImage optionally
+  used under the FIPL
+* Fixed several memory leaks
+* Miscellaneous code cleanup and documentation fixes
+
 v3.0.0 - 2018-05-08
 
 BREAKING CHANGES:
