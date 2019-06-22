@@ -8,6 +8,10 @@ MANPREFIX ?= $(PREFIX)/share/man
 DATAPREFIX ?= $(PREFIX)/share
 CONFIGPREFIX ?= /etc
 
+INSTALL_DATA ?= install -m 0644
+INSTALL_MAN ?= install -m 0644
+INSTALL_PROGRAM ?= install -m 0755
+
 override CFLAGS += -std=c99 -W -Wall -Wpedantic -Wextra
 override CPPFLAGS += $(shell sdl2-config --cflags) -D_XOPEN_SOURCE=700
 override LIBS := $(shell sdl2-config --libs)
@@ -106,11 +110,15 @@ doc/%: doc/%.txt
 	a2x --no-xmllint --doctype manpage --format manpage $<
 
 install: $(TARGET) doc
-	install -D -m 0755 $(TARGET) $(DESTDIR)$(BINPREFIX)/imv
-	install -D -m 0644 doc/imv.1 $(DESTDIR)$(MANPREFIX)/man1/imv.1
-	install -D -m 0644 doc/imv.5 $(DESTDIR)$(MANPREFIX)/man5/imv.5
-	install -D -m 0644 files/imv.desktop $(DESTDIR)$(DATAPREFIX)/applications/imv.desktop
-	install -D -m 0644 files/imv_config $(DESTDIR)$(CONFIGPREFIX)/imv_config
+	mkdir -p $(DESTDIR)$(BINPREFIX)
+	$(INSTALL_PROGRAM) $(TARGET) $(DESTDIR)$(BINPREFIX)/imv
+	mkdir -p $(DESTDIR)$(MANPREFIX)
+	$(INSTALL_MAN) doc/imv.1 $(DESTDIR)$(MANPREFIX)/man1/imv.1
+	$(INSTALL_MAN) doc/imv.5 $(DESTDIR)$(MANPREFIX)/man5/imv.5
+	mkdir -p $(DESTDIR)$(DATAPREFIX)/applications
+	$(INSTALL_DATA) files/imv.desktop $(DESTDIR)$(DATAPREFIX)/applications/imv.desktop
+	mkdir -p $(DESTDIR)$(CONFIGPREFIX)
+	$(INSTALL_DATA) files/imv_config $(DESTDIR)$(CONFIGPREFIX)/imv_config
 
 uninstall:
 	$(RM) $(DESTDIR)$(BINPREFIX)/imv
