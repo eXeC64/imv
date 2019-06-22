@@ -1,6 +1,10 @@
 imv Changelog
 =============
 
+v3.1.1 - 2019-06-22
+
+* Adjusted Makefile to improve packaging on BSDs
+
 v3.1.0 - 2019-06-17
 
 * Added support for multiple image loaders, allowing imv to use libraries other
