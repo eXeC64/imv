@@ -112,8 +112,9 @@ doc/%: doc/%.txt
 install: $(TARGET) doc
 	mkdir -p $(DESTDIR)$(BINPREFIX)
 	$(INSTALL_PROGRAM) $(TARGET) $(DESTDIR)$(BINPREFIX)/imv
-	mkdir -p $(DESTDIR)$(MANPREFIX)
+	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
 	$(INSTALL_MAN) doc/imv.1 $(DESTDIR)$(MANPREFIX)/man1/imv.1
+	mkdir -p $(DESTDIR)$(MANPREFIX)/man5
 	$(INSTALL_MAN) doc/imv.5 $(DESTDIR)$(MANPREFIX)/man5/imv.5
 	mkdir -p $(DESTDIR)$(DATAPREFIX)/applications
 	$(INSTALL_DATA) files/imv.desktop $(DESTDIR)$(DATAPREFIX)/applications/imv.desktop
