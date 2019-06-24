@@ -71,7 +71,7 @@ TEST_SOURCES := test/list.c test/navigator.c
 OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
 TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(TEST_SOURCES))
 
-VERSION != git describe --dirty --always --tags 2> /dev/null || echo v3.1.1
+VERSION != git describe --dirty --always --tags 2> /dev/null || echo v3.1.2
 
 override CPPFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
 
