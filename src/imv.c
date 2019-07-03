@@ -198,22 +198,22 @@ struct imv {
   pthread_mutex_t internal_events_mutex;
 };
 
-void command_quit(struct list *args, const char *argstr, void *data);
-void command_pan(struct list *args, const char *argstr, void *data);
-void command_select_rel(struct list *args, const char *argstr, void *data);
-void command_select_abs(struct list *args, const char *argstr, void *data);
-void command_zoom(struct list *args, const char *argstr, void *data);
-void command_open(struct list *args, const char *argstr, void *data);
-void command_close(struct list *args, const char *argstr, void *data);
-void command_fullscreen(struct list *args, const char *argstr, void *data);
-void command_overlay(struct list *args, const char *argstr, void *data);
-void command_exec(struct list *args, const char *argstr, void *data);
-void command_center(struct list *args, const char *argstr, void *data);
-void command_reset(struct list *args, const char *argstr, void *data);
-void command_next_frame(struct list *args, const char *argstr, void *data);
-void command_toggle_playing(struct list *args, const char *argstr, void *data);
-void command_set_scaling_mode(struct list *args, const char *argstr, void *data);
-void command_set_slideshow_duration(struct list *args, const char *argstr, void *data);
+static void command_quit(struct list *args, const char *argstr, void *data);
+static void command_pan(struct list *args, const char *argstr, void *data);
+static void command_select_rel(struct list *args, const char *argstr, void *data);
+static void command_select_abs(struct list *args, const char *argstr, void *data);
+static void command_zoom(struct list *args, const char *argstr, void *data);
+static void command_open(struct list *args, const char *argstr, void *data);
+static void command_close(struct list *args, const char *argstr, void *data);
+static void command_fullscreen(struct list *args, const char *argstr, void *data);
+static void command_overlay(struct list *args, const char *argstr, void *data);
+static void command_exec(struct list *args, const char *argstr, void *data);
+static void command_center(struct list *args, const char *argstr, void *data);
+static void command_reset(struct list *args, const char *argstr, void *data);
+static void command_next_frame(struct list *args, const char *argstr, void *data);
+static void command_toggle_playing(struct list *args, const char *argstr, void *data);
+static void command_set_scaling_mode(struct list *args, const char *argstr, void *data);
+static void command_set_slideshow_duration(struct list *args, const char *argstr, void *data);
 
 static bool setup_window(struct imv *imv);
 static void consume_internal_event(struct imv *imv, struct internal_event *event);
@@ -1474,7 +1474,7 @@ bool imv_load_config(struct imv *imv)
   return true;
 }
 
-void command_quit(struct list *args, const char *argstr, void *data)
+static void command_quit(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
@@ -1482,7 +1482,7 @@ void command_quit(struct list *args, const char *argstr, void *data)
   imv->quit = true;
 }
 
-void command_pan(struct list *args, const char *argstr, void *data)
+static void command_pan(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
   struct imv *imv = data;
@@ -1496,7 +1496,7 @@ void command_pan(struct list *args, const char *argstr, void *data)
   imv_viewport_move(imv->view, x, y, imv->current_image);
 }
 
-void command_select_rel(struct list *args, const char *argstr, void *data)
+static void command_select_rel(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
   struct imv *imv = data;
@@ -1510,7 +1510,7 @@ void command_select_rel(struct list *args, const char *argstr, void *data)
   imv->slideshow.elapsed = 0;
 }
 
-void command_select_abs(struct list *args, const char *argstr, void *data)
+static void command_select_abs(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
   struct imv *imv = data;
@@ -1524,7 +1524,7 @@ void command_select_abs(struct list *args, const char *argstr, void *data)
   imv->slideshow.elapsed = 0;
 }
 
-void command_zoom(struct list *args, const char *argstr, void *data)
+static void command_zoom(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
   struct imv *imv = data;
@@ -1539,7 +1539,7 @@ void command_zoom(struct list *args, const char *argstr, void *data)
   }
 }
 
-void command_open(struct list *args, const char *argstr, void *data)
+static void command_open(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
   struct imv *imv = data;
@@ -1564,7 +1564,7 @@ void command_open(struct list *args, const char *argstr, void *data)
   }
 }
 
-void command_close(struct list *args, const char *argstr, void *data)
+static void command_close(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
@@ -1576,7 +1576,7 @@ void command_close(struct list *args, const char *argstr, void *data)
   imv->slideshow.elapsed = 0;
 }
 
-void command_fullscreen(struct list *args, const char *argstr, void *data)
+static void command_fullscreen(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
@@ -1594,7 +1594,7 @@ void command_fullscreen(struct list *args, const char *argstr, void *data)
   }
 }
 
-void command_overlay(struct list *args, const char *argstr, void *data)
+static void command_overlay(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
@@ -1603,7 +1603,7 @@ void command_overlay(struct list *args, const char *argstr, void *data)
   imv->need_redraw = true;
 }
 
-void command_exec(struct list *args, const char *argstr, void *data)
+static void command_exec(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   struct imv *imv = data;
@@ -1611,7 +1611,7 @@ void command_exec(struct list *args, const char *argstr, void *data)
   system(argstr);
 }
 
-void command_center(struct list *args, const char *argstr, void *data)
+static void command_center(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
@@ -1619,7 +1619,7 @@ void command_center(struct list *args, const char *argstr, void *data)
   imv_viewport_center(imv->view, imv->current_image);
 }
 
-void command_reset(struct list *args, const char *argstr, void *data)
+static void command_reset(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
@@ -1628,7 +1628,7 @@ void command_reset(struct list *args, const char *argstr, void *data)
   imv->need_redraw = true;
 }
 
-void command_next_frame(struct list *args, const char *argstr, void *data)
+static void command_next_frame(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
@@ -1639,7 +1639,7 @@ void command_next_frame(struct list *args, const char *argstr, void *data)
   }
 }
 
-void command_toggle_playing(struct list *args, const char *argstr, void *data)
+static void command_toggle_playing(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
@@ -1647,7 +1647,7 @@ void command_toggle_playing(struct list *args, const char *argstr, void *data)
   imv_viewport_toggle_playing(imv->view);
 }
 
-void command_set_scaling_mode(struct list *args, const char *argstr, void *data)
+static void command_set_scaling_mode(struct list *args, const char *argstr, void *data)
 {
   (void)args;
   (void)argstr;
@@ -1677,7 +1677,7 @@ void command_set_scaling_mode(struct list *args, const char *argstr, void *data)
   imv->need_redraw = true;
 }
 
-void command_set_slideshow_duration(struct list *args, const char *argstr, void *data)
+static void command_set_slideshow_duration(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
   struct imv *imv = data;
