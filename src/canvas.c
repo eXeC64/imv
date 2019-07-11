@@ -3,7 +3,7 @@
 #include "image.h"
 #include "log.h"
 
-#include <GLFW/glfw3.h>
+#include <GL/gl.h>
 #include <assert.h>
 #include <cairo/cairo.h>
 #include <pango/pangocairo.h>

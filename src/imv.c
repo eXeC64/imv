@@ -3,17 +3,13 @@
 #include <assert.h>
 #include <errno.h>
 #include <getopt.h>
-#include <limits.h>
-#include <poll.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <wordexp.h>
 
-#define GLFW_EXPOSE_NATIVE_X11
-#define GLFW_EXPOSE_NATIVE_WAYLAND
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
+#include <GL/gl.h>
 
 #include "backend.h"
 #include "binds.h"
@@ -28,6 +24,7 @@
 #include "navigator.h"
 #include "source.h"
 #include "viewport.h"
+#include "window.h"
 
 /* Some systems like GNU/Hurd don't define PATH_MAX */
 #ifndef PATH_MAX
@@ -187,15 +184,11 @@ struct imv {
   struct imv_viewport *view;
   struct imv_keyboard *keyboard;
   struct imv_canvas *canvas;
+  struct imv_window *window;
 
   /* if reading an image from stdin, this is the buffer for it */
   void *stdin_image_data;
   size_t stdin_image_data_len;
-
-  GLFWwindow *window;
-  bool glfw_init;
-  struct list *internal_events;
-  pthread_mutex_t internal_events_mutex;
 };
 
 static void command_quit(struct list *args, const char *argstr, void *data);
@@ -309,6 +302,14 @@ static bool add_bind(struct imv *imv, const char *keys, const char *commands)
   return success;
 }
 
+static double cur_time(void)
+{
+  struct timespec ts;
+  const int rc = clock_gettime(CLOCK_MONOTONIC, &ts);
+  assert(!rc);
+  return ts.tv_sec + (double)ts.tv_nsec * 0.000000001;
+}
+
 static void *async_free_source_thread(void *raw)
 {
   struct imv_source *src = raw;
@@ -371,11 +372,14 @@ static void source_callback(struct imv_source_message *msg)
     event->data.bad_image.error = strdup(msg->error);
   }
 
-  pthread_mutex_lock(&imv->internal_events_mutex);
-  list_append(imv->internal_events, event);
-  pthread_mutex_unlock(&imv->internal_events_mutex);
+  struct imv_event e = {
+    .type = IMV_EVENT_CUSTOM,
+    .data = {
+      .custom = event
+    }
+  };
 
-  glfwPostEmptyEvent();
+  imv_window_push_event(imv->window, &e);
 }
 
 static void command_callback(const char *text, void *data)
@@ -388,15 +392,11 @@ static void command_callback(const char *text, void *data)
   imv->need_redraw = true;
 }
 
-static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
+static void key_handler(struct imv *imv, int scancode, bool pressed)
 {
-  (void)key;
-  (void)mods;
-  struct imv *imv = glfwGetWindowUserPointer(window);
+  imv_keyboard_update_key(imv->keyboard, scancode, pressed);
 
-  imv_keyboard_update_key(imv->keyboard, scancode, action == GLFW_PRESS);
-
-  if (action != GLFW_PRESS) {
+  if (!pressed) {
     return;
   }
 
@@ -422,6 +422,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
     /* In regular mode see if we should enter command mode, otherwise send input
      * to the bind system.
      */
+
     if (!strcmp("colon", keyname)) {
       fprintf(stderr, "active console\n");
       imv_console_activate(imv->console);
@@ -445,45 +446,58 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
   imv->need_redraw = true;
 }
 
-static void resize_callback(GLFWwindow *window, int width, int height)
-{
-  /* This callback is used for both window and framebuffer resize
-   * events, so ignore what it passes in and explicitly get the values
-   * we need for both.
-   */
-  (void)width;
-  (void)height;
-  struct imv *imv = glfwGetWindowUserPointer(window);
-  int ww, wh;
-  int bw, bh;
-  glfwGetWindowSize(imv->window, &ww, &wh);
-  glfwGetFramebufferSize(imv->window, &bw, &bh);
-  imv_viewport_update(imv->view, ww, wh, bw, bh, imv->current_image);
-  imv_canvas_resize(imv->canvas, bw, bh);
-  glViewport(0, 0, bw, bh);
-}
 
-static void scroll_callback(GLFWwindow *window, double x, double y)
+static void event_handler(void *data, const struct imv_event *e)
 {
-  (void)x;
-  struct imv *imv = glfwGetWindowUserPointer(window);
-  imv_viewport_zoom(imv->view, imv->current_image, IMV_ZOOM_MOUSE,
-                    imv->last_cursor_position.x,
-                    imv->last_cursor_position.y, -y);
-}
-
-static void cursor_callback(GLFWwindow *window, double x, double y)
-{
-  struct imv *imv = glfwGetWindowUserPointer(window);
-
-  if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
-    const double dx = x - imv->last_cursor_position.x;
-    const double dy = y - imv->last_cursor_position.y;
-    imv_viewport_move(imv->view, dx, dy, imv->current_image);
+  struct imv *imv = data;
+  switch (e->type) {
+    case IMV_EVENT_CLOSE:
+      imv->quit = true;
+      break;
+    case IMV_EVENT_RESIZE:
+      {
+        const int ww = e->data.resize.width;
+        const int wh = e->data.resize.height;
+        const int bw = e->data.resize.buffer_width;
+        const int bh = e->data.resize.buffer_height;
+        imv_viewport_update(imv->view, ww, wh, bw, bh, imv->current_image);
+        imv_canvas_resize(imv->canvas, bw, bh);
+        glViewport(0, 0, bw, bh);
+        break;
+      }
+    case IMV_EVENT_KEYBOARD:
+      key_handler(imv, e->data.keyboard.scancode, e->data.keyboard. pressed);
+      break;
+    case IMV_EVENT_CUSTOM:
+      consume_internal_event(imv, e->data.custom);
+      break;
+    default:
+      break;
   }
-  imv->last_cursor_position.x = x;
-  imv->last_cursor_position.y = y;
+
 }
+
+/* static void scroll_callback(GLFWwindow *window, double x, double y)*/
+/* {*/
+/*   (void)x;*/
+/*   struct imv *imv = glfwGetWindowUserPointer(window);*/
+/*   imv_viewport_zoom(imv->view, imv->current_image, IMV_ZOOM_MOUSE,*/
+/*                     imv->last_cursor_position.x,*/
+/*                     imv->last_cursor_position.y, -y);*/
+/* }*/
+
+/* static void cursor_callback(GLFWwindow *window, double x, double y)*/
+/* {*/
+/*   struct imv *imv = glfwGetWindowUserPointer(window);*/
+
+/*   if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {*/
+/*     const double dx = x - imv->last_cursor_position.x;*/
+/*     const double dy = y - imv->last_cursor_position.y;*/
+/*     imv_viewport_move(imv->view, dx, dy, imv->current_image);*/
+/*   }*/
+/*   imv->last_cursor_position.x = x;*/
+/*   imv->last_cursor_position.y = y;*/
+/* }*/
 
 
 static void log_to_stderr(enum imv_log_level level, const char *text, void *data)
@@ -523,8 +537,6 @@ struct imv *imv_create(void)
       " [${imv_width}x${imv_height}] [${imv_scale}%]"
       " $imv_current_file [$imv_scaling_mode]"
   );
-  imv->internal_events = list_create();
-  pthread_mutex_init(&imv->internal_events_mutex, NULL);
 
   imv_command_register(imv->commands, "quit", &command_quit);
   imv_command_register(imv->commands, "pan", &command_pan);
@@ -601,13 +613,8 @@ void imv_free(struct imv *imv)
   if (imv->stdin_image_data) {
     free(imv->stdin_image_data);
   }
-  list_free(imv->internal_events);
-  pthread_mutex_destroy(&imv->internal_events_mutex);
   if (imv->window) {
-    glfwDestroyWindow(imv->window);
-  }
-  if (imv->glfw_init) {
-    glfwTerminate();
+    imv_window_free(imv->window);
   }
   free(imv);
 }
@@ -720,11 +727,13 @@ static void *load_paths_from_stdin(void *data)
       event->type = NEW_PATH;
       event->data.new_path.path = strdup(buf);
 
-      pthread_mutex_lock(&imv->internal_events_mutex);
-      list_append(imv->internal_events, event);
-      pthread_mutex_unlock(&imv->internal_events_mutex);
-
-      glfwPostEmptyEvent();
+      struct imv_event e = {
+        .type = IMV_EVENT_CUSTOM,
+        .data = {
+          .custom = event
+        }
+      };
+      imv_window_push_event(imv->window, &e);
     }
   }
   return NULL;
@@ -884,22 +893,13 @@ int imv_run(struct imv *imv)
   }
 
   /* time keeping */
-  double last_time = glfwGetTime();
+  double last_time = cur_time();
   double current_time;
 
 
-  while (!imv->quit && !glfwWindowShouldClose(imv->window)) {
+  while (!imv->quit) {
 
-    glfwPollEvents();
-
-    /* Handle any new internal events */
-    pthread_mutex_lock(&imv->internal_events_mutex);
-    while (imv->internal_events->len > 0) {
-      struct internal_event *event = imv->internal_events->items[0];
-      consume_internal_event(imv, event);
-      list_remove(imv->internal_events, 0);
-    }
-    pthread_mutex_unlock(&imv->internal_events_mutex);
+    imv_window_pump_events(imv->window, event_handler, imv);
 
     /* if we're quitting, don't bother drawing any more images */
     if (imv->quit) {
@@ -978,7 +978,7 @@ int imv_run(struct imv *imv)
 
           char title[1024];
           generate_env_text(imv, title, sizeof title, imv->title_text);
-          glfwSetWindowTitle(imv->window, title);
+          imv_window_set_title(imv->window, title);
         } else {
           /* Error loading path so remove it from the navigator */
           imv_navigator_remove(imv->navigator, current_path);
@@ -988,7 +988,7 @@ int imv_run(struct imv *imv)
 
     if (imv->need_rescale) {
       int ww, wh;
-      glfwGetWindowSize(imv->window, &ww, &wh);
+      imv_window_get_size(imv->window, &ww, &wh);
 
       imv->need_rescale = false;
       if (imv->scaling_mode == SCALING_NONE ||
@@ -1001,7 +1001,7 @@ int imv_run(struct imv *imv)
       }
     }
 
-    current_time = glfwGetTime();
+    current_time = cur_time();
 
     /* Check if a new frame is due */
     if (imv_viewport_is_playing(imv->view) && imv->next_frame.image
@@ -1045,7 +1045,7 @@ int imv_run(struct imv *imv)
       glClearColor(0.0, 0.0, 0.0, 1.0);
       glClear(GL_COLOR_BUFFER_BIT);
       render_window(imv);
-      glfwSwapBuffers(imv->window);
+      imv_window_present(imv->window);
     }
 
     /* sleep until we have something to do */
@@ -1071,7 +1071,7 @@ int imv_run(struct imv *imv)
     }
 
     /* Go to sleep until an input/internal event or the timeout expires */
-    glfwWaitEventsTimeout(timeout);
+    imv_window_wait_for_event(imv->window, timeout);
   }
 
   if (imv->list_files_at_exit) {
@@ -1084,50 +1084,29 @@ int imv_run(struct imv *imv)
 
 static bool setup_window(struct imv *imv)
 {
-  if (!glfwInit()) {
-    const char *err = NULL;
-    glfwGetError(&err);
-    imv_log(IMV_ERROR, "glfw failed to init: %s\n", err);
-    return false;
-  }
-
-  imv->glfw_init = true;
-
-  imv->window = glfwCreateWindow(imv->initial_width, imv->initial_height,
-                                 "imv",  NULL, NULL);
+  imv->window = imv_window_create(imv->initial_width, imv->initial_height, "imv");
 
   if (!imv->window) {
-    const char *err = NULL;
-    glfwGetError(&err);
-    imv_log(IMV_ERROR, "glfw failed to create window: %s\n", err);
+    imv_log(IMV_ERROR, "Failed to create window\n");
     return false;
   }
 
-  glfwSetWindowUserPointer(imv->window, imv);
-  glfwSetKeyCallback(imv->window, &key_callback);
-  glfwSetScrollCallback(imv->window, &scroll_callback);
-  glfwSetCursorPosCallback(imv->window, &cursor_callback);
-  glfwSetWindowSizeCallback(imv->window, &resize_callback);
-  glfwSetFramebufferSizeCallback(imv->window, &resize_callback);
-
-  glfwMakeContextCurrent(imv->window);
-
   /* allow fullscreen to be maintained even when focus is lost */
-  glfwWindowHint(GLFW_AUTO_ICONIFY,
-      imv->stay_fullscreen_on_focus_loss ? GLFW_FALSE : GLFW_TRUE);
+  /* glfwWindowHint(GLFW_AUTO_ICONIFY, */
+  /*     imv->stay_fullscreen_on_focus_loss ? GLFW_FALSE : GLFW_TRUE); */
 
   {
     int ww, wh, bw, bh;
-    glfwGetWindowSize(imv->window, &ww, &wh);
-    glfwGetFramebufferSize(imv->window, &bw, &bh);
+    imv_window_get_size(imv->window, &ww, &wh);
+    imv_window_get_framebuffer_size(imv->window, &bw, &bh);
     imv->view = imv_viewport_create(ww, wh, bw, bh);
   }
 
   /* put us in fullscren mode to begin with if requested */
   if (imv->fullscreen) {
-    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-    glfwSetWindowMonitor(imv->window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+    /* GLFWmonitor* monitor = glfwGetPrimaryMonitor(); */
+    /* const GLFWvidmode* mode = glfwGetVideoMode(monitor); */
+    /* glfwSetWindowMonitor(imv->window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate); */
   }
 
   {
@@ -1137,7 +1116,7 @@ static bool setup_window(struct imv *imv)
 
   {
     int ww, wh;
-    glfwGetWindowSize(imv->window, &ww, &wh);
+    imv_window_get_size(imv->window, &ww, &wh);
     imv->canvas = imv_canvas_create(ww, wh);
     imv_canvas_font(imv->canvas, imv->font.name, imv->font.size);
   }
@@ -1160,14 +1139,14 @@ static void handle_new_image(struct imv *imv, struct imv_image *image, int frame
   }
   if (imv->need_resize) {
     imv->need_resize = false;
-    glfwSetWindowSize(imv->window, imv_image_width(image), imv_image_height(image));
+    /* glfwSetWindowSize(imv->window, imv_image_width(image), imv_image_height(image)); */
     if (imv->resize_mode == RESIZE_CENTER) {
       /* TODO centering */
       /* glfwSetWindowPos(imv->window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED); */
     }
   }
   imv->loading = false;
-  imv->next_frame.due = frametime ? glfwGetTime() + frametime * 0.001 : 0.0;
+  imv->next_frame.due = frametime ? cur_time() + frametime * 0.001 : 0.0;
   imv->next_frame.duration = 0.0;
 
   /* If this is an animated image, we should kick off loading the next frame */
@@ -1227,12 +1206,12 @@ static void consume_internal_event(struct imv *imv, struct internal_event *event
 static void render_window(struct imv *imv)
 {
   int ww, wh;
-  glfwGetWindowSize(imv->window, &ww, &wh);
+  imv_window_get_size(imv->window, &ww, &wh);
 
   /* update window title */
   char title_text[1024];
   generate_env_text(imv, title_text, sizeof title_text, imv->title_text);
-  glfwSetWindowTitle(imv->window, title_text);
+  imv_window_set_title(imv->window, title_text);
 
   /* first we draw the background */
   if (imv->background.type == BACKGROUND_SOLID) {
@@ -1582,16 +1561,15 @@ static void command_fullscreen(struct list *args, const char *argstr, void *data
   (void)argstr;
   struct imv *imv = data;
 
-
-  if (glfwGetWindowMonitor(imv->window)) {
-    glfwSetWindowMonitor(imv->window, NULL, 0, 0, imv->initial_width, imv->initial_height, GLFW_DONT_CARE);
-    imv->fullscreen = false;
-  } else {
-    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-    glfwSetWindowMonitor(imv->window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-    imv->fullscreen = true;
-  }
+  /* if (glfwGetWindowMonitor(imv->window)) { */
+  /*   glfwSetWindowMonitor(imv->window, NULL, 0, 0, imv->initial_width, imv->initial_height, GLFW_DONT_CARE); */
+  /*   imv->fullscreen = false; */
+  /* } else { */
+  /*   GLFWmonitor* monitor = glfwGetPrimaryMonitor(); */
+  /*   const GLFWvidmode* mode = glfwGetVideoMode(monitor); */
+  /*   glfwSetWindowMonitor(imv->window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate); */
+  /*   imv->fullscreen = true; */
+  /* } */
 }
 
 static void command_overlay(struct list *args, const char *argstr, void *data)
