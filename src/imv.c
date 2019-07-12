@@ -1017,10 +1017,10 @@ int imv_run(struct imv *imv)
       double dt = current_time - last_time;
 
       imv->slideshow.elapsed += dt;
-      /* imv->need_redraw = true; /1* need to update display *1/ */
       if (imv->slideshow.elapsed >= imv->slideshow.duration) {
         imv_navigator_select_rel(imv->navigator, 1);
         imv->slideshow.elapsed = 0;
+        imv->need_redraw = true;
       }
     }
 
@@ -1042,9 +1042,7 @@ int imv_run(struct imv *imv)
     double timeout = 1.0; /* seconds */
 
     /* If we need to display the next frame of an animation soon we should
-     * limit our sleep until the next frame is due. If the frame is overdue,
-     * sleep for 1ms at a time to avoid a glfw race between WaitEvents and
-     * PostEmptyEvent.
+     * limit our sleep until the next frame is due.
      */
     if (imv_viewport_is_playing(imv->view) && imv->next_frame.due != 0.0) {
       timeout = imv->next_frame.due - current_time;
@@ -1054,9 +1052,9 @@ int imv_run(struct imv *imv)
     }
 
     if (imv->slideshow.duration > 0) {
-      double timeleft = imv->slideshow.elapsed - imv->slideshow.duration;
+      double timeleft = imv->slideshow.duration - imv->slideshow.elapsed;
       if (timeleft > 0.0 && timeleft < timeout) {
-        timeout = timeleft + 0.005;
+        timeout = timeleft + 0.001;
       }
     }
 

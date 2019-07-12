@@ -1,10 +1,13 @@
 #include "window.h"
 
 #include <assert.h>
+#include <poll.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/eventfd.h>
+#include <unistd.h>
 
 #include <wayland-client.h>
 #include <wayland-egl.h>
@@ -27,6 +30,9 @@ struct imv_window {
   EGLContext           egl_context;
   EGLSurface           egl_surface;
   struct wl_egl_window *egl_window;
+
+  int display_fd;
+  int event_fd;
 
   int width;
   int height;
@@ -266,6 +272,8 @@ static void connect_to_wayland(struct imv_window *window)
 {
   window->wl_display = wl_display_connect(NULL);
   assert(window->wl_display);
+  window->display_fd = wl_display_get_fd(window->wl_display);
+  window->event_fd = eventfd(0, 0);
 
   window->wl_registry = wl_display_get_registry(window->wl_display);
   assert(window->wl_registry);
@@ -323,6 +331,7 @@ static void create_window(struct imv_window *window, int width, int height,
 
 static void shutdown_wayland(struct imv_window *window)
 {
+  close(window->event_fd);
   if (window->wl_pointer) {
     wl_pointer_destroy(window->wl_pointer);
   }
@@ -405,6 +414,37 @@ void imv_window_resize(struct imv_window *window, int w, int h)
 
 void imv_window_wait_for_event(struct imv_window *window, double timeout)
 {
+  struct pollfd fds[] = {
+    {.fd = window->display_fd, .events = POLLIN},
+    {.fd = window->event_fd,   .events = POLLIN}
+  };
+  nfds_t nfds = sizeof fds / sizeof *fds;
+
+  while (wl_display_prepare_read(window->wl_display)) {
+    wl_display_dispatch_pending(window->wl_display);
+  }
+
+  wl_display_flush(window->wl_display);
+
+  int rc = poll(fds, nfds, timeout * 1000);
+  if (rc < 0) {
+    wl_display_cancel_read(window->wl_display);
+    return;
+  }
+
+  /* Handle any new wayland events */
+  if (fds[0].revents & POLLIN) {
+    wl_display_read_events(window->wl_display);
+    wl_display_dispatch_pending(window->wl_display);
+  } else {
+    wl_display_cancel_read(window->wl_display);
+  }
+
+  /* Clear the eventfd if hit */
+  if (fds[1].revents & POLLIN) {
+    uint64_t out;
+    read(window->event_fd, &out, sizeof out);
+  }
 }
 
 void imv_window_push_event(struct imv_window *window, struct imv_event *e)
@@ -420,11 +460,15 @@ void imv_window_push_event(struct imv_window *window, struct imv_event *e)
 
   window->events.queue[window->events.len++] = *e;
   pthread_mutex_unlock(&window->events.mutex);
+
+  /* Wake up wait_events */
+  uint64_t in = 1;
+  write(window->event_fd, &in, sizeof in);
 }
 
 void imv_window_pump_events(struct imv_window *window, imv_event_handler handler, void *data)
 {
-  wl_display_dispatch(window->wl_display);
+  wl_display_dispatch_pending(window->wl_display);
 
   pthread_mutex_lock(&window->events.mutex);
   if (handler) {
