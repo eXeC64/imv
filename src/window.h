@@ -48,6 +48,10 @@ void imv_window_get_framebuffer_size(struct imv_window *window, int *w, int *h);
 
 void imv_window_set_title(struct imv_window *window, const char *title);
 
+bool imv_window_is_fullscreen(struct imv_window *window);
+
+void imv_window_set_fullscreen(struct imv_window *window, bool fullscreen);
+
 void imv_window_present(struct imv_window *window);
 
 void imv_window_resize(struct imv_window *window, int w, int h);

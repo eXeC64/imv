@@ -1,10 +1,10 @@
 #include "window.h"
 
 #include <assert.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <wayland-client.h>
 #include <wayland-egl.h>
@@ -30,6 +30,7 @@ struct imv_window {
 
   int width;
   int height;
+  bool fullscreen;
   int scale;
 
   struct {
@@ -84,7 +85,9 @@ static void keyboard_key(void *data, struct wl_keyboard *keyboard,
     uint32_t serial, uint32_t time, uint32_t key, uint32_t state)
 {
   (void)serial;
+  (void)keyboard;
   (void)time;
+
   struct imv_window *window = data;
   struct imv_event e = {
     .type = IMV_EVENT_KEYBOARD,
@@ -215,11 +218,18 @@ static void toplevel_configure(void *data, struct xdg_toplevel *toplevel,
     int width, int height, struct wl_array *states)
 {
   (void)toplevel;
-  (void)states;
 
   struct imv_window *window = data;
   window->width = width;
   window->height = height;
+  window->fullscreen = false;
+
+  enum xdg_toplevel_state *state;
+  wl_array_for_each(state, states) {
+    if (*state == XDG_TOPLEVEL_STATE_FULLSCREEN) {
+      window->fullscreen = true;
+    }
+  }
   wl_egl_window_resize(window->egl_window, width, height, 0, 0);
 
   struct imv_event e = {
@@ -368,6 +378,20 @@ void imv_window_get_framebuffer_size(struct imv_window *window, int *w, int *h)
 void imv_window_set_title(struct imv_window *window, const char *title)
 {
   xdg_toplevel_set_title(window->wl_xdg_toplevel, title);
+}
+
+bool imv_window_is_fullscreen(struct imv_window *window)
+{
+  return window->fullscreen;
+}
+
+void imv_window_set_fullscreen(struct imv_window *window, bool fullscreen)
+{
+  if (window->fullscreen && !fullscreen) {
+    xdg_toplevel_unset_fullscreen(window->wl_xdg_toplevel);
+  } else if (!window->fullscreen && fullscreen) {
+    xdg_toplevel_set_fullscreen(window->wl_xdg_toplevel, NULL);
+  }
 }
 
 void imv_window_present(struct imv_window *window)

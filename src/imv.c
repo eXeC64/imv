@@ -92,8 +92,8 @@ struct imv {
   /* indicates a new image is being loaded */
   bool loading;
 
-  /* fullscreen state */
-  bool fullscreen;
+  /* initial fullscreen state */
+  bool start_fullscreen;
 
   /* initial window dimensions */
   int initial_width;
@@ -104,9 +104,6 @@ struct imv {
 
   /* method for scaling up images: interpolate or nearest neighbour */
   enum upscaling_method upscaling_method;
-
-  /* for multiple monitors, should we stay fullscreen if we lose focus? */
-  bool stay_fullscreen_on_focus_loss;
 
   /* dirty state flags */
   bool need_redraw;
@@ -776,7 +773,7 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
  /* TODO getopt_long */
   while ((o = getopt(argc, argv, "frdwWxhvlu:s:n:b:t:")) != -1) {
     switch(o) {
-      case 'f': imv->fullscreen = true;                          break;
+      case 'f': imv->start_fullscreen = true;                    break;
       case 'r': imv->recursive_load = true;                      break;
       case 'd': imv->overlay_enabled = true;                     break;
       case 'w': imv->resize_mode = RESIZE_ONLY;                  break;
@@ -1091,10 +1088,6 @@ static bool setup_window(struct imv *imv)
     return false;
   }
 
-  /* allow fullscreen to be maintained even when focus is lost */
-  /* glfwWindowHint(GLFW_AUTO_ICONIFY, */
-  /*     imv->stay_fullscreen_on_focus_loss ? GLFW_FALSE : GLFW_TRUE); */
-
   {
     int ww, wh, bw, bh;
     imv_window_get_size(imv->window, &ww, &wh);
@@ -1103,11 +1096,7 @@ static bool setup_window(struct imv *imv)
   }
 
   /* put us in fullscren mode to begin with if requested */
-  if (imv->fullscreen) {
-    /* GLFWmonitor* monitor = glfwGetPrimaryMonitor(); */
-    /* const GLFWvidmode* mode = glfwGetVideoMode(monitor); */
-    /* glfwSetWindowMonitor(imv->window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate); */
-  }
+  imv_window_set_fullscreen(imv->window, imv->start_fullscreen);
 
   {
     imv->keyboard = imv_keyboard_create();
@@ -1328,7 +1317,7 @@ static int handle_ini_value(void *user, const char *section, const char *name,
   if (!strcmp(section, "options")) {
 
     if (!strcmp(name, "fullscreen")) {
-      imv->fullscreen = parse_bool(value);
+      imv->start_fullscreen = parse_bool(value);
       return 1;
     }
 
@@ -1352,11 +1341,6 @@ static int handle_ini_value(void *user, const char *section, const char *name,
 
     if (!strcmp(name, "upscaling_method")) {
       return parse_upscaling_method(imv, value);
-    }
-
-    if (!strcmp(name, "stay_fullscreen_on_focus_loss")) {
-      imv->stay_fullscreen_on_focus_loss = parse_bool(value);
-      return 1;
     }
 
     if (!strcmp(name, "recursive")) {
@@ -1561,15 +1545,7 @@ static void command_fullscreen(struct list *args, const char *argstr, void *data
   (void)argstr;
   struct imv *imv = data;
 
-  /* if (glfwGetWindowMonitor(imv->window)) { */
-  /*   glfwSetWindowMonitor(imv->window, NULL, 0, 0, imv->initial_width, imv->initial_height, GLFW_DONT_CARE); */
-  /*   imv->fullscreen = false; */
-  /* } else { */
-  /*   GLFWmonitor* monitor = glfwGetPrimaryMonitor(); */
-  /*   const GLFWvidmode* mode = glfwGetVideoMode(monitor); */
-  /*   glfwSetWindowMonitor(imv->window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate); */
-  /*   imv->fullscreen = true; */
-  /* } */
+  imv_window_set_fullscreen(imv->window, !imv_window_is_fullscreen(imv->window));
 }
 
 static void command_overlay(struct list *args, const char *argstr, void *data)
