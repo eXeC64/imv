@@ -424,7 +424,7 @@ void imv_window_push_event(struct imv_window *window, struct imv_event *e)
 
 void imv_window_pump_events(struct imv_window *window, imv_event_handler handler, void *data)
 {
-  wl_display_dispatch_pending(window->wl_display);
+  wl_display_dispatch(window->wl_display);
 
   pthread_mutex_lock(&window->events.mutex);
   if (handler) {

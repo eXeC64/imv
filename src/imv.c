@@ -896,13 +896,6 @@ int imv_run(struct imv *imv)
 
   while (!imv->quit) {
 
-    imv_window_pump_events(imv->window, event_handler, imv);
-
-    /* if we're quitting, don't bother drawing any more images */
-    if (imv->quit) {
-      break;
-    }
-
     /* Check if navigator wrapped around paths lists */
     if (!imv->loop_input && imv_navigator_wrapped(imv->navigator)) {
       break;
@@ -1069,6 +1062,9 @@ int imv_run(struct imv *imv)
 
     /* Go to sleep until an input/internal event or the timeout expires */
     imv_window_wait_for_event(imv->window, timeout);
+
+    /* Handle the new events that have arrived */
+    imv_window_pump_events(imv->window, event_handler, imv);
   }
 
   if (imv->list_files_at_exit) {
