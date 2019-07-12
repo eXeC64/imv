@@ -11,6 +11,7 @@ enum imv_event_type {
   IMV_EVENT_KEYBOARD,
   IMV_EVENT_MOUSE_MOTION,
   IMV_EVENT_MOUSE_BUTTON,
+  IMV_EVENT_MOUSE_SCROLL,
   IMV_EVENT_CUSTOM
 };
 
@@ -34,6 +35,9 @@ struct imv_event {
       int button;
       bool pressed;
     } mouse_button;
+    struct {
+      double dx, dy;
+    } mouse_scroll;
     void *custom;
   } data;
 };
@@ -53,6 +57,8 @@ bool imv_window_is_fullscreen(struct imv_window *window);
 void imv_window_set_fullscreen(struct imv_window *window, bool fullscreen);
 
 bool imv_window_get_mouse_button(struct imv_window *window, int button);
+
+void imv_window_get_mouse_position(struct imv_window *window, double *x, double *y);
 
 void imv_window_present(struct imv_window *window);
 

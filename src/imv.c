@@ -455,6 +455,14 @@ static void event_handler(void *data, const struct imv_event *e)
             e->data.mouse_motion.dy, imv->current_image);
       }
       break;
+    case IMV_EVENT_MOUSE_SCROLL:
+      {
+        double x, y;
+        imv_window_get_mouse_position(imv->window, &x, &y);
+        imv_viewport_zoom(imv->view, imv->current_image, IMV_ZOOM_MOUSE,
+            x, y, -e->data.mouse_scroll.dy);
+      }
+      break;
     case IMV_EVENT_CUSTOM:
       consume_internal_event(imv, e->data.custom);
       break;
@@ -463,15 +471,6 @@ static void event_handler(void *data, const struct imv_event *e)
   }
 
 }
-
-/* static void scroll_callback(GLFWwindow *window, double x, double y)*/
-/* {*/
-/*   (void)x;*/
-/*   struct imv *imv = glfwGetWindowUserPointer(window);*/
-/*   imv_viewport_zoom(imv->view, imv->current_image, IMV_ZOOM_MOUSE,*/
-/*                     imv->last_cursor_position.x,*/
-/*                     imv->last_cursor_position.y, -y);*/
-/* }*/
 
 static void log_to_stderr(enum imv_log_level level, const char *text, void *data)
 {
