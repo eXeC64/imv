@@ -9,8 +9,6 @@
 #include <unistd.h>
 #include <wordexp.h>
 
-#include <GL/gl.h>
-
 #include "backend.h"
 #include "binds.h"
 #include "canvas.h"
@@ -443,7 +441,6 @@ static void event_handler(void *data, const struct imv_event *e)
         const int bh = e->data.resize.buffer_height;
         imv_viewport_update(imv->view, ww, wh, bw, bh, imv->current_image);
         imv_canvas_resize(imv->canvas, bw, bh);
-        glViewport(0, 0, bw, bh);
         break;
       }
     case IMV_EVENT_KEYBOARD:
@@ -985,8 +982,7 @@ int imv_run(struct imv *imv)
     }
 
     if (imv->need_redraw) {
-      glClearColor(0.0, 0.0, 0.0, 1.0);
-      glClear(GL_COLOR_BUFFER_BIT);
+      imv_window_clear(imv->window, 0, 0, 0);
       render_window(imv);
       imv_window_present(imv->window);
     }

@@ -46,6 +46,9 @@ struct imv_window *imv_window_create(int w, int h, const char *title);
 
 void imv_window_free(struct imv_window *window);
 
+void imv_window_clear(struct imv_window *window, unsigned char r,
+    unsigned char g, unsigned char b);
+
 void imv_window_get_size(struct imv_window *window, int *w, int *h);
 
 void imv_window_get_framebuffer_size(struct imv_window *window, int *w, int *h);

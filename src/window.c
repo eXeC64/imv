@@ -414,6 +414,7 @@ static void toplevel_configure(void *data, struct xdg_toplevel *toplevel,
     }
   }
   wl_egl_window_resize(window->egl_window, width, height, 0, 0);
+  glViewport(0, 0, width * window->scale, height * window->scale);
 
   struct imv_event e = {
     .type = IMV_EVENT_RESIZE,
@@ -539,6 +540,14 @@ void imv_window_free(struct imv_window *window)
   shutdown_wayland(window);
   free(window->events.queue);
   free(window);
+}
+
+void imv_window_clear(struct imv_window *window, unsigned char r,
+    unsigned char g, unsigned char b)
+{
+  (void)window;
+  glClearColor(r / 255.0f, g / 255.0f, b / 255.0f, 1.0);
+  glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void imv_window_get_size(struct imv_window *window, int *w, int *h)
