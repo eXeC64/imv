@@ -408,10 +408,6 @@ void imv_window_present(struct imv_window *window)
   eglSwapBuffers(window->egl_display, window->egl_surface);
 }
 
-void imv_window_resize(struct imv_window *window, int w, int h)
-{
-}
-
 void imv_window_wait_for_event(struct imv_window *window, double timeout)
 {
   struct pollfd fds[] = {

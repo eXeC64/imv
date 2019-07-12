@@ -54,8 +54,6 @@ void imv_window_set_fullscreen(struct imv_window *window, bool fullscreen);
 
 void imv_window_present(struct imv_window *window);
 
-void imv_window_resize(struct imv_window *window, int w, int h);
-
 void imv_window_wait_for_event(struct imv_window *window, double timeout);
 
 void imv_window_push_event(struct imv_window *window, struct imv_event *e);

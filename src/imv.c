@@ -50,13 +50,6 @@ enum background_type {
   BACKGROUND_TYPE_COUNT
 };
 
-/* window behaviour on image change */
-enum resize_mode {
-  RESIZE_NONE,  /* do nothing */
-  RESIZE_ONLY,  /* resize to fit the new image */
-  RESIZE_CENTER /* resize to fit the new image and recenter */
-};
-
 struct backend_chain {
   const struct imv_backend *backend;
   struct backend_chain *next;
@@ -108,10 +101,6 @@ struct imv {
   /* dirty state flags */
   bool need_redraw;
   bool need_rescale;
-  bool need_resize;
-
-  /* mode for resizing the window on image change */
-  enum resize_mode resize_mode;
 
   /* traverse sub-directories for more images */
   bool recursive_load;
@@ -687,26 +676,6 @@ static bool parse_upscaling_method(struct imv *imv, const char *method)
   return false;
 }
 
-static bool parse_resizing_mode(struct imv *imv, const char *method)
-{
-  if (!strcmp(method, "none")) {
-    imv->resize_mode = RESIZE_NONE;
-    return true;
-  }
-
-  if (!strcmp(method, "resize")) {
-    imv->resize_mode = RESIZE_ONLY;
-    return true;
-  }
-
-  if (!strcmp(method, "recenter")) {
-    imv->resize_mode = RESIZE_CENTER;
-    return true;
-  }
-
-  return false;
-}
-
 static void *load_paths_from_stdin(void *data)
 {
   struct imv *imv = data;
@@ -776,8 +745,6 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
       case 'f': imv->start_fullscreen = true;                    break;
       case 'r': imv->recursive_load = true;                      break;
       case 'd': imv->overlay_enabled = true;                     break;
-      case 'w': imv->resize_mode = RESIZE_ONLY;                  break;
-      case 'W': imv->resize_mode = RESIZE_CENTER;                break;
       case 'x': imv->loop_input = false;                         break;
       case 'l': imv->list_files_at_exit = true;                  break;
       case 'n': imv->starting_path = optarg;                     break;
@@ -1116,18 +1083,6 @@ static void handle_new_image(struct imv *imv, struct imv_image *image, int frame
   imv->current_image = image;
   imv->need_redraw = true;
   imv->need_rescale = true;
-  /* If autoresizing on every image is enabled, make sure we do so */
-  if (imv->resize_mode != RESIZE_NONE) {
-    imv->need_resize = true;
-  }
-  if (imv->need_resize) {
-    imv->need_resize = false;
-    /* glfwSetWindowSize(imv->window, imv_image_width(image), imv_image_height(image)); */
-    if (imv->resize_mode == RESIZE_CENTER) {
-      /* TODO centering */
-      /* glfwSetWindowPos(imv->window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED); */
-    }
-  }
   imv->loading = false;
   imv->next_frame.due = frametime ? cur_time() + frametime * 0.001 : 0.0;
   imv->next_frame.duration = 0.0;
@@ -1327,10 +1282,6 @@ static int handle_ini_value(void *user, const char *section, const char *name,
     if (!strcmp(name, "overlay")) {
       imv->overlay_enabled = parse_bool(value);
       return 1;
-    }
-
-    if (!strcmp(name, "autoresize")) {
-      return parse_resizing_mode(imv, value);
     }
 
     if (!strcmp(name, "upscaling_method")) {
