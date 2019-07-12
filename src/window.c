@@ -40,6 +40,21 @@ struct imv_window {
   int scale;
 
   struct {
+    struct {
+      double last;
+      double current;
+    } x;
+    struct {
+      double last;
+      double current;
+    } y;
+    struct {
+      bool last;
+      bool current;
+    } mouse1;
+  } pointer;
+
+  struct {
     struct imv_event *queue;
     size_t len;
     size_t cap;
@@ -138,6 +153,144 @@ static const struct wl_keyboard_listener keyboard_listener = {
   .repeat_info = keyboard_repeat
 };
 
+static void pointer_enter(void *data, struct wl_pointer *pointer,
+    uint32_t serial, struct wl_surface *surface, wl_fixed_t surface_x,
+    wl_fixed_t surface_y)
+{
+  (void)pointer;
+  (void)serial;
+  (void)surface;
+
+  struct imv_window *window = data;
+  window->pointer.x.last = wl_fixed_to_double(surface_x);
+  window->pointer.y.last = wl_fixed_to_double(surface_y);
+  window->pointer.x.current = wl_fixed_to_double(surface_x);
+  window->pointer.y.current = wl_fixed_to_double(surface_y);
+}
+
+static void pointer_leave(void *data, struct wl_pointer *pointer,
+    uint32_t serial, struct wl_surface *surface)
+{
+  (void)data;
+  (void)pointer;
+  (void)serial;
+  (void)surface;
+}
+
+static void pointer_motion(void *data, struct wl_pointer *pointer,
+    uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y)
+{
+  (void)pointer;
+  (void)time;
+
+  struct imv_window *window = data;
+  window->pointer.x.current = wl_fixed_to_double(surface_x);
+  window->pointer.y.current = wl_fixed_to_double(surface_y);
+}
+
+static void pointer_button(void *data, struct wl_pointer *pointer,
+    uint32_t serial, uint32_t time, uint32_t button, uint32_t state)
+{
+  (void)pointer;
+  (void)serial;
+  (void)time;
+
+  struct imv_window *window = data;
+  const uint32_t MOUSE1 = 0x110;
+  if (button == MOUSE1) {
+    window->pointer.mouse1.current = state;
+  }
+}
+
+static void pointer_axis(void *data, struct wl_pointer *pointer,
+    uint32_t time, uint32_t axis, wl_fixed_t value)
+{
+  (void)data;
+  (void)pointer;
+  (void)time;
+  (void)axis;
+  (void)value;
+}
+
+static void pointer_frame(void *data, struct wl_pointer *pointer)
+{
+  (void)pointer;
+
+  struct imv_window *window = data;
+
+  int dx = window->pointer.x.current - window->pointer.x.last;
+  int dy = window->pointer.y.current - window->pointer.y.last;
+  window->pointer.x.last = window->pointer.x.current;
+  window->pointer.y.last = window->pointer.y.current;
+  if (dx || dy) {
+    struct imv_event e = {
+      .type = IMV_EVENT_MOUSE_MOTION,
+      .data = {
+        .mouse_motion = {
+          .x = window->pointer.x.current,
+          .y = window->pointer.y.current,
+          .dx = dx,
+          .dy = dy,
+        }
+      }
+    };
+    imv_window_push_event(window, &e);
+  }
+
+  if (window->pointer.mouse1.current != window->pointer.mouse1.last) {
+    window->pointer.mouse1.last = window->pointer.mouse1.current;
+    struct imv_event e = {
+      .type = IMV_EVENT_MOUSE_BUTTON,
+      .data = {
+        .mouse_button = {
+          .button = 1,
+          .pressed = window->pointer.mouse1.current
+        }
+      }
+    };
+    imv_window_push_event(window, &e);
+  }
+
+}
+
+static void pointer_axis_source(void *data, struct wl_pointer *pointer,
+    uint32_t axis_source)
+{
+  (void)data;
+  (void)pointer;
+  (void)axis_source;
+}
+
+static void pointer_axis_stop(void *data, struct wl_pointer *pointer,
+    uint32_t time, uint32_t axis)
+{
+  (void)data;
+  (void)pointer;
+  (void)time;
+  (void)axis;
+}
+
+static void pointer_axis_discrete(void *data, struct wl_pointer *pointer,
+    uint32_t axis, int32_t discrete)
+{
+  (void)data;
+  (void)pointer;
+  (void)axis;
+  (void)discrete;
+}
+
+static const struct wl_pointer_listener pointer_listener = {
+  .enter = pointer_enter,
+  .leave = pointer_leave,
+  .motion = pointer_motion,
+  .button = pointer_button,
+  .axis = pointer_axis,
+  .frame = pointer_frame,
+  .axis_source = pointer_axis_source,
+  .axis_stop = pointer_axis_stop,
+  .axis_discrete = pointer_axis_discrete
+};
+
 static void seat_capabilities(void *data, struct wl_seat *seat, uint32_t capabilities)
 {
   (void)seat;
@@ -146,6 +299,7 @@ static void seat_capabilities(void *data, struct wl_seat *seat, uint32_t capabil
   if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
     if (!window->wl_pointer) {
       window->wl_pointer = wl_seat_get_pointer(window->wl_seat);
+      wl_pointer_add_listener(window->wl_pointer, &pointer_listener, window);
     }
   } else {
     if (window->wl_pointer) {
@@ -401,6 +555,14 @@ void imv_window_set_fullscreen(struct imv_window *window, bool fullscreen)
   } else if (!window->fullscreen && fullscreen) {
     xdg_toplevel_set_fullscreen(window->wl_xdg_toplevel, NULL);
   }
+}
+
+bool imv_window_get_mouse_button(struct imv_window *window, int button)
+{
+  if (button == 1) {
+    return window->pointer.mouse1.last;
+  }
+  return false;
 }
 
 void imv_window_present(struct imv_window *window)

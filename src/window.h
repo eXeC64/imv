@@ -28,7 +28,7 @@ struct imv_event {
       bool pressed;
     } keyboard;
     struct {
-      int x, y, dx, dy;
+      double x, y, dx, dy;
     } mouse_motion;
     struct {
       int button;
@@ -51,6 +51,8 @@ void imv_window_set_title(struct imv_window *window, const char *title);
 bool imv_window_is_fullscreen(struct imv_window *window);
 
 void imv_window_set_fullscreen(struct imv_window *window, bool fullscreen);
+
+bool imv_window_get_mouse_button(struct imv_window *window, int button);
 
 void imv_window_present(struct imv_window *window);
 

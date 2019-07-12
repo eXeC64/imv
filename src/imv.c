@@ -141,11 +141,6 @@ struct imv {
 
   struct imv_image *current_image;
 
-  struct {
-    double x;
-    double y;
-  } last_cursor_position;
-
   /* overlay font */
   struct {
     char *name;
@@ -454,6 +449,12 @@ static void event_handler(void *data, const struct imv_event *e)
     case IMV_EVENT_KEYBOARD:
       key_handler(imv, e->data.keyboard.scancode, e->data.keyboard. pressed);
       break;
+    case IMV_EVENT_MOUSE_MOTION:
+      if (imv_window_get_mouse_button(imv->window, 1)) {
+        imv_viewport_move(imv->view, e->data.mouse_motion.dx,
+            e->data.mouse_motion.dy, imv->current_image);
+      }
+      break;
     case IMV_EVENT_CUSTOM:
       consume_internal_event(imv, e->data.custom);
       break;
@@ -471,20 +472,6 @@ static void event_handler(void *data, const struct imv_event *e)
 /*                     imv->last_cursor_position.x,*/
 /*                     imv->last_cursor_position.y, -y);*/
 /* }*/
-
-/* static void cursor_callback(GLFWwindow *window, double x, double y)*/
-/* {*/
-/*   struct imv *imv = glfwGetWindowUserPointer(window);*/
-
-/*   if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {*/
-/*     const double dx = x - imv->last_cursor_position.x;*/
-/*     const double dy = y - imv->last_cursor_position.y;*/
-/*     imv_viewport_move(imv->view, dx, dy, imv->current_image);*/
-/*   }*/
-/*   imv->last_cursor_position.x = x;*/
-/*   imv->last_cursor_position.y = y;*/
-/* }*/
-
 
 static void log_to_stderr(enum imv_log_level level, const char *text, void *data)
 {
