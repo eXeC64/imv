@@ -66,8 +66,8 @@ struct imv_window {
   } events;
 };
 
-static void
-handle_ping_xdg_wm_base(void *data, struct xdg_wm_base *xdg, uint32_t serial)
+static void handle_ping_xdg_wm_base(void *data, struct xdg_wm_base *xdg,
+    uint32_t serial)
 {
   (void)data;
   xdg_wm_base_pong(xdg, serial);
