@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <poll.h>
 #include <stdlib.h>
+#include <string.h>
 
 struct imv_window {
   Display *x_display;
@@ -37,7 +38,7 @@ struct imv_window *imv_window_create(int w, int h, const char *title)
 
   XSetWindowAttributes wa = {
     .colormap = cmap,
-    .event_mask = ExposureMask | KeyPressMask
+    .event_mask = ExposureMask | KeyPressMask | KeyReleaseMask
   };
 
   window->x_window = XCreateWindow(window->x_display, root, 0, 0, w, h,
@@ -115,7 +116,7 @@ void imv_window_get_mouse_position(struct imv_window *window, double *x, double 
 
 void imv_window_present(struct imv_window *window)
 {
-  (void)window;
+  glXSwapBuffers(window->x_display, window->x_window);
 }
 
 void imv_window_wait_for_event(struct imv_window *window, double timeout)
@@ -130,16 +131,18 @@ void imv_window_wait_for_event(struct imv_window *window, double timeout)
 
 void imv_window_push_event(struct imv_window *window, struct imv_event *e)
 {
-  (void)window;
-  (void)e;
-  // XSendEvent
-  // XClientMessageEvent
+  XEvent xe = {
+    .xclient = {
+      .type = ClientMessage,
+      .format = 8
+    }
+  };
+  memcpy(&xe.xclient.data.l[0], &e->data.custom, sizeof(void*));
+  XSendEvent(window->x_display, window->x_window, True, 0xfff, &xe);
 }
 
 void imv_window_pump_events(struct imv_window *window, imv_event_handler handler, void *data)
 {
-  (void)handler;
-  (void)data;
   XEvent xev;
 
   while (XPending(window->x_display)) {
@@ -149,7 +152,43 @@ void imv_window_pump_events(struct imv_window *window, imv_event_handler handler
       XWindowAttributes wa;
       XGetWindowAttributes(window->x_display, window->x_window, &wa);
       glViewport(0, 0, wa.width, wa.height);
-      glXSwapBuffers(window->x_display, window->x_window);
+      struct imv_event e = {
+        .type = IMV_EVENT_RESIZE,
+        .data = {
+          .resize = {
+            .width = wa.width,
+            .height = wa.height,
+            .buffer_width = wa.width,
+            .buffer_height = wa.height
+          }
+        }
+      };
+      if (handler) {
+        handler(data, &e);
+      }
+    } else if (xev.type == KeyPress || xev.type == KeyRelease) {
+      struct imv_event e = {
+        .type = IMV_EVENT_KEYBOARD,
+        .data = {
+          .keyboard = {
+            .scancode = xev.xkey.keycode - 8,
+            .pressed = xev.type == KeyPress
+          }
+        }
+      };
+      if (handler) {
+        handler(data, &e);
+      }
+    } else if (xev.type == ClientMessage) {
+      struct imv_event e = {
+        .type = IMV_EVENT_CUSTOM,
+        .data = {
+          .custom = (void*)*((void**)&xev.xclient.data.l[0])
+        }
+      };
+      if (handler) {
+        handler(data, &e);
+      }
     }
   }
 
