@@ -1,10 +1,11 @@
 #include "window.h"
 
-#include <assert.h>
-#include <stdlib.h>
+#include <GL/gl.h>
+#include <GL/glx.h>
 #include <X11/Xlib.h>
-#include<GL/gl.h>
-#include<GL/glx.h>
+#include <assert.h>
+#include <poll.h>
+#include <stdlib.h>
 
 struct imv_window {
   Display *x_display;
@@ -119,14 +120,20 @@ void imv_window_present(struct imv_window *window)
 
 void imv_window_wait_for_event(struct imv_window *window, double timeout)
 {
-  (void)window;
-  (void)timeout;
+  struct pollfd fds[] = {
+    {.fd = ConnectionNumber(window->x_display), .events = POLLIN},
+  };
+  nfds_t nfds = sizeof fds / sizeof *fds;
+
+  poll(fds, nfds, timeout * 1000);
 }
 
 void imv_window_push_event(struct imv_window *window, struct imv_event *e)
 {
   (void)window;
   (void)e;
+  // XSendEvent
+  // XClientMessageEvent
 }
 
 void imv_window_pump_events(struct imv_window *window, imv_event_handler handler, void *data)
