@@ -41,6 +41,11 @@ ifeq ($(WINDOWS),wayland)
 	override LIBS += -lwayland-client -lwayland-egl -lEGL
 endif
 
+ifeq ($(WINDOWS),x11)
+	SOURCES += src/x11_window.c
+	override LIBS += -lX11 -lGL -lGLU
+endif
+
 # Add backends to build as configured
 ifeq ($(BACKEND_FREEIMAGE),yes)
 	SOURCES += src/backend_freeimage.c

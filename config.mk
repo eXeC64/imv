@@ -3,7 +3,7 @@
 #Choices:
 # wayland - Use wayland backend
 # x11 - Use X11 backend
-WINDOWS=wayland
+WINDOWS=x11
 
 # Configure available backends:
 
