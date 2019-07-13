@@ -1,3 +1,10 @@
+# Configure window system to use
+
+#Choices:
+# wayland - Use wayland backend
+# x11 - Use X11 backend
+WINDOWS=wayland
+
 # Configure available backends:
 
 # FreeImage http://freeimage.sourceforge.net

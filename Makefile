@@ -14,7 +14,7 @@ INSTALL_PROGRAM ?= install -m 0755
 
 override CFLAGS += -std=c99 -W -Wall -Wpedantic -Wextra $(shell pkg-config --cflags pangocairo)
 override CPPFLAGS += -D_XOPEN_SOURCE=700
-override LIBS := -lwayland-client -lwayland-egl -lEGL -lGL -lpthread -lxkbcommon $(shell pkg-config --libs pangocairo)
+override LIBS := -lGL -lpthread -lxkbcommon $(shell pkg-config --libs pangocairo)
 
 BUILDDIR ?= build
 TARGET := $(BUILDDIR)/imv
@@ -34,8 +34,12 @@ SOURCES += src/list.c
 SOURCES += src/log.c
 SOURCES += src/navigator.c
 SOURCES += src/viewport.c
-SOURCES += src/window.c
-SOURCES += src/xdg-shell-protocol.c
+
+ifeq ($(WINDOWS),wayland)
+	SOURCES += src/wl_window.c
+	SOURCES += src/xdg-shell-protocol.c
+	override LIBS += -lwayland-client -lwayland-egl -lEGL
+endif
 
 # Add backends to build as configured
 ifeq ($(BACKEND_FREEIMAGE),yes)
