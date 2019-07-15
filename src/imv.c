@@ -135,6 +135,8 @@ struct imv {
     double duration;
     /* the next frame of an animated image, pre-fetched */
     struct imv_image *image;
+    /* force the next frame to load, even if early */
+    bool force_next_frame;
   } next_frame;
 
   struct imv_image *current_image;
@@ -944,8 +946,16 @@ int imv_run(struct imv *imv)
     current_time = cur_time();
 
     /* Check if a new frame is due */
+    bool should_change_frame = false;
+    if (imv->next_frame.force_next_frame && imv->next_frame.image) {
+      should_change_frame = true;
+    }
     if (imv_viewport_is_playing(imv->view) && imv->next_frame.image
         && imv->next_frame.due && imv->next_frame.due <= current_time) {
+      should_change_frame = true;
+    }
+
+    if (should_change_frame) {
       if (imv->current_image) {
         imv_image_free(imv->current_image);
       }
@@ -953,6 +963,7 @@ int imv_run(struct imv *imv)
       imv->next_frame.image = NULL;
       imv->next_frame.due = current_time + imv->next_frame.duration;
       imv->next_frame.duration = 0;
+      imv->next_frame.force_next_frame = false;
 
       imv->need_redraw = true;
 
@@ -1516,7 +1527,7 @@ static void command_next_frame(struct list *args, const char *argstr, void *data
   struct imv *imv = data;
   if (imv->current_source && imv->current_source->load_next_frame) {
     async_load_next_frame(imv->current_source);
-    imv->next_frame.due = 0.0001; /* Earliest possible non-zero timestamp */
+    imv->next_frame.force_next_frame = true;
   }
 }
 
