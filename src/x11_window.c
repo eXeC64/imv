@@ -1,8 +1,8 @@
 #include "window.h"
 
 #include <assert.h>
+#include <fcntl.h>
 #include <poll.h>
-#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -31,14 +31,16 @@ struct imv_window {
   } pointer;
 
   int pipe_fds[2];
-
-  struct {
-    struct imv_event *queue;
-    size_t len;
-    size_t cap;
-    pthread_mutex_t mutex;
-  } events;
 };
+
+static void set_nonblocking(int fd)
+{
+  int flags = fcntl(fd, F_GETFL);
+  assert(flags != -1);
+  flags |= O_NONBLOCK;
+  int rc = fcntl(fd, F_SETFL, flags);
+  assert(rc != -1);
+}
 
 struct imv_window *imv_window_create(int w, int h, const char *title)
 {
@@ -46,9 +48,8 @@ struct imv_window *imv_window_create(int w, int h, const char *title)
   window->pointer.last.x = -1;
   window->pointer.last.y = -1;
   pipe(window->pipe_fds);
-  window->events.cap = 128;
-  window->events.queue = malloc(window->events.cap * sizeof *window->events.queue);
-  pthread_mutex_init(&window->events.mutex, NULL);
+  set_nonblocking(window->pipe_fds[0]);
+  set_nonblocking(window->pipe_fds[1]);
 
   window->x_display = XOpenDisplay(NULL);
   assert(window->x_display);
@@ -95,8 +96,6 @@ void imv_window_free(struct imv_window *window)
 {
   close(window->pipe_fds[0]);
   close(window->pipe_fds[1]);
-  pthread_mutex_destroy(&window->events.mutex);
-  free(window->events.queue);
   glXDestroyContext(window->x_display, window->x_glc);
   XCloseDisplay(window->x_display);
   free(window);
@@ -211,31 +210,12 @@ void imv_window_wait_for_event(struct imv_window *window, double timeout)
   nfds_t nfds = sizeof fds / sizeof *fds;
 
   poll(fds, nfds, timeout * 1000);
-
-  /* Clear the pipe if hit */
-  if (fds[1].revents & POLLIN) {
-    char out[32];
-    read(window->pipe_fds[0], &out, sizeof out);
-  }
 }
 
 void imv_window_push_event(struct imv_window *window, struct imv_event *e)
 {
-  pthread_mutex_lock(&window->events.mutex);
-  if (window->events.len == window->events.cap) {
-    size_t new_cap = window->events.cap * 2;
-    struct imv_event *new_queue =
-      realloc(window->events.queue, new_cap * sizeof *window->events.queue);
-    assert(new_queue);
-    window->events.queue = new_queue;
-  }
-
-  window->events.queue[window->events.len++] = *e;
-  pthread_mutex_unlock(&window->events.mutex);
-
-  /* Wake up wait_events */
-  char in = 1;
-  write(window->pipe_fds[1], &in, sizeof in);
+  /* Push it down the pipe */
+  write(window->pipe_fds[1], e, sizeof *e);
 }
 
 void imv_window_pump_events(struct imv_window *window, imv_event_handler handler, void *data)
@@ -338,13 +318,17 @@ void imv_window_pump_events(struct imv_window *window, imv_event_handler handler
     }
   }
 
-  pthread_mutex_lock(&window->events.mutex);
-  if (handler) {
-    for (size_t i = 0; i < window->events.len; ++i) {
-      handler(data, &window->events.queue[i]);
+  /* Handle any events in the pipe */
+  while (1) {
+    struct imv_event e;
+    ssize_t len = read(window->pipe_fds[0], &e, sizeof e);
+    if (len <= 0) {
+      break;
+    }
+    assert(len == sizeof e);
+    if (handler) {
+      handler(data, &e);
     }
   }
-  window->events.len = 0;
-  pthread_mutex_unlock(&window->events.mutex);
 }
 
