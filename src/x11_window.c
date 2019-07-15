@@ -3,18 +3,20 @@
 #include <GL/gl.h>
 #include <GL/glx.h>
 #include <X11/Xlib.h>
+#include <X11/Xatom.h>
 #include <assert.h>
 #include <poll.h>
 #include <stdlib.h>
 #include <string.h>
 
 struct imv_window {
-  Display *x_display;
-  Window x_window;
+  Display    *x_display;
+  Window     x_window;
   GLXContext x_glc;
+  Atom       x_state;
+  Atom       x_fullscreen;
   int width;
   int height;
-  bool fullscreen;
 };
 
 struct imv_window *imv_window_create(int w, int h, const char *title)
@@ -46,6 +48,9 @@ struct imv_window *imv_window_create(int w, int h, const char *title)
 
   window->x_window = XCreateWindow(window->x_display, root, 0, 0, w, h,
       0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask, &wa);
+
+  window->x_state = XInternAtom(window->x_display, "_NET_WM_STATE", true);
+  window->x_fullscreen = XInternAtom(window->x_display, "_NET_WM_STATE_FULLSCREEN", true);
 
   XMapWindow(window->x_display, window->x_window);
   XStoreName(window->x_display, window->x_window, title);
@@ -99,13 +104,46 @@ void imv_window_set_title(struct imv_window *window, const char *title)
 
 bool imv_window_is_fullscreen(struct imv_window *window)
 {
-  return window->fullscreen;
+  size_t count = 0;
+  Atom type;
+  int format;
+  size_t after;
+  Atom *props = NULL;
+  XGetWindowProperty(window->x_display, window->x_window, window->x_state,
+      0, 1024, False, XA_ATOM, &type, &format, &count, &after, (unsigned char**)&props);
+
+  bool fullscreen = false;
+  for (size_t i = 0; i < count; ++i) {
+    if (props[i] == window->x_fullscreen) {
+      fullscreen = true;
+      break;
+    }
+  }
+  XFree(props);
+  return fullscreen;
 }
 
 void imv_window_set_fullscreen(struct imv_window *window, bool fullscreen)
 {
-  (void)window;
-  (void)fullscreen;
+  Window root = DefaultRootWindow(window->x_display);
+  XEvent event = {
+    .xclient = {
+      .type = ClientMessage,
+      .window = window->x_window,
+      .format = 32,
+      .message_type = window->x_state,
+      .data = {
+        .l = {
+          (fullscreen ? 1 : 0),
+          window->x_fullscreen,
+          0,
+          1
+        }
+      }
+    }
+  };
+  XSendEvent(window->x_display, root, False,
+      SubstructureNotifyMask | SubstructureRedirectMask, &event );
 }
 
 bool imv_window_get_mouse_button(struct imv_window *window, int button)
