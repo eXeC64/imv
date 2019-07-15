@@ -12,6 +12,9 @@ struct imv_window {
   Display *x_display;
   Window x_window;
   GLXContext x_glc;
+  int width;
+  int height;
+  bool fullscreen;
 };
 
 struct imv_window *imv_window_create(int w, int h, const char *title)
@@ -71,16 +74,22 @@ void imv_window_clear(struct imv_window *window, unsigned char r,
 
 void imv_window_get_size(struct imv_window *window, int *w, int *h)
 {
-  (void)window;
-  (void)w;
-  (void)h;
+  if (w) {
+    *w = window->width;
+  }
+  if (h) {
+    *h = window->height;
+  }
 }
 
 void imv_window_get_framebuffer_size(struct imv_window *window, int *w, int *h)
 {
-  (void)window;
-  (void)w;
-  (void)h;
+  if (w) {
+    *w = window->width;
+  }
+  if (h) {
+    *h = window->height;
+  }
 }
 
 void imv_window_set_title(struct imv_window *window, const char *title)
@@ -90,8 +99,7 @@ void imv_window_set_title(struct imv_window *window, const char *title)
 
 bool imv_window_is_fullscreen(struct imv_window *window)
 {
-  (void)window;
-  return false;
+  return window->fullscreen;
 }
 
 void imv_window_set_fullscreen(struct imv_window *window, bool fullscreen)
@@ -110,8 +118,12 @@ bool imv_window_get_mouse_button(struct imv_window *window, int button)
 void imv_window_get_mouse_position(struct imv_window *window, double *x, double *y)
 {
   (void)window;
-  (void)x;
-  (void)y;
+  if (x) {
+    *x = 0;
+  }
+  if (y) {
+    *y = 0;
+  }
 }
 
 void imv_window_present(struct imv_window *window)
@@ -151,6 +163,8 @@ void imv_window_pump_events(struct imv_window *window, imv_event_handler handler
     if (xev.type == Expose) {
       XWindowAttributes wa;
       XGetWindowAttributes(window->x_display, window->x_window, &wa);
+      window->width = wa.width;
+      window->height = wa.height;
       glViewport(0, 0, wa.width, wa.height);
       struct imv_event e = {
         .type = IMV_EVENT_RESIZE,
