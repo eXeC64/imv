@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/eventfd.h>
 #include <unistd.h>
 
 #include <wayland-client.h>
@@ -32,7 +31,7 @@ struct imv_window {
   struct wl_egl_window *egl_window;
 
   int display_fd;
-  int event_fd;
+  int pipe_fds[2];
 
   int width;
   int height;
@@ -451,7 +450,7 @@ static void connect_to_wayland(struct imv_window *window)
   window->wl_display = wl_display_connect(NULL);
   assert(window->wl_display);
   window->display_fd = wl_display_get_fd(window->wl_display);
-  window->event_fd = eventfd(0, 0);
+  pipe(window->pipe_fds);
 
   window->wl_registry = wl_display_get_registry(window->wl_display);
   assert(window->wl_registry);
@@ -509,7 +508,8 @@ static void create_window(struct imv_window *window, int width, int height,
 
 static void shutdown_wayland(struct imv_window *window)
 {
-  close(window->event_fd);
+  close(window->pipe_fds[0]);
+  close(window->pipe_fds[1]);
   if (window->wl_pointer) {
     wl_pointer_destroy(window->wl_pointer);
   }
@@ -615,8 +615,8 @@ void imv_window_present(struct imv_window *window)
 void imv_window_wait_for_event(struct imv_window *window, double timeout)
 {
   struct pollfd fds[] = {
-    {.fd = window->display_fd, .events = POLLIN},
-    {.fd = window->event_fd,   .events = POLLIN}
+    {.fd = window->display_fd,  .events = POLLIN},
+    {.fd = window->pipe_fds[0], .events = POLLIN}
   };
   nfds_t nfds = sizeof fds / sizeof *fds;
 
@@ -642,8 +642,8 @@ void imv_window_wait_for_event(struct imv_window *window, double timeout)
 
   /* Clear the eventfd if hit */
   if (fds[1].revents & POLLIN) {
-    uint64_t out;
-    read(window->event_fd, &out, sizeof out);
+    char out[32];
+    read(window->pipe_fds[0], &out, sizeof out);
   }
 }
 
@@ -662,8 +662,8 @@ void imv_window_push_event(struct imv_window *window, struct imv_event *e)
   pthread_mutex_unlock(&window->events.mutex);
 
   /* Wake up wait_events */
-  uint64_t in = 1;
-  write(window->event_fd, &in, sizeof in);
+  char in = 1;
+  write(window->pipe_fds[1], &in, sizeof in);
 }
 
 void imv_window_pump_events(struct imv_window *window, imv_event_handler handler, void *data)
