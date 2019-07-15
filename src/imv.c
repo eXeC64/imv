@@ -405,7 +405,6 @@ static void key_handler(struct imv *imv, int scancode, bool pressed)
      */
 
     if (!strcmp("colon", keyname)) {
-      fprintf(stderr, "active console\n");
       imv_console_activate(imv->console);
       imv->need_redraw = true;
       return;
@@ -420,7 +419,6 @@ static void key_handler(struct imv *imv, int scancode, bool pressed)
     if (cmds) {
       imv_command_exec_list(imv->commands, cmds, imv);
     }
-    fprintf(stderr, "user hit: '%s'\n", keyname);
     free(keyname);
   }
 
@@ -1245,7 +1243,6 @@ static int handle_ini_value(void *user, const char *section, const char *name,
                             const char *value)
 {
   struct imv *imv = user;
-  fprintf(stderr, "got section='%s' name='%s' value='%s'\n", section, name, value);
 
   if (!strcmp(section, "binds")) {
     return add_bind(imv, name, value);
