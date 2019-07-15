@@ -1,13 +1,16 @@
 #include "window.h"
 
-#include <GL/gl.h>
-#include <GL/glx.h>
-#include <X11/Xlib.h>
-#include <X11/Xatom.h>
 #include <assert.h>
 #include <poll.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+
+#include <GL/gl.h>
+#include <GL/glx.h>
+#include <X11/Xatom.h>
+#include <X11/Xlib.h>
 
 struct imv_window {
   Display    *x_display;
@@ -26,6 +29,15 @@ struct imv_window {
     } current;
     bool mouse1;
   } pointer;
+
+  int pipe_fds[2];
+
+  struct {
+    struct imv_event *queue;
+    size_t len;
+    size_t cap;
+    pthread_mutex_t mutex;
+  } events;
 };
 
 struct imv_window *imv_window_create(int w, int h, const char *title)
@@ -33,6 +45,10 @@ struct imv_window *imv_window_create(int w, int h, const char *title)
   struct imv_window *window = calloc(1, sizeof *window);
   window->pointer.last.x = -1;
   window->pointer.last.y = -1;
+  pipe(window->pipe_fds);
+  window->events.cap = 128;
+  window->events.queue = malloc(window->events.cap * sizeof *window->events.queue);
+  pthread_mutex_init(&window->events.mutex, NULL);
 
   window->x_display = XOpenDisplay(NULL);
   assert(window->x_display);
@@ -77,6 +93,10 @@ struct imv_window *imv_window_create(int w, int h, const char *title)
 
 void imv_window_free(struct imv_window *window)
 {
+  close(window->pipe_fds[0]);
+  close(window->pipe_fds[1]);
+  pthread_mutex_destroy(&window->events.mutex);
+  free(window->events.queue);
   glXDestroyContext(window->x_display, window->x_glc);
   XCloseDisplay(window->x_display);
   free(window);
@@ -186,22 +206,36 @@ void imv_window_wait_for_event(struct imv_window *window, double timeout)
 {
   struct pollfd fds[] = {
     {.fd = ConnectionNumber(window->x_display), .events = POLLIN},
+    {.fd = window->pipe_fds[0], .events = POLLIN}
   };
   nfds_t nfds = sizeof fds / sizeof *fds;
 
   poll(fds, nfds, timeout * 1000);
+
+  /* Clear the pipe if hit */
+  if (fds[1].revents & POLLIN) {
+    char out[32];
+    read(window->pipe_fds[0], &out, sizeof out);
+  }
 }
 
 void imv_window_push_event(struct imv_window *window, struct imv_event *e)
 {
-  XEvent xe = {
-    .xclient = {
-      .type = ClientMessage,
-      .format = 8
-    }
-  };
-  memcpy(&xe.xclient.data.l[0], &e->data.custom, sizeof(void*));
-  XSendEvent(window->x_display, window->x_window, True, 0xfff, &xe);
+  pthread_mutex_lock(&window->events.mutex);
+  if (window->events.len == window->events.cap) {
+    size_t new_cap = window->events.cap * 2;
+    struct imv_event *new_queue =
+      realloc(window->events.queue, new_cap * sizeof *window->events.queue);
+    assert(new_queue);
+    window->events.queue = new_queue;
+  }
+
+  window->events.queue[window->events.len++] = *e;
+  pthread_mutex_unlock(&window->events.mutex);
+
+  /* Wake up wait_events */
+  char in = 1;
+  write(window->pipe_fds[1], &in, sizeof in);
 }
 
 void imv_window_pump_events(struct imv_window *window, imv_event_handler handler, void *data)
@@ -301,18 +335,16 @@ void imv_window_pump_events(struct imv_window *window, imv_event_handler handler
       if (handler) {
         handler(data, &e);
       }
-    } else if (xev.type == ClientMessage) {
-      struct imv_event e = {
-        .type = IMV_EVENT_CUSTOM,
-        .data = {
-          .custom = (void*)*((void**)&xev.xclient.data.l[0])
-        }
-      };
-      if (handler) {
-        handler(data, &e);
-      }
     }
   }
 
+  pthread_mutex_lock(&window->events.mutex);
+  if (handler) {
+    for (size_t i = 0; i < window->events.len; ++i) {
+      handler(data, &window->events.queue[i]);
+    }
+  }
+  window->events.len = 0;
+  pthread_mutex_unlock(&window->events.mutex);
 }
 

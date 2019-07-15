@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <poll.h>
 #include <pthread.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -640,7 +639,7 @@ void imv_window_wait_for_event(struct imv_window *window, double timeout)
     wl_display_cancel_read(window->wl_display);
   }
 
-  /* Clear the eventfd if hit */
+  /* Clear the pipe if hit */
   if (fds[1].revents & POLLIN) {
     char out[32];
     read(window->pipe_fds[0], &out, sizeof out);
