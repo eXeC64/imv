@@ -17,11 +17,23 @@ struct imv_window {
   Atom       x_fullscreen;
   int width;
   int height;
+  struct {
+    struct {
+      int x, y;
+    } last;
+    struct {
+      int x, y;
+    } current;
+    bool mouse1;
+  } pointer;
 };
 
 struct imv_window *imv_window_create(int w, int h, const char *title)
 {
   struct imv_window *window = calloc(1, sizeof *window);
+  window->pointer.last.x = -1;
+  window->pointer.last.y = -1;
+
   window->x_display = XOpenDisplay(NULL);
   assert(window->x_display);
   Window root = DefaultRootWindow(window->x_display);
@@ -44,6 +56,7 @@ struct imv_window *imv_window_create(int w, int h, const char *title)
   XSetWindowAttributes wa = {
     .colormap = cmap,
     .event_mask = ExposureMask | KeyPressMask | KeyReleaseMask
+                | ButtonPressMask | ButtonReleaseMask | PointerMotionMask
   };
 
   window->x_window = XCreateWindow(window->x_display, root, 0, 0, w, h,
@@ -148,19 +161,19 @@ void imv_window_set_fullscreen(struct imv_window *window, bool fullscreen)
 
 bool imv_window_get_mouse_button(struct imv_window *window, int button)
 {
-  (void)window;
-  (void)button;
+  if (button == 1) {
+    return window->pointer.mouse1;
+  }
   return false;
 }
 
 void imv_window_get_mouse_position(struct imv_window *window, double *x, double *y)
 {
-  (void)window;
   if (x) {
-    *x = 0;
+    *x = window->pointer.current.x;
   }
   if (y) {
-    *y = 0;
+    *y = window->pointer.current.y;
   }
 }
 
@@ -225,6 +238,63 @@ void imv_window_pump_events(struct imv_window *window, imv_event_handler handler
           .keyboard = {
             .scancode = xev.xkey.keycode - 8,
             .pressed = xev.type == KeyPress
+          }
+        }
+      };
+      if (handler) {
+        handler(data, &e);
+      }
+    } else if (xev.type == ButtonPress || xev.type == ButtonRelease) {
+      if (xev.xbutton.button == Button1) {
+        window->pointer.mouse1 = xev.type == ButtonPress;
+        struct imv_event e = {
+          .type = IMV_EVENT_MOUSE_BUTTON,
+          .data = {
+            .mouse_button = {
+              .button = 1,
+              .pressed = xev.type == ButtonPress
+            }
+          }
+        };
+        if (handler) {
+          handler(data, &e);
+        }
+      } else if (xev.xbutton.button == Button4 || xev.xbutton.button == Button5) {
+        struct imv_event e = {
+          .type = IMV_EVENT_MOUSE_SCROLL,
+          .data = {
+            .mouse_scroll = {
+              .dx = 0,
+              .dy = xev.xbutton.button == Button4 ? -1 : 1
+            }
+          }
+        };
+        if (handler) {
+          handler(data, &e);
+        }
+      }
+    } else if (xev.type == MotionNotify) {
+      window->pointer.current.x = xev.xmotion.x;
+      window->pointer.current.y = xev.xmotion.y;
+      int dx = window->pointer.current.x - window->pointer.last.x;
+      int dy = window->pointer.current.y - window->pointer.last.y;
+      if (window->pointer.last.x == -1) {
+        dx = 0;
+      }
+      if (window->pointer.last.y == -1) {
+        dy = 0;
+      }
+      window->pointer.last.x = window->pointer.current.x;
+      window->pointer.last.y = window->pointer.current.y;
+
+      struct imv_event e = {
+        .type = IMV_EVENT_MOUSE_MOTION,
+        .data = {
+          .mouse_motion = {
+            .x = window->pointer.current.x,
+            .y = window->pointer.current.y,
+            .dx = dx,
+            .dy = dy
           }
         }
       };
