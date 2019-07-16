@@ -1,6 +1,7 @@
 #include "window.h"
 
 #include <assert.h>
+#include <fcntl.h>
 #include <poll.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -55,14 +56,16 @@ struct imv_window {
       double dy;
     } scroll;
   } pointer;
-
-  struct {
-    struct imv_event *queue;
-    size_t len;
-    size_t cap;
-    pthread_mutex_t mutex;
-  } events;
 };
+
+static void set_nonblocking(int fd)
+{
+  int flags = fcntl(fd, F_GETFL);
+  assert(flags != -1);
+  flags |= O_NONBLOCK;
+  int rc = fcntl(fd, F_SETFL, flags);
+  assert(rc != -1);
+}
 
 static void handle_ping_xdg_wm_base(void *data, struct xdg_wm_base *xdg,
     uint32_t serial)
@@ -450,6 +453,8 @@ static void connect_to_wayland(struct imv_window *window)
   assert(window->wl_display);
   window->display_fd = wl_display_get_fd(window->wl_display);
   pipe(window->pipe_fds);
+  set_nonblocking(window->pipe_fds[0]);
+  set_nonblocking(window->pipe_fds[1]);
 
   window->wl_registry = wl_display_get_registry(window->wl_display);
   assert(window->wl_registry);
@@ -525,9 +530,6 @@ struct imv_window *imv_window_create(int width, int height, const char *title)
 {
   struct imv_window *window = calloc(1, sizeof *window);
   window->scale = 1;
-  window->events.cap = 128;
-  window->events.queue = malloc(window->events.cap * sizeof *window->events.queue);
-  pthread_mutex_init(&window->events.mutex, NULL);
   connect_to_wayland(window);
   create_window(window, width, height, title);
   return window;
@@ -535,9 +537,7 @@ struct imv_window *imv_window_create(int width, int height, const char *title)
 
 void imv_window_free(struct imv_window *window)
 {
-  pthread_mutex_destroy(&window->events.mutex);
   shutdown_wayland(window);
-  free(window->events.queue);
   free(window);
 }
 
@@ -638,43 +638,27 @@ void imv_window_wait_for_event(struct imv_window *window, double timeout)
   } else {
     wl_display_cancel_read(window->wl_display);
   }
-
-  /* Clear the pipe if hit */
-  if (fds[1].revents & POLLIN) {
-    char out[32];
-    read(window->pipe_fds[0], &out, sizeof out);
-  }
 }
 
 void imv_window_push_event(struct imv_window *window, struct imv_event *e)
 {
-  pthread_mutex_lock(&window->events.mutex);
-  if (window->events.len == window->events.cap) {
-    size_t new_cap = window->events.cap * 2;
-    struct imv_event *new_queue =
-      realloc(window->events.queue, new_cap * sizeof *window->events.queue);
-    assert(new_queue);
-    window->events.queue = new_queue;
-  }
-
-  window->events.queue[window->events.len++] = *e;
-  pthread_mutex_unlock(&window->events.mutex);
-
-  /* Wake up wait_events */
-  char in = 1;
-  write(window->pipe_fds[1], &in, sizeof in);
+  /* Push it down the pipe */
+  write(window->pipe_fds[1], e, sizeof *e);
 }
 
 void imv_window_pump_events(struct imv_window *window, imv_event_handler handler, void *data)
 {
   wl_display_dispatch_pending(window->wl_display);
 
-  pthread_mutex_lock(&window->events.mutex);
-  if (handler) {
-    for (size_t i = 0; i < window->events.len; ++i) {
-      handler(data, &window->events.queue[i]);
+  while (1) {
+    struct imv_event e;
+    ssize_t len = read(window->pipe_fds[0], &e, sizeof e);
+    if (len <= 0) {
+      break;
+    }
+    assert(len == sizeof e);
+    if (handler) {
+      handler(data, &e);
     }
   }
-  window->events.len = 0;
-  pthread_mutex_unlock(&window->events.mutex);
 }
