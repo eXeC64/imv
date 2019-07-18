@@ -4,12 +4,14 @@ packages:
   - libcmocka-dev
   - libegl1-mesa-dev
   - libfreeimage-dev
+  - libglu-dev
   - libpango1.0-dev
   - libpng-dev
   - librsvg2-dev
   - libtiff-dev
   - libturbojpeg-dev
   - libwayland-dev
+  - libx11-dev
   - libxkbcommon-dev
   - mesa-common-dev
 sources:
@@ -19,11 +21,23 @@ tasks:
       cd imv
       sed -i -e 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk
       cat config.mk
-  - gcc: |
+  - gcc-x11: |
       cd imv
-      CC=gcc BUILDDIR=gcc make
-      CC=gcc BUILDDIR=gcc make check
-  - clang: |
+      sed -i -e 's/WINDOWS=.*/WINDOWS=x11/' config.mk
+      CC=gcc BUILDDIR=gcc-x11 make
+      CC=gcc BUILDDIR=gcc-x11 make check
+  - clang-x11: |
       cd imv
-      CC=clang BUILDDIR=clang make
-      CC=clang BUILDDIR=clang make check
+      sed -i -e 's/WINDOWS=.*/WINDOWS=x11/' config.mk
+      CC=clang BUILDDIR=clang-x11 make
+      CC=clang BUILDDIR=clang-x11 make check
+  - gcc-wayland: |
+      cd imv
+      sed -i -e 's/WINDOWS=.*/WINDOWS=wayland/' config.mk
+      CC=gcc BUILDDIR=gcc-wayland make
+      CC=gcc BUILDDIR=gcc-wayland make check
+  - clang-wayland: |
+      cd imv
+      sed -i -e 's/WINDOWS=.*/WINDOWS=wayland/' config.mk
+      CC=clang BUILDDIR=clang-wayland make
+      CC=clang BUILDDIR=clang-wayland make check
