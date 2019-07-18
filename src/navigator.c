@@ -22,7 +22,6 @@ struct imv_navigator {
   int last_move_direction;
   int changed;
   int wrapped;
-  int poll_countdown;
 };
 
 struct imv_navigator *imv_navigator_create(void)
