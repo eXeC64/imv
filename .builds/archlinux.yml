@@ -7,8 +7,9 @@ packages:
   - libpng
   - librsvg
   - libtiff
-  - sdl2
-  - sdl2_ttf
+  - libxkbcommon
+  - pango
+  - wayland
 sources:
   - https://git.sr.ht/~exec64/imv
 tasks:

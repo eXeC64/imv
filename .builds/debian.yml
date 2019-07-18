@@ -2,13 +2,16 @@ image: debian/stable
 packages:
   - clang
   - libcmocka-dev
+  - libegl1-mesa-dev
   - libfreeimage-dev
+  - libpango1.0-dev
   - libpng-dev
   - librsvg2-dev
-  - libsdl2-dev
-  - libsdl2-ttf-dev
   - libtiff-dev
   - libturbojpeg-dev
+  - libwayland-dev
+  - libxkbcommon-dev
+  - mesa-common-dev
 sources:
   - https://git.sr.ht/~exec64/imv
 tasks:

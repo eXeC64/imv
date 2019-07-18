@@ -1,14 +1,17 @@
 image: fedora/latest
 packages:
-  - SDL2-devel
-  - SDL2_ttf-devel
   - clang
   - freeimage-devel
   - libcmocka-devel
   - libpng-devel
   - librsvg2-devel
   - libtiff-devel
+  - libxkbcommon-devel
+  - mesa-libEGL-devel
+  - mesa-libGL-devel
+  - pango-devel
   - turbojpeg-devel
+  - wayland-devel
 sources:
   - https://git.sr.ht/~exec64/imv
 tasks:

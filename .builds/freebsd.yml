@@ -2,20 +2,23 @@ image: freebsd/latest
 packages:
   - devel/gmake
   - devel/pkgconf
-  - devel/sdl20
   - graphics/freeimage
+  - graphics/libGLU
   - graphics/libjpeg-turbo
   - graphics/librsvg2
   - graphics/png
-  - graphics/sdl2_ttf
   - graphics/tiff
   - sysutils/cmocka
+  - x11-toolkits/pango
+  - x11/libxkbcommon
+  - x11/libxkbcommon
 sources:
   - https://git.sr.ht/~exec64/imv
 tasks:
   - configure: |
       cd imv
       sed -i -e 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk
+      sed -i -e 's/WINDOWS=wayland/WINDOWS=x11/' config.mk
       cat config.mk
   - build: |
       cd imv
