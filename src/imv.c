@@ -1182,11 +1182,14 @@ static void render_window(struct imv *imv)
 
   /* draw command entry bar if needed */
   if (imv_console_prompt(imv->console)) {
+    const int bottom_offset = 5;
     const int height = imv->font.size * 1.2;
     imv_canvas_color(imv->canvas, 0, 0, 0, 0.75);
-    imv_canvas_fill_rectangle(imv->canvas, 0, wh - height, ww, height);
+    imv_canvas_fill_rectangle(imv->canvas, 0, wh - height - bottom_offset,
+        ww, height + bottom_offset);
     imv_canvas_color(imv->canvas, 1, 1, 1, 1);
-    imv_canvas_printf(imv->canvas, 0, wh - height, ":%s|", imv_console_prompt(imv->console));
+    imv_canvas_printf(imv->canvas, 0, wh - height - bottom_offset,
+        ":%s\u2588", imv_console_prompt(imv->console));
   }
 
   imv_canvas_draw(imv->canvas);
