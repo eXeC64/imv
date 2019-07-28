@@ -747,22 +747,17 @@ void imv_window_wait_for_event(struct imv_window *window, double timeout)
   };
   nfds_t nfds = sizeof fds / sizeof *fds;
 
-  while (wl_display_prepare_read(window->wl_display)) {
-    wl_display_dispatch_pending(window->wl_display);
+  if (wl_display_prepare_read(window->wl_display)) {
+    /* If an event's already in the wayland queue we return */
+    return;
   }
 
   wl_display_flush(window->wl_display);
 
-  int rc = poll(fds, nfds, timeout * 1000);
-  if (rc < 0) {
-    wl_display_cancel_read(window->wl_display);
-    return;
-  }
+  poll(fds, nfds, timeout * 1000);
 
-  /* Handle any new wayland events */
   if (fds[0].revents & POLLIN) {
     wl_display_read_events(window->wl_display);
-    wl_display_dispatch_pending(window->wl_display);
   } else {
     wl_display_cancel_read(window->wl_display);
   }
