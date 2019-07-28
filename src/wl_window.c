@@ -1,5 +1,7 @@
 #include "window.h"
 
+#include "list.h"
+
 #include <assert.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -30,6 +32,8 @@ struct imv_window {
   EGLSurface           egl_surface;
   struct wl_egl_window *egl_window;
 
+  struct list *wl_outputs;
+
   int display_fd;
   int pipe_fds[2];
 
@@ -56,6 +60,13 @@ struct imv_window {
       double dy;
     } scroll;
   } pointer;
+};
+
+struct output_data {
+  struct wl_output *wl_output;
+  int scale;
+  int pending_scale;
+  bool contains_window;
 };
 
 static void set_nonblocking(int fd)
@@ -140,7 +151,7 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *keyboard,
   (void)group;
 }
 
-void keyboard_repeat(void *data, struct wl_keyboard *keyboard,
+static void keyboard_repeat(void *data, struct wl_keyboard *keyboard,
     int32_t rate, int32_t delay)
 {
   (void)data;
@@ -357,6 +368,54 @@ static const struct wl_seat_listener seat_listener = {
   .name = seat_name
 };
 
+static void output_geometry(void *data, struct wl_output *wl_output, int32_t x,
+    int32_t y, int32_t physical_width, int32_t physical_height,
+    int32_t subpixel, const char *make, const char *model, int32_t transform)
+{
+  (void)data;
+  (void)wl_output;
+  (void)x;
+  (void)y;
+  (void)physical_width;
+  (void)physical_height;
+  (void)subpixel;
+  (void)make;
+  (void)model;
+  (void)transform;
+}
+
+static void output_mode(void *data, struct wl_output *wl_output, uint32_t flags,
+    int32_t width, int32_t height, int32_t refresh)
+{
+  (void)data;
+  (void)wl_output;
+  (void)flags;
+  (void)width;
+  (void)height;
+  (void)refresh;
+}
+
+static void output_done(void *data, struct wl_output *wl_output)
+{
+  (void)data;
+  struct output_data *output_data = wl_output_get_user_data(wl_output);
+  output_data->scale = output_data->pending_scale;
+}
+
+static void output_scale(void *data, struct wl_output *wl_output, int32_t factor)
+{
+  (void)data;
+  struct output_data *output_data = wl_output_get_user_data(wl_output);
+  output_data->pending_scale = factor;
+}
+
+static const struct wl_output_listener output_listener = {
+  .geometry = output_geometry,
+  .mode = output_mode,
+  .done = output_done,
+  .scale = output_scale
+};
+
 static void on_global(void *data, struct wl_registry *registry, uint32_t id,
     const char *interface, uint32_t version)
 {
@@ -372,6 +431,13 @@ static void on_global(void *data, struct wl_registry *registry, uint32_t id,
   } else if (!strcmp(interface, "wl_seat")) {
     window->wl_seat = wl_registry_bind(registry, id, &wl_seat_interface, version);
     wl_seat_add_listener(window->wl_seat, &seat_listener, window);
+  } else if (!strcmp(interface, "wl_output")) {
+    struct output_data *output_data = calloc(1, sizeof *output_data);
+    output_data->wl_output = wl_registry_bind(registry, id, &wl_output_interface, version);
+    output_data->pending_scale = 1;
+    wl_output_set_user_data(output_data->wl_output, output_data);
+    wl_output_add_listener(output_data->wl_output, &output_listener, output_data);
+    list_append(window->wl_outputs, output_data);
   }
 }
 
@@ -382,9 +448,66 @@ static void on_remove_global(void *data, struct wl_registry *registry, uint32_t 
   (void)id;
 }
 
+static void update_scale(struct imv_window *window)
+{
+  int new_scale = 1;
+  for (size_t i = 0; i < window->wl_outputs->len; ++i) {
+    struct output_data *data = window->wl_outputs->items[i];
+    if (data->contains_window && data->scale > new_scale) {
+      new_scale = data->scale;
+    }
+  }
+
+  if (new_scale != window->scale) {
+    window->scale = new_scale;
+    wl_surface_set_buffer_scale(window->wl_surface, window->scale);
+    wl_surface_commit(window->wl_surface);
+    size_t buffer_width = window->width * window->scale;
+    size_t buffer_height = window->height * window->scale;
+    wl_egl_window_resize(window->egl_window, buffer_width, buffer_height, 0, 0);
+    glViewport(0, 0, buffer_width, buffer_height);
+
+    struct imv_event e = {
+      .type = IMV_EVENT_RESIZE,
+      .data = {
+        .resize = {
+          .width = window->width,
+          .height = window->height,
+          .buffer_width = buffer_width,
+          .buffer_height = buffer_height
+        }
+      }
+    };
+    imv_window_push_event(window, &e);
+  }
+}
+
 static const struct wl_registry_listener registry_listener = {
     .global = on_global,
     .global_remove = on_remove_global
+};
+
+static void surface_enter(void *data, struct wl_surface *wl_surface,
+    struct wl_output *output)
+{
+  (void)wl_surface;
+  struct output_data *output_data = wl_output_get_user_data(output);
+  output_data->contains_window = true;
+  update_scale(data);
+}
+
+static void surface_leave(void *data, struct wl_surface *wl_surface,
+    struct wl_output *output)
+{
+  (void)wl_surface;
+  struct output_data *output_data = wl_output_get_user_data(output);
+  output_data->contains_window = false;
+  update_scale(data);
+}
+
+static const struct wl_surface_listener surface_listener = {
+  .enter = surface_enter,
+  .leave = surface_leave
 };
 
 static void surface_configure(void *data, struct xdg_surface *surface, uint32_t serial)
@@ -394,7 +517,7 @@ static void surface_configure(void *data, struct xdg_surface *surface, uint32_t 
   wl_surface_commit(window->wl_surface);
 }
 
-static const struct xdg_surface_listener surface_listener = {
+static const struct xdg_surface_listener shell_surface_listener = {
   .configure = surface_configure
 };
 
@@ -414,8 +537,10 @@ static void toplevel_configure(void *data, struct xdg_toplevel *toplevel,
       window->fullscreen = true;
     }
   }
-  wl_egl_window_resize(window->egl_window, width, height, 0, 0);
-  glViewport(0, 0, width * window->scale, height * window->scale);
+  size_t buffer_width = window->width * window->scale;
+  size_t buffer_height = window->height * window->scale;
+  wl_egl_window_resize(window->egl_window, buffer_width, buffer_height, 0, 0);
+  glViewport(0, 0, buffer_width, buffer_height);
 
   struct imv_event e = {
     .type = IMV_EVENT_RESIZE,
@@ -487,11 +612,12 @@ static void create_window(struct imv_window *window, int width, int height,
 
   window->wl_surface = wl_compositor_create_surface(window->wl_compositor);
   assert(window->wl_surface);
+  wl_surface_add_listener(window->wl_surface, &surface_listener, window);
 
   window->wl_xdg_surface = xdg_wm_base_get_xdg_surface(window->wl_xdg, window->wl_surface);
   assert(window->wl_xdg_surface);
 
-  xdg_surface_add_listener(window->wl_xdg_surface, &surface_listener, window);
+  xdg_surface_add_listener(window->wl_xdg_surface, &shell_surface_listener, window);
 
   window->wl_xdg_toplevel = xdg_surface_get_toplevel(window->wl_xdg_surface);
   assert(window->wl_xdg_toplevel);
@@ -530,6 +656,7 @@ struct imv_window *imv_window_create(int width, int height, const char *title)
 {
   struct imv_window *window = calloc(1, sizeof *window);
   window->scale = 1;
+  window->wl_outputs = list_create();
   connect_to_wayland(window);
   create_window(window, width, height, title);
   return window;
@@ -538,6 +665,7 @@ struct imv_window *imv_window_create(int width, int height, const char *title)
 void imv_window_free(struct imv_window *window)
 {
   shutdown_wayland(window);
+  list_deep_free(window->wl_outputs);
   free(window);
 }
 
