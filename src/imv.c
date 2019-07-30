@@ -174,8 +174,9 @@ struct imv {
 
 static void command_quit(struct list *args, const char *argstr, void *data);
 static void command_pan(struct list *args, const char *argstr, void *data);
-static void command_select_rel(struct list *args, const char *argstr, void *data);
-static void command_select_abs(struct list *args, const char *argstr, void *data);
+static void command_next(struct list *args, const char *argstr, void *data);
+static void command_prev(struct list *args, const char *argstr, void *data);
+static void command_goto(struct list *args, const char *argstr, void *data);
 static void command_zoom(struct list *args, const char *argstr, void *data);
 static void command_open(struct list *args, const char *argstr, void *data);
 static void command_close(struct list *args, const char *argstr, void *data);
@@ -509,8 +510,9 @@ struct imv *imv_create(void)
 
   imv_command_register(imv->commands, "quit", &command_quit);
   imv_command_register(imv->commands, "pan", &command_pan);
-  imv_command_register(imv->commands, "select_rel", &command_select_rel);
-  imv_command_register(imv->commands, "select_abs", &command_select_abs);
+  imv_command_register(imv->commands, "next", &command_next);
+  imv_command_register(imv->commands, "prev", &command_prev);
+  imv_command_register(imv->commands, "goto", &command_goto);
   imv_command_register(imv->commands, "zoom", &command_zoom);
   imv_command_register(imv->commands, "open", &command_open);
   imv_command_register(imv->commands, "close", &command_close);
@@ -525,12 +527,12 @@ struct imv *imv_create(void)
   imv_command_register(imv->commands, "slideshow_duration", &command_set_slideshow_duration);
 
   add_bind(imv, "q", "quit");
-  add_bind(imv, "<Left>", "select_rel -1");
-  add_bind(imv, "<bracketleft>", "select_rel -1");
-  add_bind(imv, "<Right>", "select_rel 1");
-  add_bind(imv, "<bracketright>", "select_rel 1");
-  add_bind(imv, "gg", "select_abs 0");
-  add_bind(imv, "<Shift+G>", "select_abs -1");
+  add_bind(imv, "<Left>", "prev");
+  add_bind(imv, "<bracketleft>", "prev");
+  add_bind(imv, "<Right>", "next");
+  add_bind(imv, "<bracketright>", "next");
+  add_bind(imv, "gg", "goto 0");
+  add_bind(imv, "<Shift+G>", "goto -1");
   add_bind(imv, "j", "pan 0 -50");
   add_bind(imv, "k", "pan 0 50");
   add_bind(imv, "h", "pan 50 0");
@@ -1397,21 +1399,37 @@ static void command_pan(struct list *args, const char *argstr, void *data)
   imv_viewport_move(imv->view, x, y, imv->current_image);
 }
 
-static void command_select_rel(struct list *args, const char *argstr, void *data)
+static void command_next(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
   struct imv *imv = data;
-  if (args->len != 2) {
-    return;
+  long int index = 1;
+
+  if (args->len >= 2) {
+    index = strtol(args->items[1], NULL, 10);
   }
 
-  long int index = strtol(args->items[1], NULL, 10);
   imv_navigator_select_rel(imv->navigator, index);
 
   imv->slideshow.elapsed = 0;
 }
 
-static void command_select_abs(struct list *args, const char *argstr, void *data)
+static void command_prev(struct list *args, const char *argstr, void *data)
+{
+  (void)argstr;
+  struct imv *imv = data;
+  long int index = 1;
+
+  if (args->len >= 2) {
+    index = strtol(args->items[1], NULL, 10);
+  }
+
+  imv_navigator_select_rel(imv->navigator, -index);
+
+  imv->slideshow.elapsed = 0;
+}
+
+static void command_goto(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
   struct imv *imv = data;
@@ -1420,7 +1438,7 @@ static void command_select_abs(struct list *args, const char *argstr, void *data
   }
 
   long int index = strtol(args->items[1], NULL, 10);
-  imv_navigator_select_abs(imv->navigator, index);
+  imv_navigator_select_abs(imv->navigator, index - 1);
 
   imv->slideshow.elapsed = 0;
 }
