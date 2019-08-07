@@ -63,12 +63,6 @@ Options
 *-u* <linear|nearest_neighbour>::
 	Set upscaling method used by imv.
 
-*-w*::
-	Enable automatic resizing of the window to fit each image.
-
-*-W*::
-	Enable automatic resizing and recentering of the window to fit each image.
-
 *-x*::
 	Disable looping of input paths.
 
@@ -78,25 +72,31 @@ Commands
 Commands can be entered by pressing *:*. imv supports the following commands:
 
 *quit*::
-	Quit imv.
+	Quit imv. Aliased to 'q'.
 
 *pan* <x> <y>::
 	Pan the view by the given amounts.
 
-*select_rel* <offset>::
-	Select a different image. '1' is the next one, '-1' is the previous.
+*next* <offset>::
+	Move forwards by a given number of images. Aliased to 'n'
 
-*select_abs* <index>::
+*prev* <offset>::
+	Move backwards by a given number of images. Aliased to 'p'
+
+*goto* <index>::
 	Select an image by index. '1' is the first image, '2' the second, etc.
 	The last image can be indexed as '-1', the second last as '-2'.
+	Aliased to 'g'.
 
 *zoom* <amount|'actual'>::
 	Zoom into the image by the given amount. Negative values zoom out.
 	'actual' resets the zoom to 100%, showing the image at its actual size.
+	Aliased to 'z'.
 
 *open* [-r] <paths ...>::
 	Add the given paths to the list of open images. If the '-r' option is
 	specified, do so recursively. Shell expansions may be used.
+	Aliased to 'o'.
 
 *close*::
 	Close the currently selected image.
@@ -125,12 +125,17 @@ Commands can be entered by pressing *:*. imv supports the following commands:
 *toggle_playing*::
 	Toggle playback of the current image if it is an animated gif.
 
-*scaling_mode* <none|shrink|full|next>::
+*scaling* <none|shrink|full|next>::
 	Set the current scaling mode. Setting the mode to 'next' advances it to the
 	next mode in the list.
 
-*slideshow_duration* <amount>::
-	Change the slideshow duration by the given amount in seconds.
+*slideshow* <+amount|-amount|duration>::
+	Increase or decrease the slideshow duration by the given amount in seconds,
+	or set its duration directly. Aliased to 'ss'.
+
+*background* <checks|hexadecimal-code>::
+	Set the background color. 'checks' for a chequerboard pattern, or specify
+	a 6-digit hexadecimal color code. Aliased to 'bg'.
 
 Configuration
 -------------
@@ -186,10 +191,17 @@ customising the window's title, or the overlay text.
 *$imv_slideshow_elapsed*::
 	How long the current image has been shown for.
 
+IPC
+---
+
+imv can accept commands from another process over a unix socket. Each instance
+of imv will open a unix socket named '$XDG_RUNTIME_DIR/imv-$PID.sock'. If
+$XDG_RUNTIME_DIR is undefined, the socket is placed into '/tmp/' instead.
+
 Authors
 -------
 
-imv is written and maintained by Harry Jeffery <harry@exec64.co.uk>
+imv is written and maintained by Harry Jeffery <me@harry.pm>
 with contributions from other developers.
 
 Full source code and other information can be found at

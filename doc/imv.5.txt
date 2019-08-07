@@ -73,9 +73,6 @@ The *[options]* section accepts the following settings:
 	Start imv in slideshow mode, and set the amount of time to show each image
 	for in seconds. Defaults to '0', i.e. no slideshow.
 
-*stay_fullscreen_on_focus_loss* = <true|false>::
-	Stay full screen even when imv loses focus. Defaults to 'false'.
-
 *suppress_default_binds* = <true|false>::
 	Disable imv's built-in binds so they don't conflict with custom ones.
 	Defaults to 'false'.
@@ -91,9 +88,10 @@ The *[options]* section accepts the following settings:
 Aliases
 -------
 
-The *[aliases]* section allows imv's commands to be aliases. For example:
-'q = quit' would add a 'q' command that simply executes the 'quit' command.
-And 'next = select_rel 1' would add a 'next' command to imv.
+The *[aliases]* section allows aliases to be added for imv's build in commands.
+For example, 'x = close' would add a 'x' command that simply executes the
+'close' command.  Any arguments provided to an alias are appended to the
+command configured by the alias.
 
 Binds
 -----
@@ -110,139 +108,21 @@ Single keys such as 'q' are just that: 'q = quit' will bind the 'q' key to the
 'quit' command.
 
 Modifier keys can be specified by prefixing them: 'Ctrl+q', 'Meta+f',
-'Shift+g'. If multiple modifier keys are desired, they are specified in the
+'Shift+G'. If multiple modifier keys are desired, they are specified in the
 order 'Ctrl+Meta+Shift'. When a key's name is more than a single character,
 or a modifier is used it must be wrapped in '<' and '>', for example:
 '<Ctrl+q>'.
 
 Multiple keys in succession can be specified by listing them in order:
-'gg = select_abs 0' will bind two presses of the 'g' key to jump to the first
+'gg = goto 0' will bind two presses of the 'g' key to jump to the first
 image, and '<Ctrl+a>p = exec echo hi' will bind the key sequence of 'Ctrl+a'
 followed by 'p' to executing the shell command 'echo hi'.
 
-N.B. Special characters such as '!' are not named directly, and are accessed
-by their regular key, combined with the shift modifier: 'Shift+1'.
+Many keys, such as '<', and '>' have special names. On X11, these can be easily
+found with the xev(1) command. For example, '!' is called 'exclam', '<' is
+called 'less', '>' is called 'greater'.
 
-Some keys, such as '<', and '>' have special names, to avoid conflits with
-the bind syntax, or the config file format. Other keys with no character
-associated with them, such as the 'Return' key or the arrow keys also have
-special names. These are as follows:
-
-*Application*::
-	The Application / Compose / Context Menu / Alt Gr key.
-
-*AudioMute*::
-	The mute volume key.
-
-*AudioNext*::
-	The next track media key.
-
-*AudioPlay*::
-	The play media key.
-
-*AudioPrev*::
-	The previous track media key.
-
-*AudioStop*::
-	The stop media key.
-
-*Backspace*::
-	The backspace key.
-
-*BrightnessDown*::
-	The brightness down key.
-
-*BrightnessUp*::
-	The brightness up key.
-
-*Cancel*::
-	The cancel key.
-
-*Clear*::
-	The clear key.
-
-*Delete*::
-	The delete key.
-
-*Down*::
-	The down arrow key.
-
-*Eject*::
-	The eject key.
-
-*End*::
-	The end key.
-
-*Escape*::
-	The Esc / escape key.
-
-*Equals*::
-	The = key.
-
-*F<1-24>*::
-	The F keys.
-
-*Home*::
-	The home key.
-
-*Keypad <00|000|0-9>*::
-	The numeric keypad number keys.
-
-*Keypad Backspace*::
-	The numeric keypad backspace key.
-
-*Keypad Clear*::
-	The numeric keypad clear key.
-
-*Keypad Enter*::
-	The numeric keypad enter key.
-
-*Keypad -*::
-	The numeric keypad subtract key.
-
-*Keypad +*::
-	The numeric keypad add key.
-
-*Left*::
-	The left arrow key.
-
-*LeftSquareBracket*::
-	The [ key.
-
-*Mute*::
-	The mute key.
-
-*PageDown*::
-	The page down key.
-
-*PageUp*::
-	The page down key.
-
-*Pause*::
-	The pause key.
-
-*Return*::
-	The return / enter key.
-
-*Right*::
-	The right arrow key.
-
-*RightSquareBracket*::
-	The ] key.
-
-*Space*::
-	The space bar.
-
-*Up*::
-	The up arrow key.
-
-*VolumeDown*::
-	The volume down key.
-
-*VolumeUp*::
-	The volume up key.
-
-See Also
---------
+A complete list of keysyms can also be found on most systems with the
+'dumpkeys -l' command.
 
 **imv**(1)

@@ -752,7 +752,7 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
   int o;
 
  /* TODO getopt_long */
-  while ((o = getopt(argc, argv, "frdwWxhvlu:s:n:b:t:")) != -1) {
+  while ((o = getopt(argc, argv, "frdxhvlu:s:n:b:t:")) != -1) {
     switch(o) {
       case 'f': imv->start_fullscreen = true;                    break;
       case 'r': imv->recursive_load = true;                      break;
