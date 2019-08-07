@@ -48,7 +48,7 @@ void list_remove(struct list *list, size_t index)
     return;
   }
 
-  memmove(&list->items[index], &list->items[index + 1], list->len - index);
+  memmove(&list->items[index], &list->items[index + 1], sizeof(void*) * (list->len - index));
 
   list->len -= 1;
 }
@@ -61,7 +61,7 @@ void list_insert(struct list *list, size_t index, void *item)
     index = list->len;
   }
 
-  memmove(&list->items[index + 1], &list->items[index], list->len - index);
+  memmove(&list->items[index + 1], &list->items[index], sizeof(void*) * (list->len - index));
   list->items[index] = item;
   list->len += 1;
 }
