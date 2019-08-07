@@ -51,6 +51,9 @@ struct imv_canvas *imv_canvas_create(int width, int height)
 
 void imv_canvas_free(struct imv_canvas *canvas)
 {
+  if (!canvas) {
+    return;
+  }
   pango_font_description_free(canvas->font);
   canvas->font = NULL;
   cairo_destroy(canvas->cairo);
