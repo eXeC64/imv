@@ -510,18 +510,12 @@ struct imv *imv_create(void)
   );
 
   imv_command_register(imv->commands, "quit", &command_quit);
-  imv_command_register(imv->commands, "q", &command_quit);
   imv_command_register(imv->commands, "pan", &command_pan);
   imv_command_register(imv->commands, "next", &command_next);
-  imv_command_register(imv->commands, "n", &command_next);
   imv_command_register(imv->commands, "prev", &command_prev);
-  imv_command_register(imv->commands, "p", &command_prev);
   imv_command_register(imv->commands, "goto", &command_goto);
-  imv_command_register(imv->commands, "g", &command_goto);
   imv_command_register(imv->commands, "zoom", &command_zoom);
-  imv_command_register(imv->commands, "z", &command_zoom);
   imv_command_register(imv->commands, "open", &command_open);
-  imv_command_register(imv->commands, "o", &command_open);
   imv_command_register(imv->commands, "close", &command_close);
   imv_command_register(imv->commands, "fullscreen", &command_fullscreen);
   imv_command_register(imv->commands, "overlay", &command_overlay);
@@ -533,7 +527,15 @@ struct imv *imv_create(void)
   imv_command_register(imv->commands, "scaling", &command_set_scaling_mode);
   imv_command_register(imv->commands, "slideshow", &command_set_slideshow_duration);
   imv_command_register(imv->commands, "background", &command_set_background);
-  imv_command_register(imv->commands, "bg", &command_set_background);
+
+  imv_command_alias(imv->commands, "q", "quit");
+  imv_command_alias(imv->commands, "n", "next");
+  imv_command_alias(imv->commands, "p", "prev");
+  imv_command_alias(imv->commands, "g", "goto");
+  imv_command_alias(imv->commands, "z", "zoom");
+  imv_command_alias(imv->commands, "o", "open");
+  imv_command_alias(imv->commands, "bg", "background");
+  imv_command_alias(imv->commands, "ss", "slideshow");
 
   add_bind(imv, "q", "quit");
   add_bind(imv, "<Left>", "prev");
@@ -563,8 +565,8 @@ struct imv *imv_create(void)
   add_bind(imv, "r", "reset");
   add_bind(imv, "<period>", "next_frame");
   add_bind(imv, "<space>", "toggle_playing");
-  add_bind(imv, "t", "slideshow_duration +1");
-  add_bind(imv, "<Shift+T>", "slideshow_duration -1");
+  add_bind(imv, "t", "slideshow +1");
+  add_bind(imv, "<Shift+T>", "slideshow -1");
 
   return imv;
 }
