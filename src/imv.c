@@ -16,6 +16,7 @@
 #include "console.h"
 #include "image.h"
 #include "ini.h"
+#include "ipc.h"
 #include "keyboard.h"
 #include "list.h"
 #include "log.h"
@@ -56,7 +57,8 @@ struct backend_chain {
 enum internal_event_type {
   NEW_IMAGE,
   BAD_IMAGE,
-  NEW_PATH
+  NEW_PATH,
+  COMMAND
 };
 
 struct internal_event {
@@ -73,6 +75,9 @@ struct internal_event {
     struct {
       char *path;
     } new_path;
+    struct {
+      char *text;
+    } command;
   } data;
 };
 
@@ -162,6 +167,7 @@ struct imv {
   struct imv_source *last_source;
   struct imv_commands *commands;
   struct imv_console *console;
+  struct imv_ipc *ipc;
   struct imv_viewport *view;
   struct imv_keyboard *keyboard;
   struct imv_canvas *canvas;
@@ -368,11 +374,18 @@ static void source_callback(struct imv_source_message *msg)
 static void command_callback(const char *text, void *data)
 {
   struct imv *imv = data;
-  struct list *commands = list_create();
-  list_append(commands, strdup(text));
-  imv_command_exec_list(imv->commands, commands, imv);
-  list_deep_free(commands);
-  imv->need_redraw = true;
+
+  struct internal_event *event = calloc(1, sizeof *event);
+  event->type = COMMAND;
+  event->data.command.text = strdup(text);
+
+  struct imv_event e = {
+    .type = IMV_EVENT_CUSTOM,
+    .data = {
+      .custom = event
+    }
+  };
+  imv_window_push_event(imv->window, &e);
 }
 
 static void key_handler(struct imv *imv, int scancode, bool pressed)
@@ -498,6 +511,8 @@ struct imv *imv_create(void)
   imv->commands = imv_commands_create();
   imv->console = imv_console_create();
   imv_console_set_command_callback(imv->console, &command_callback, imv);
+  imv->ipc = imv_ipc_create();
+  imv_ipc_set_command_callback(imv->ipc, &command_callback, imv);
   imv->title_text = strdup(
       "imv - [${imv_current_index}/${imv_file_count}]"
       " [${imv_width}x${imv_height}] [${imv_scale}%]"
@@ -583,6 +598,7 @@ void imv_free(struct imv *imv)
   }
   imv_commands_free(imv->commands);
   imv_console_free(imv->console);
+  imv_ipc_free(imv->ipc);
   imv_viewport_free(imv->view);
   imv_keyboard_free(imv->keyboard);
   imv_canvas_free(imv->canvas);
@@ -1137,6 +1153,13 @@ static void consume_internal_event(struct imv *imv, struct internal_event *event
     imv_add_path(imv, event->data.new_path.path);
     free(event->data.new_path.path);
     /* Need to update image count in title */
+    imv->need_redraw = true;
+
+  } else if (event->type == COMMAND) {
+    struct list *commands = list_create();
+    list_append(commands, event->data.command.text);
+    imv_command_exec_list(imv->commands, commands, imv);
+    list_deep_free(commands);
     imv->need_redraw = true;
   }
 

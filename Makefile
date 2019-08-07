@@ -29,6 +29,7 @@ SOURCES += src/console.c
 SOURCES += src/image.c
 SOURCES += src/imv.c
 SOURCES += src/ini.c
+SOURCES += src/ipc.c
 SOURCES += src/keyboard.c
 SOURCES += src/list.c
 SOURCES += src/log.c
