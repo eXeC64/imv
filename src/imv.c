@@ -509,12 +509,18 @@ struct imv *imv_create(void)
   );
 
   imv_command_register(imv->commands, "quit", &command_quit);
+  imv_command_register(imv->commands, "q", &command_quit);
   imv_command_register(imv->commands, "pan", &command_pan);
   imv_command_register(imv->commands, "next", &command_next);
+  imv_command_register(imv->commands, "n", &command_next);
   imv_command_register(imv->commands, "prev", &command_prev);
+  imv_command_register(imv->commands, "p", &command_prev);
   imv_command_register(imv->commands, "goto", &command_goto);
+  imv_command_register(imv->commands, "g", &command_goto);
   imv_command_register(imv->commands, "zoom", &command_zoom);
+  imv_command_register(imv->commands, "z", &command_zoom);
   imv_command_register(imv->commands, "open", &command_open);
+  imv_command_register(imv->commands, "o", &command_open);
   imv_command_register(imv->commands, "close", &command_close);
   imv_command_register(imv->commands, "fullscreen", &command_fullscreen);
   imv_command_register(imv->commands, "overlay", &command_overlay);
@@ -523,8 +529,8 @@ struct imv *imv_create(void)
   imv_command_register(imv->commands, "reset", &command_reset);
   imv_command_register(imv->commands, "next_frame", &command_next_frame);
   imv_command_register(imv->commands, "toggle_playing", &command_toggle_playing);
-  imv_command_register(imv->commands, "scaling_mode", &command_set_scaling_mode);
-  imv_command_register(imv->commands, "slideshow_duration", &command_set_slideshow_duration);
+  imv_command_register(imv->commands, "scaling", &command_set_scaling_mode);
+  imv_command_register(imv->commands, "slideshow", &command_set_slideshow_duration);
 
   add_bind(imv, "q", "quit");
   add_bind(imv, "<Left>", "prev");
