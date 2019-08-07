@@ -83,11 +83,14 @@ int imv_navigator_add(struct imv_navigator *nav, const char *path,
           continue;
         }
         snprintf(path_buf, sizeof path_buf, "%s/%s", path, dir->d_name);
-        if (recursive) {
+        struct stat new_path_info;
+        stat(path_buf, &new_path_info);
+        int is_dir = S_ISDIR(new_path_info.st_mode);
+        if (is_dir && recursive) {
           if (imv_navigator_add(nav, path_buf, recursive) != 0) {
             return 1;
           }
-        } else {
+        } else if (!is_dir) {
           if (add_item(nav, path_buf) != 0) {
             return 1;
           }
