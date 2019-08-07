@@ -189,6 +189,7 @@ static void command_next_frame(struct list *args, const char *argstr, void *data
 static void command_toggle_playing(struct list *args, const char *argstr, void *data);
 static void command_set_scaling_mode(struct list *args, const char *argstr, void *data);
 static void command_set_slideshow_duration(struct list *args, const char *argstr, void *data);
+static void command_set_background(struct list *args, const char *argstr, void *data);
 
 static bool setup_window(struct imv *imv);
 static void consume_internal_event(struct imv *imv, struct internal_event *event);
@@ -531,6 +532,8 @@ struct imv *imv_create(void)
   imv_command_register(imv->commands, "toggle_playing", &command_toggle_playing);
   imv_command_register(imv->commands, "scaling", &command_set_scaling_mode);
   imv_command_register(imv->commands, "slideshow", &command_set_slideshow_duration);
+  imv_command_register(imv->commands, "background", &command_set_background);
+  imv_command_register(imv->commands, "bg", &command_set_background);
 
   add_bind(imv, "q", "quit");
   add_bind(imv, "<Left>", "prev");
@@ -1608,6 +1611,15 @@ static void command_set_slideshow_duration(struct list *args, const char *argstr
     }
 
     imv->need_redraw = true;
+  }
+}
+
+static void command_set_background(struct list *args, const char *argstr, void *data)
+{
+  (void)argstr;
+  struct imv *imv = data;
+  if (args->len == 2) {
+    parse_bg(imv, args->items[1]);
   }
 }
 
