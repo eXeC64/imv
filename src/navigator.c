@@ -10,22 +10,20 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#include "list.h"
+
 /* Some systems like GNU/Hurd don't define PATH_MAX */
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
 
-struct path {
+struct nav_item {
   char *path;
 };
 
 struct imv_navigator {
-  struct {
-    struct path *items;
-    ssize_t len;
-    ssize_t cap;
-  } paths;
-  ssize_t cur_path;
+  struct list *paths;
+  size_t cur_path;
   time_t last_change;
   time_t last_check;
   int last_move_direction;
@@ -37,40 +35,33 @@ struct imv_navigator *imv_navigator_create(void)
 {
   struct imv_navigator *nav = calloc(1, sizeof *nav);
   nav->last_move_direction = 1;
-  nav->paths.cap = 128;
-  nav->paths.items = malloc(nav->paths.cap * sizeof *nav->paths.items);
+  nav->paths = list_create();
   return nav;
 }
 
 void imv_navigator_free(struct imv_navigator *nav)
 {
-  for (ssize_t i = 0; i < nav->paths.len; ++i) {
-    struct path *path = &nav->paths.items[i];
-    free(path->path);
+  for (size_t i = 0; i < nav->paths->len; ++i) {
+    struct nav_item *nav_item = nav->paths->items[i];
+    free(nav_item->path);
   }
-  free(nav->paths.items);
+  list_deep_free(nav->paths);
   free(nav);
 }
 
 static int add_item(struct imv_navigator *nav, const char *path)
 {
-  if (nav->paths.cap == nav->paths.len) {
-    ssize_t new_cap = nav->paths.cap * 2;
-    struct path *new_paths = realloc(nav->paths.items, new_cap * sizeof *nav->paths.items);
-    assert(new_paths);
-    nav->paths.items = new_paths;
+  struct nav_item *nav_item = calloc(1, sizeof *nav_item);
+
+  nav_item->path = realpath(path, NULL);
+  if (!nav_item->path) {
+    nav_item->path = strdup(path);
   }
 
-  char *raw_path = realpath(path, NULL);
-  if (!raw_path) {
-    return 1;
-  }
+  list_append(nav->paths, nav_item);
 
-  struct path *new_path = &nav->paths.items[nav->paths.len++];
-  memset(new_path, 0, sizeof *new_path);
-  new_path->path = strdup(path);
-
-  if (nav->paths.len == 1) {
+  if (nav->paths->len == 1) {
+    nav->cur_path = 0;
     nav->changed = 1;
   }
 
@@ -113,53 +104,51 @@ int imv_navigator_add(struct imv_navigator *nav, const char *path,
 
 const char *imv_navigator_selection(struct imv_navigator *nav)
 {
-  if (nav->paths.len == 0) {
-    return "";
-  }
-  return nav->paths.items[nav->cur_path].path;
+  const char *path = imv_navigator_at(nav, nav->cur_path);
+  return path ? path : "";
 }
 
 size_t imv_navigator_index(struct imv_navigator *nav)
 {
-  return (size_t)nav->cur_path;
+  return nav->cur_path;
 }
 
-void imv_navigator_select_rel(struct imv_navigator *nav, int direction)
+void imv_navigator_select_rel(struct imv_navigator *nav, ssize_t direction)
 {
   const ssize_t prev_path = nav->cur_path;
-  if (nav->paths.len == 0) {
+  if (nav->paths->len == 0) {
     return;
   }
 
   if (direction > 1) {
-    direction = direction % nav->paths.len;
+    direction = direction % nav->paths->len;
   } else if (direction < -1) {
-    direction = direction % nav->paths.len;
+    direction = direction % nav->paths->len;
   } else if (direction == 0) {
     return;
   }
 
-  nav->cur_path += direction;
-  if (nav->cur_path >= nav->paths.len) {
+  ssize_t new_path = nav->cur_path + direction;
+  if (new_path >= (ssize_t)nav->paths->len) {
     /* Wrap after the end of the list */
-    nav->cur_path = nav->cur_path - nav->paths.len;
+    new_path -= (ssize_t)nav->paths->len;
     nav->wrapped = 1;
-  } else if (nav->cur_path < 0) {
+  } else if (new_path < 0) {
     /* Wrap before the start of the list */
-    nav->cur_path = nav->paths.len + nav->cur_path;
+    new_path += (ssize_t)nav->paths->len;
     nav->wrapped = 1;
   }
+  nav->cur_path = (size_t)new_path;
   nav->last_move_direction = direction;
-  nav->changed = prev_path != nav->cur_path;
+  nav->changed = prev_path != new_path;
   return;
 }
 
-void imv_navigator_select_abs(struct imv_navigator *nav, int index)
+void imv_navigator_select_abs(struct imv_navigator *nav, ssize_t index)
 {
-  const ssize_t prev_path = nav->cur_path;
   /* allow -1 to indicate the last image */
   if (index < 0) {
-    index += nav->paths.len;
+    index += (ssize_t)nav->paths->len;
 
     /* but if they go farther back than the first image, stick to first image */
     if (index < 0) {
@@ -168,35 +157,35 @@ void imv_navigator_select_abs(struct imv_navigator *nav, int index)
   }
 
   /* stick to last image if we go beyond it */
-  if (index >= nav->paths.len) {
-    index = nav->paths.len - 1;
+  if (index >= (ssize_t)nav->paths->len) {
+    index = (ssize_t)nav->paths->len - 1;
   }
 
-  nav->cur_path = index;
+  const size_t prev_path = nav->cur_path;
+  nav->cur_path = (size_t)index;
   nav->changed = prev_path != nav->cur_path;
-  nav->last_move_direction = (index >= prev_path) ? 1 : -1;
+  nav->last_move_direction = (index >= (ssize_t)prev_path) ? 1 : -1;
 }
 
 void imv_navigator_remove(struct imv_navigator *nav, const char *path)
 {
-  ssize_t removed = -1;
-  for (ssize_t i = 0; i < nav->paths.len; ++i) {
-    if (!strcmp(path, nav->paths.items[i].path)) {
+  bool found = false;
+  size_t removed = 0;
+  for (size_t i = 0; i < nav->paths->len; ++i) {
+    struct nav_item *item = nav->paths->items[i];
+    if (!strcmp(item->path, path)) {
+      free(item->path);
+      free(item);
+      list_remove(nav->paths, i);
       removed = i;
-      free(nav->paths.items[i].path);
+      found = true;
       break;
     }
   }
 
-  if (removed == -1) {
+  if (!found) {
     return;
   }
-
-  for (ssize_t i = removed; i < nav->paths.len - 1; ++i) {
-    nav->paths.items[i] = nav->paths.items[i+1];
-  }
-
-  nav->paths.len -= 1;
 
   if (nav->cur_path == removed) {
     /* We just removed the current path */
@@ -205,7 +194,7 @@ void imv_navigator_remove(struct imv_navigator *nav, const char *path)
       imv_navigator_select_rel(nav, -1);
     } else {
       /* Try to stay where we are, unless we ran out of room */
-      if (nav->cur_path == nav->paths.len) {
+      if (nav->cur_path == nav->paths->len) {
         nav->cur_path = 0;
         nav->wrapped = 1;
       }
@@ -214,30 +203,22 @@ void imv_navigator_remove(struct imv_navigator *nav, const char *path)
   nav->changed = 1;
 }
 
-void imv_navigator_select_str(struct imv_navigator *nav, const int path)
-{
-  if (path <= 0 || path >= nav->paths.len) {
-    return;
-  }
-  ssize_t prev_path = nav->cur_path;
-  nav->cur_path = path;
-  nav->changed = prev_path != nav->cur_path;
-}
-
-int imv_navigator_find_path(struct imv_navigator *nav, const char *path)
+ssize_t imv_navigator_find_path(struct imv_navigator *nav, const char *path)
 {
   /* first try to match the exact path */
-  for (ssize_t i = 0; i < nav->paths.len; ++i) {
-    if (!strcmp(path, nav->paths.items[i].path)) {
-      return i;
+  for (size_t i = 0; i < nav->paths->len; ++i) {
+    struct nav_item *item = nav->paths->items[i];
+    if (!strcmp(item->path, path)) {
+      return (ssize_t)i;
     }
   }
 
   /* no exact matches, try the final portion of the path */
-  for (ssize_t i = 0; i < nav->paths.len; ++i) {
-    char *last_sep = strrchr(nav->paths.items[i].path, '/');
-    if (last_sep && strcmp(last_sep+1, path) == 0) {
-      return i;
+  for (size_t i = 0; i < nav->paths->len; ++i) {
+    struct nav_item *item = nav->paths->items[i];
+    char *last_sep = strrchr(item->path, '/');
+    if (last_sep && !strcmp(last_sep+1, path)) {
+      return (ssize_t)i;
     }
   }
 
@@ -253,7 +234,7 @@ int imv_navigator_poll_changed(struct imv_navigator *nav)
     return 1;
   }
 
-  if (nav->paths.len == 0) {
+  if (nav->paths->len == 0) {
     return 0;
   };
 
@@ -263,7 +244,8 @@ int imv_navigator_poll_changed(struct imv_navigator *nav)
     nav->last_check = cur_time;
 
     struct stat file_info;
-    if (stat(nav->paths.items[nav->cur_path].path, &file_info) == -1) {
+    struct nav_item *cur_item = nav->paths->items[nav->cur_path];
+    if (stat(cur_item->path, &file_info) == -1) {
       return 0;
     }
 
@@ -283,13 +265,14 @@ int imv_navigator_wrapped(struct imv_navigator *nav)
 
 size_t imv_navigator_length(struct imv_navigator *nav)
 {
-  return (size_t)nav->paths.len;
+  return nav->paths->len;
 }
 
-char *imv_navigator_at(struct imv_navigator *nav, int index)
+char *imv_navigator_at(struct imv_navigator *nav, size_t index)
 {
-  if (index >= 0 && index < nav->paths.len) {
-    return nav->paths.items[index].path;
+  if (index < nav->paths->len) {
+    struct nav_item *item = nav->paths->items[index];
+    return item->path;
   }
   return NULL;
 }

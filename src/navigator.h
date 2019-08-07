@@ -25,20 +25,17 @@ const char *imv_navigator_selection(struct imv_navigator *nav);
 size_t imv_navigator_index(struct imv_navigator *nav);
 
 /* Change the currently selected path. dir = -1 for previous, 1 for next. */
-void imv_navigator_select_rel(struct imv_navigator *nav, int dir);
+void imv_navigator_select_rel(struct imv_navigator *nav, ssize_t dir);
 
 /* Change the currently selected path. 0 = first, 1 = second, etc. */
-void imv_navigator_select_abs(struct imv_navigator *nav, int index);
+void imv_navigator_select_abs(struct imv_navigator *nav, ssize_t index);
 
 /* Removes the given path. The current selection is updated if necessary,
  * based on the last direction the selection moved. */
 void imv_navigator_remove(struct imv_navigator *nav, const char *path);
 
-/* Select the given path if it exists. */
-void imv_navigator_select_str(struct imv_navigator *nav, const int path);
-
 /* Return the index of the path given. Returns -1 if not found. */
-int imv_navigator_find_path(struct imv_navigator *nav, const char *path);
+ssize_t imv_navigator_find_path(struct imv_navigator *nav, const char *path);
 
 /* Returns 1 if either the currently selected path or underlying file has
  * changed since last called */
@@ -51,7 +48,7 @@ int imv_navigator_wrapped(struct imv_navigator *nav);
 size_t imv_navigator_length(struct imv_navigator *nav);
 
 /* Return a path for a given index */
-char *imv_navigator_at(struct imv_navigator *nav, int index);
+char *imv_navigator_at(struct imv_navigator *nav, size_t index);
 
 
 #endif

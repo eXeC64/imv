@@ -836,7 +836,7 @@ int imv_run(struct imv *imv)
   }
 
   if (imv->starting_path) {
-    int index = imv_navigator_find_path(imv->navigator, imv->starting_path);
+    ssize_t index = imv_navigator_find_path(imv->navigator, imv->starting_path);
     if (index == -1) {
       index = (int) strtol(imv->starting_path, NULL, 10);
       index -= 1; /* input is 1-indexed, internally we're 0 indexed */
@@ -846,7 +846,7 @@ int imv_run(struct imv *imv)
     }
 
     if (index >= 0) {
-      imv_navigator_select_str(imv->navigator, index);
+      imv_navigator_select_abs(imv->navigator, index);
     } else {
       imv_log(IMV_ERROR, "Invalid starting image: %s\n", imv->starting_path);
     }
