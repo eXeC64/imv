@@ -1601,15 +1601,24 @@ static void command_set_slideshow_duration(struct list *args, const char *argstr
   (void)argstr;
   struct imv *imv = data;
   if (args->len == 2) {
-    long int delta = strtol(args->items[1], NULL, 10);
+    const char *arg = args->items[1];
+    const char prefix = *arg;
 
-    /* Ensure we can't go below 0 */
-    if (delta < 0 && (size_t)labs(delta) > imv->slideshow.duration) {
-      imv->slideshow.duration = 0;
+    int new_duration = imv->slideshow.duration;
+
+    long int arg_num = strtol(arg, NULL, 10);
+
+    if (prefix == '+' || prefix == '-') {
+      new_duration += arg_num;
     } else {
-      imv->slideshow.duration += delta;
+      new_duration = arg_num;
     }
 
+    if (new_duration < 0) {
+      new_duration = 0;
+    }
+
+    imv->slideshow.duration = new_duration;
     imv->need_redraw = true;
   }
 }
