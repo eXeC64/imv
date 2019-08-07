@@ -864,13 +864,6 @@ int imv_run(struct imv *imv)
       break;
     }
 
-    /* if we're out of images, and we're not expecting more from stdin, quit */
-    if (!imv->paths_from_stdin && imv_navigator_length(imv->navigator) == 0) {
-      imv_log(IMV_INFO, "No input files left. Exiting.\n");
-      imv->quit = true;
-      continue;
-    }
-
     /* If the user has changed image, start loading the new one. It's possible
      * that there are lots of unsupported files listed back to back, so we
      * may immediate close one and navigate onto the next. So we attempt to
@@ -935,6 +928,12 @@ int imv_run(struct imv *imv)
         } else {
           /* Error loading path so remove it from the navigator */
           imv_navigator_remove(imv->navigator, current_path);
+        }
+      } else {
+        /* No image currently selected */
+        if (imv->current_image) {
+          imv_image_free(imv->current_image);
+          imv->current_image = NULL;
         }
       }
     }
@@ -1642,8 +1641,12 @@ static void update_env_vars(struct imv *imv)
   setenv("imv_scaling_mode", scaling_label[imv->scaling_mode], 1);
   setenv("imv_loading", imv->loading ? "1" : "0", 1);
 
-  snprintf(str, sizeof str, "%zu", imv_navigator_index(imv->navigator) + 1);
-  setenv("imv_current_index", str, 1);
+  if (imv_navigator_length(imv->navigator)) {
+    snprintf(str, sizeof str, "%zu", imv_navigator_index(imv->navigator) + 1);
+    setenv("imv_current_index", str, 1);
+  } else {
+    setenv("imv_current_index", "0", 1);
+  }
 
   snprintf(str, sizeof str, "%zu", imv_navigator_length(imv->navigator));
   setenv("imv_file_count", str, 1);
