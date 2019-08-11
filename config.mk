@@ -1,9 +1,10 @@
 # Configure window system to use
 
 #Choices:
+# all - Build both, determine which to use at runtime
 # wayland - Use wayland backend
 # x11 - Use X11 backend
-WINDOWS=wayland
+WINDOWS=all
 
 # Configure available backends:
 

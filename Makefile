@@ -17,7 +17,16 @@ override CPPFLAGS += -D_XOPEN_SOURCE=700
 override LIBS := -lGL -lpthread -lxkbcommon $(shell pkg-config --libs pangocairo)
 
 BUILDDIR ?= build
-TARGET := $(BUILDDIR)/imv
+TARGET_WL = $(BUILDDIR)/imv-wl
+TARGET_X11 = $(BUILDDIR)/imv-x11
+
+ifeq ($(WINDOWS),wayland)
+	TARGETS := $(TARGET_WL)
+else ifeq ($(WINDOWS),x11)
+	TARGETS := $(TARGET_X11)
+else ifeq ($(WINDOWS),all)
+	TARGETS := $(TARGET_WL) $(TARGET_X11)
+endif
 
 SOURCES := src/main.c
 
@@ -36,16 +45,11 @@ SOURCES += src/log.c
 SOURCES += src/navigator.c
 SOURCES += src/viewport.c
 
-ifeq ($(WINDOWS),wayland)
-	SOURCES += src/wl_window.c
-	SOURCES += src/xdg-shell-protocol.c
-	override LIBS += -lwayland-client -lwayland-egl -lEGL
-endif
+WL_SOURCES = src/wl_window.c src/xdg-shell-protocol.c
+WL_LIBS = -lwayland-client -lwayland-egl -lEGL
 
-ifeq ($(WINDOWS),x11)
-	SOURCES += src/x11_window.c
-	override LIBS += -lX11 -lGL -lGLU
-endif
+X11_SOURCES = src/x11_window.c
+X11_LIBS = -lX11 -lGL -lGLU
 
 # Add backends to build as configured
 ifeq ($(BACKEND_FREEIMAGE),yes)
@@ -82,6 +86,9 @@ endif
 TEST_SOURCES := test/list.c test/navigator.c
 
 OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
+WL_OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(WL_SOURCES))
+X11_OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(X11_SOURCES))
+
 TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(TEST_SOURCES))
 
 VERSION != git describe --dirty --always --tags 2> /dev/null || echo v3.1.2
@@ -91,13 +98,16 @@ override CPPFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
 TFLAGS ?= -g $(CFLAGS) $(CPPFLAGS) $(shell pkg-config --cflags cmocka)
 TLIBS := $(LIBS) $(shell pkg-config --libs cmocka)
 
-imv: $(TARGET)
+imv: $(TARGETS)
 
-$(TARGET): $(OBJECTS)
-	$(CC) -o $@ $^ $(LIBS) $(LDFLAGS)
+$(BUILDDIR)/imv-wl: $(OBJECTS) $(WL_OBJECTS)
+	$(CC) -o $@ $^ $(LIBS) $(WL_LIBS) $(LDFLAGS)
+
+$(BUILDDIR)/imv-x11: $(OBJECTS) $(X11_OBJECTS)
+	$(CC) -o $@ $^ $(LIBS) $(X11_LIBS) $(LDFLAGS)
 
 debug: CFLAGS += -DDEBUG -g -pg
-debug: $(TARGET)
+debug: $(TARGETS)
 
 $(OBJECTS): | $(BUILDDIR)
 
@@ -122,9 +132,17 @@ doc: doc/imv.1 doc/imv.5
 doc/%: doc/%.txt
 	a2x --no-xmllint --doctype manpage --format manpage $<
 
-install: $(TARGET) doc
+install: $(TARGETS) doc
 	mkdir -p $(DESTDIR)$(BINPREFIX)
-	$(INSTALL_PROGRAM) $(TARGET) $(DESTDIR)$(BINPREFIX)/imv
+	ifeq ($(WINDOWS),wayland)
+		$(INSTALL_PROGRAM) $(TARGET_WL) $(DESTDIR)$(BINPREFIX)/imv
+	else ifeq ($(WINDOWS),x11)
+		$(INSTALL_PROGRAM) $(TARGET_X11) $(DESTDIR)$(BINPREFIX)/imv
+	else ifeq ($(WINDOWS),all)
+		$(INSTALL_PROGRAM) $(TARGET_WL) $(DESTDIR)$(BINPREFIX)/imv-wl
+		$(INSTALL_PROGRAM) $(TARGET_X11) $(DESTDIR)$(BINPREFIX)/imv-x11
+		$(INSTALL_PROGRAM) src/imv.sh $(DESTDIR)$(BINPREFIX)/imv
+	endif
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
 	$(INSTALL_MAN) doc/imv.1 $(DESTDIR)$(MANPREFIX)/man1/imv.1
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man5
@@ -135,6 +153,10 @@ install: $(TARGET) doc
 	$(INSTALL_DATA) files/imv_config $(DESTDIR)$(CONFIGPREFIX)/imv_config
 
 uninstall:
+	ifeq ($(WINDOWS),all)
+		$(RM) $(DESTDIR)$(BINPREFIX)/imv-wl
+		$(RM) $(DESTDIR)$(BINPREFIX)/imv-x11
+	endif
 	$(RM) $(DESTDIR)$(BINPREFIX)/imv
 	$(RM) $(DESTDIR)$(MANPREFIX)/man1/imv.1
 	$(RM) $(DESTDIR)$(MANPREFIX)/man5/imv.5
