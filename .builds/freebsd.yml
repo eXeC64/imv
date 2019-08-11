@@ -18,7 +18,6 @@ tasks:
   - configure: |
       cd imv
       sed -i -e 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk
-      sed -i -e 's/WINDOWS=wayland/WINDOWS=x11/' config.mk
       cat config.mk
   - build: |
       cd imv

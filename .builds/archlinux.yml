@@ -18,23 +18,11 @@ tasks:
       cd imv
       sed -i -e 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk
       cat config.mk
-  - gcc-x11: |
+  - gcc: |
       cd imv
-      sed -i -e 's/WINDOWS=.*/WINDOWS=x11/' config.mk
-      CC=gcc BUILDDIR=gcc-x11 make
-      CC=gcc BUILDDIR=gcc-x11 make check
-  - clang-x11: |
+      CC=gcc BUILDDIR=gcc make
+      CC=gcc BUILDDIR=gcc make check
+  - clang: |
       cd imv
-      sed -i -e 's/WINDOWS=.*/WINDOWS=x11/' config.mk
-      CC=clang BUILDDIR=clang-x11 make
-      CC=clang BUILDDIR=clang-x11 make check
-  - gcc-wayland: |
-      cd imv
-      sed -i -e 's/WINDOWS=.*/WINDOWS=wayland/' config.mk
-      CC=gcc BUILDDIR=gcc-wayland make
-      CC=gcc BUILDDIR=gcc-wayland make check
-  - clang-wayland: |
-      cd imv
-      sed -i -e 's/WINDOWS=.*/WINDOWS=wayland/' config.mk
-      CC=clang BUILDDIR=clang-wayland make
-      CC=clang BUILDDIR=clang-wayland make check
+      CC=clang BUILDDIR=clang make
+      CC=clang BUILDDIR=clang make check
