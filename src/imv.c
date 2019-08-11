@@ -627,7 +627,7 @@ void imv_install_backend(struct imv *imv, const struct imv_backend *backend)
 
 static bool parse_bg(struct imv *imv, const char *bg)
 {
-  if (strcmp("checks", bg) == 0) {
+  if (!strcmp("checks", bg)) {
     imv->background.type = BACKGROUND_CHEQUERED;
   } else {
     imv->background.type = BACKGROUND_SOLID;
@@ -1181,9 +1181,9 @@ static void render_window(struct imv *imv)
   if (imv->background.type == BACKGROUND_SOLID) {
     imv_canvas_clear(imv->canvas);
     imv_canvas_color(imv->canvas,
-        imv->background.color.r,
-        imv->background.color.g,
-        imv->background.color.b,
+        imv->background.color.r / 255.f,
+        imv->background.color.g / 255.f,
+        imv->background.color.b / 255.f,
         1.0);
     imv_canvas_fill(imv->canvas);
     imv_canvas_draw(imv->canvas);
