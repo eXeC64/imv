@@ -117,7 +117,7 @@ $(BUILDDIR):
 $(BUILDDIR)/%.o: src/%.c Makefile
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
-$(BUILDDIR)/test_%: test/%.c $(filter-out src/main.c, $(SOURCES))
+$(BUILDDIR)/test_%: test/%.c src/dummy_window.c $(filter-out src/main.c, $(SOURCES))
 	$(CC) -o $@ -Isrc $(TFLAGS) $^ $(LDFLAGS) $(TLIBS)
 
 check: $(BUILDDIR) $(TESTS)
