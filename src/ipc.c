@@ -35,7 +35,7 @@ void *wait_for_commands(void* void_conn)
   while (1) {
     char buf[1024];
     ssize_t len = recv(conn->fd, buf, sizeof buf - 1, 0);
-    if (len == -1) {
+    if (len <= 0) {
       break;
     }
 
