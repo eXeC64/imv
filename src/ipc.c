@@ -19,16 +19,7 @@ struct connection {
   int fd;
 };
 
-static void get_ipc_filename(char *buf, size_t len)
-{
-  const char *base = getenv("XDG_RUNTIME_DIR");
-  if (!base) {
-    base = "/tmp";
-  }
-  snprintf(buf, len, "%s/imv-%d.sock", base, getpid());
-}
-
-void *wait_for_commands(void* void_conn)
+static void *wait_for_commands(void* void_conn)
 {
   struct connection *conn = void_conn;
 
@@ -55,7 +46,7 @@ void *wait_for_commands(void* void_conn)
   return NULL;
 }
 
-void *wait_for_connections(void* void_ipc)
+static void *wait_for_connections(void* void_ipc)
 {
   struct imv_ipc *ipc = void_ipc;
   (void)ipc;
@@ -86,7 +77,7 @@ struct imv_ipc *imv_ipc_create(void)
   struct sockaddr_un desc = {
     .sun_family = AF_UNIX
   };
-  get_ipc_filename(desc.sun_path, sizeof desc.sun_path);
+  imv_ipc_path(desc.sun_path, sizeof desc.sun_path, getpid());
 
   unlink(desc.sun_path);
 
@@ -115,7 +106,7 @@ void imv_ipc_free(struct imv_ipc *ipc)
   }
 
   char ipc_filename[1024];
-  get_ipc_filename(ipc_filename, sizeof ipc_filename);
+  imv_ipc_path(ipc_filename, sizeof ipc_filename, getpid());
   unlink(ipc_filename);
   close(ipc->fd);
 

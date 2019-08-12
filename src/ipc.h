@@ -1,6 +1,8 @@
 #ifndef IMV_IPC_H
 #define IMV_IPC_H
 
+#include <unistd.h>
+
 struct imv_ipc;
 
 struct imv_ipc *imv_ipc_create(void);
@@ -11,5 +13,7 @@ typedef void (*imv_ipc_callback)(const char *command, void *data);
 
 void imv_ipc_set_command_callback(struct imv_ipc *ipc,
     imv_ipc_callback callback, void *data);
+
+void imv_ipc_path(char *buf, size_t len, int pid);
 
 #endif

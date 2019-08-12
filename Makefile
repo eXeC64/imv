@@ -19,13 +19,14 @@ override LIBS := -lGL -lpthread -lxkbcommon $(shell pkg-config --libs pangocairo
 BUILDDIR ?= build
 TARGET_WL = $(BUILDDIR)/imv-wl
 TARGET_X11 = $(BUILDDIR)/imv-x11
+TARGET_MSG = $(BUILDDIR)/imv-msg
 
 ifeq ($(WINDOWS),wayland)
-	TARGETS := $(TARGET_WL)
+	TARGETS := $(TARGET_WL) $(TARGET_MSG)
 else ifeq ($(WINDOWS),x11)
-	TARGETS := $(TARGET_X11)
+	TARGETS := $(TARGET_X11) $(TARGET_MSG)
 else ifeq ($(WINDOWS),all)
-	TARGETS := $(TARGET_WL) $(TARGET_X11)
+	TARGETS := $(TARGET_WL) $(TARGET_X11) $(TARGET_MSG)
 endif
 
 SOURCES := src/main.c
@@ -39,6 +40,7 @@ SOURCES += src/image.c
 SOURCES += src/imv.c
 SOURCES += src/ini.c
 SOURCES += src/ipc.c
+SOURCES += src/ipc_common.c
 SOURCES += src/keyboard.c
 SOURCES += src/list.c
 SOURCES += src/log.c
@@ -50,6 +52,9 @@ WL_LIBS = -lwayland-client -lwayland-egl -lEGL
 
 X11_SOURCES = src/x11_window.c
 X11_LIBS = -lX11 -lGL -lGLU
+
+MSG_SOURCES = src/imv_msg.c src/ipc_common.c
+MSG_LIBS =
 
 # Add backends to build as configured
 ifeq ($(BACKEND_FREEIMAGE),yes)
@@ -88,6 +93,7 @@ TEST_SOURCES := test/list.c test/navigator.c
 OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SOURCES))
 WL_OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(WL_SOURCES))
 X11_OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(X11_SOURCES))
+MSG_OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(MSG_SOURCES))
 
 TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(TEST_SOURCES))
 
@@ -100,11 +106,14 @@ TLIBS := $(LIBS) $(shell pkg-config --libs cmocka)
 
 imv: $(TARGETS)
 
-$(BUILDDIR)/imv-wl: $(OBJECTS) $(WL_OBJECTS)
+$(TARGET_WL): $(OBJECTS) $(WL_OBJECTS)
 	$(CC) -o $@ $^ $(LIBS) $(WL_LIBS) $(LDFLAGS)
 
-$(BUILDDIR)/imv-x11: $(OBJECTS) $(X11_OBJECTS)
+$(TARGET_X11): $(OBJECTS) $(X11_OBJECTS)
 	$(CC) -o $@ $^ $(LIBS) $(X11_LIBS) $(LDFLAGS)
+
+$(TARGET_MSG): $(MSG_OBJECTS)
+	$(CC) -o $@ $^ $(MSG_LIBS) $(LDFLAGS)
 
 debug: CFLAGS += -DDEBUG -g -pg
 debug: $(TARGETS)
@@ -143,6 +152,7 @@ else ifeq ($(WINDOWS),all)
 		$(INSTALL_PROGRAM) $(TARGET_X11) $(DESTDIR)$(BINPREFIX)/imv-x11
 		$(INSTALL_PROGRAM) src/imv.sh $(DESTDIR)$(BINPREFIX)/imv
 endif
+	$(INSTALL_PROGRAM) $(TARGET_MSG) $(DESTDIR)$(BINPREFIX)/imv-msg
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
 	$(INSTALL_MAN) doc/imv.1 $(DESTDIR)$(MANPREFIX)/man1/imv.1
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man5
@@ -158,6 +168,7 @@ ifeq ($(WINDOWS),all)
 		$(RM) $(DESTDIR)$(BINPREFIX)/imv-x11
 endif
 	$(RM) $(DESTDIR)$(BINPREFIX)/imv
+	$(RM) $(DESTDIR)$(BINPREFIX)/imv-msg
 	$(RM) $(DESTDIR)$(MANPREFIX)/man1/imv.1
 	$(RM) $(DESTDIR)$(MANPREFIX)/man5/imv.5
 	$(RM) $(DESTDIR)$(DATAPREFIX)/applications/imv.desktop
