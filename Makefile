@@ -134,15 +134,15 @@ doc/%: doc/%.txt
 
 install: $(TARGETS) doc
 	mkdir -p $(DESTDIR)$(BINPREFIX)
-	ifeq ($(WINDOWS),wayland)
+ifeq ($(WINDOWS),wayland)
 		$(INSTALL_PROGRAM) $(TARGET_WL) $(DESTDIR)$(BINPREFIX)/imv
-	else ifeq ($(WINDOWS),x11)
+else ifeq ($(WINDOWS),x11)
 		$(INSTALL_PROGRAM) $(TARGET_X11) $(DESTDIR)$(BINPREFIX)/imv
-	else ifeq ($(WINDOWS),all)
+else ifeq ($(WINDOWS),all)
 		$(INSTALL_PROGRAM) $(TARGET_WL) $(DESTDIR)$(BINPREFIX)/imv-wl
 		$(INSTALL_PROGRAM) $(TARGET_X11) $(DESTDIR)$(BINPREFIX)/imv-x11
 		$(INSTALL_PROGRAM) src/imv.sh $(DESTDIR)$(BINPREFIX)/imv
-	endif
+endif
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
 	$(INSTALL_MAN) doc/imv.1 $(DESTDIR)$(MANPREFIX)/man1/imv.1
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man5
@@ -153,10 +153,10 @@ install: $(TARGETS) doc
 	$(INSTALL_DATA) files/imv_config $(DESTDIR)$(CONFIGPREFIX)/imv_config
 
 uninstall:
-	ifeq ($(WINDOWS),all)
+ifeq ($(WINDOWS),all)
 		$(RM) $(DESTDIR)$(BINPREFIX)/imv-wl
 		$(RM) $(DESTDIR)$(BINPREFIX)/imv-x11
-	endif
+endif
 	$(RM) $(DESTDIR)$(BINPREFIX)/imv
 	$(RM) $(DESTDIR)$(MANPREFIX)/man1/imv.1
 	$(RM) $(DESTDIR)$(MANPREFIX)/man5/imv.5
