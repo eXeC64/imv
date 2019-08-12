@@ -10,13 +10,14 @@ work for imv v4**
 Features
 --------
 
-* Wayland Support
+* Native Wayland and X11 support
 * Support for over 30 different image file formats including:
   * Photoshop PSD files
   * Animated GIFS
   * Various RAW formats
   * SVG
 * Configurable key bindings and behaviour
+* Controllable via scripts using `imv-msg`
 
 Example Usage
 -------------
@@ -55,7 +56,7 @@ you like.
 In your imv config:
 
     [binds]
-    <Shift+x> = exec rm "$imv_current_file"; close
+    <Shift+X> = exec rm "$imv_current_file"; close
 
 Then press 'X' within imv to delete the image and close it.
 
@@ -63,7 +64,7 @@ Then press 'X' within imv to delete the image and close it.
 In your imv config:
 
     [binds]
-    <Shift+r> = exec mogrify -rotate 90 "$imv_current_file"
+    <Shift+R> = exec mogrify -rotate 90 "$imv_current_file"
 
 Then press 'R' within imv to rotate the image 90 degrees using imagemagick.
 

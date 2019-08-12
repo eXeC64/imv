@@ -198,6 +198,8 @@ imv can accept commands from another process over a unix socket. Each instance
 of imv will open a unix socket named '$XDG_RUNTIME_DIR/imv-$PID.sock'. If
 $XDG_RUNTIME_DIR is undefined, the socket is placed into '/tmp/' instead.
 
+The **imv-msg**(1) utility is provided to simpliy this from shell scripts.
+
 Authors
 -------
 
@@ -210,4 +212,4 @@ Full source code and other information can be found at
 See Also
 --------
 
-**imv**(5)
+**imv**(5) **imv-msg**(1)
