@@ -1,0 +1,35 @@
+/////
+vim:set ts=4 sw=4 tw=82 noet:
+/////
+:quotes.~:
+
+imv-msg (1)
+===========
+
+Name
+----
+imv-msg - Utility for sending commands to a running imv instance
+
+Description
+-----------
+
+imv-msg is a tool to simplify the sending of commands to a running instance
+of imv. Given an instance's pid it opens the corresponding unix socket and
+sends the provided command.
+
+Synopsis
+--------
+'imv-msg' <pid> <command>
+
+Authors
+-------
+
+imv-msg is written and maintained by Harry Jeffery <me@harry.pm>
+
+Full source code and other information can be found at
+<https://github.com/eXeC64/imv>.
+
+See Also
+--------
+
+**imv**(1)

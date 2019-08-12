@@ -134,9 +134,9 @@ check: $(BUILDDIR) $(TESTS)
 
 clean:
 	$(RM) -Rf $(BUILDDIR)
-	$(RM) doc/imv.1 doc/imv.5
+	$(RM) doc/imv.1 doc/imv-msg.1 doc/imv.5
 
-doc: doc/imv.1 doc/imv.5
+doc: doc/imv.1 doc/imv-msg.1 doc/imv.5
 
 doc/%: doc/%.txt
 	a2x --no-xmllint --doctype manpage --format manpage $<
@@ -155,6 +155,7 @@ endif
 	$(INSTALL_PROGRAM) $(TARGET_MSG) $(DESTDIR)$(BINPREFIX)/imv-msg
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
 	$(INSTALL_MAN) doc/imv.1 $(DESTDIR)$(MANPREFIX)/man1/imv.1
+	$(INSTALL_MAN) doc/imv-msg.1 $(DESTDIR)$(MANPREFIX)/man1/imv-msg.1
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man5
 	$(INSTALL_MAN) doc/imv.5 $(DESTDIR)$(MANPREFIX)/man5/imv.5
 	mkdir -p $(DESTDIR)$(DATAPREFIX)/applications
@@ -170,6 +171,7 @@ endif
 	$(RM) $(DESTDIR)$(BINPREFIX)/imv
 	$(RM) $(DESTDIR)$(BINPREFIX)/imv-msg
 	$(RM) $(DESTDIR)$(MANPREFIX)/man1/imv.1
+	$(RM) $(DESTDIR)$(MANPREFIX)/man1/imv-msg.1
 	$(RM) $(DESTDIR)$(MANPREFIX)/man5/imv.5
 	$(RM) $(DESTDIR)$(DATAPREFIX)/applications/imv.desktop
 	@echo "$(DESTDIR)$(CONFIGPREFIX)/imv_config has not been removed. Please remove it manually."
