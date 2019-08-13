@@ -1081,6 +1081,11 @@ static bool setup_window(struct imv *imv)
   {
     imv->keyboard = imv_keyboard_create();
     assert(imv->keyboard);
+
+    const char *keymap = imv_window_keymap(imv->window);
+    if (keymap) {
+      imv_keyboard_set_keymap(imv->keyboard, keymap);
+    }
   }
 
   {

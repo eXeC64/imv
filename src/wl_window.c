@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/mman.h>
 
 #include <wayland-client.h>
 #include <wayland-egl.h>
@@ -41,6 +42,8 @@ struct imv_window {
   int height;
   bool fullscreen;
   int scale;
+
+  char *keymap;
 
   struct {
     struct {
@@ -92,11 +95,17 @@ static const struct xdg_wm_base_listener shell_listener_xdg = {
 static void keyboard_keymap(void *data, struct wl_keyboard *keyboard,
     uint32_t format, int32_t fd, uint32_t size)
 {
-  (void)data;
   (void)keyboard;
   (void)format;
-  (void)fd;
-  (void)size;
+  struct imv_window *window = data;
+  if (window->keymap) {
+    free(window->keymap);
+  }
+  window->keymap = malloc(size);
+  char *src = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
+  memcpy(window->keymap, src, size);
+  munmap(src, size);
+  close(fd);
 }
 
 static void keyboard_enter(void *data, struct wl_keyboard *keyboard,
@@ -784,4 +793,9 @@ void imv_window_pump_events(struct imv_window *window, imv_event_handler handler
       handler(data, &e);
     }
   }
+}
+
+const char *imv_window_keymap(struct imv_window *window)
+{
+  return window->keymap;
 }

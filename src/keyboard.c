@@ -22,9 +22,9 @@ struct imv_keyboard *imv_keyboard_create(void)
   struct xkb_rule_names names = {
     .rules = NULL,
     .model = NULL,
-    .layout = "gb",
+    .layout = NULL,
     .variant = NULL,
-    .options = "caps:escape,compose:ralt"
+    .options = NULL,
   };
   keyboard->keymap = xkb_keymap_new_from_names(keyboard->context, &names, 0);
   assert(keyboard->keymap);
@@ -115,4 +115,12 @@ char *imv_keyboard_describe_key(struct imv_keyboard *keyboard, int scancode)
 size_t imv_keyboard_get_text(struct imv_keyboard *keyboard, int scancode, char *buf, size_t buflen)
 {
   return xkb_state_key_get_utf8(keyboard->state, scancode + scancode_offset, buf, buflen);
+}
+
+void imv_keyboard_set_keymap(struct imv_keyboard *keyboard, const char *keymap)
+{
+  xkb_keymap_unref(keyboard->keymap);
+  keyboard->keymap = xkb_keymap_new_from_string(keyboard->context, keymap, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+  xkb_state_unref(keyboard->state);
+  keyboard->state = xkb_state_new(keyboard->keymap);
 }
