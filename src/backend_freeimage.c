@@ -1,6 +1,7 @@
 #include "backend_freeimage.h"
 #include "backend.h"
 #include "source.h"
+#include "log.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -60,15 +61,52 @@ static struct imv_image *to_image(FIBITMAP *in_bmp)
   return image;
 }
 
-static void report_error(struct imv_source *src)
+static FIBITMAP *normalise_bitmap(FIBITMAP *input)
 {
+  FIBITMAP *output = NULL;
+
+  switch (FreeImage_GetImageType(input)) {
+    case FIT_RGB16:
+    case FIT_RGBA16:
+    case FIT_RGBF:
+    case FIT_RGBAF:
+      output = FreeImage_ConvertTo32Bits(input);
+      FreeImage_Unload(input);
+      break;
+
+    case FIT_UINT16:
+    case FIT_INT16:
+    case FIT_UINT32:
+    case FIT_INT32:
+    case FIT_FLOAT:
+    case FIT_DOUBLE:
+    case FIT_COMPLEX:
+      output = FreeImage_ConvertTo8Bits(input);
+      FreeImage_Unload(input);
+      break;
+
+    case FIT_BITMAP:
+    default:
+      output = input;
+  }
+
+  imv_log(IMV_DEBUG,
+      "freeimage: bitmap normalised to 32 bits: before=%p after=%p\n",
+      input, output);
+  return output;
+}
+
+static void report_error(struct imv_source *src, const char *error)
+{
+  imv_log(IMV_ERROR, "freeimage: %s\n", error);
+
   assert(src->callback);
 
   struct imv_source_message msg;
   msg.source = src;
   msg.user_data = src->user_data;
   msg.image = NULL;
-  msg.error = "Internal error";
+  msg.error = error;
 
   pthread_mutex_unlock(&src->busy);
   src->callback(&msg);
@@ -76,6 +114,7 @@ static void report_error(struct imv_source *src)
 
 static void send_bitmap(struct imv_source *src, FIBITMAP *fibitmap, int frametime)
 {
+  imv_log(IMV_DEBUG, "freeimage: returning bitmap\n");
   assert(src->callback);
 
   struct imv_source_message msg;
@@ -95,6 +134,7 @@ static void *first_frame(struct imv_source *src)
   if (pthread_mutex_trylock(&src->busy)) {
     return NULL;
   }
+  imv_log(IMV_DEBUG, "freeimage: first_frame called\n");
 
   FIBITMAP *bmp = NULL;
 
@@ -114,12 +154,12 @@ static void *first_frame(struct imv_source *src)
           private->memory,
           /* flags */ GIF_LOAD256);
     } else {
-      report_error(src);
+      report_error(src, "src->name and private->memory both NULL");
       return NULL;
     }
 
     if (!private->multibitmap) {
-      report_error(src);
+      report_error(src, "first frame already loaded");
       return NULL;
     }
 
@@ -148,11 +188,11 @@ static void *first_frame(struct imv_source *src)
       fibitmap = FreeImage_LoadFromMemory(private->format, private->memory, flags);
     }
     if (!fibitmap) {
-      report_error(src);
+      report_error(src, "FreeImage_Load returned NULL");
       return NULL;
     }
-    bmp = FreeImage_ConvertTo32Bits(fibitmap);
-    FreeImage_Unload(fibitmap);
+
+    bmp = normalise_bitmap(fibitmap);
   }
 
   src->width = FreeImage_GetWidth(bmp);
@@ -263,9 +303,11 @@ static void *next_frame(struct imv_source *src)
 
 static enum backend_result open_path(const char *path, struct imv_source **src)
 {
+  imv_log(IMV_DEBUG, "freeimage: open_path(%s)\n", path);
   FREE_IMAGE_FORMAT fmt = FreeImage_GetFileType(path, 0);
 
   if (fmt == FIF_UNKNOWN) {
+    imv_log(IMV_DEBUG, "freeimage: unknown file format\n");
     return BACKEND_UNSUPPORTED;
   }
 
