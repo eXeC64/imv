@@ -1,6 +1,7 @@
 #include "backend_libpng.h"
 #include "backend.h"
 #include "source.h"
+#include "log.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -158,7 +159,15 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   /* Tell libpng to give us a consistent output format */
   png_set_gray_to_rgb(private->png);
   png_set_filler(private->png, 0xff, PNG_FILLER_AFTER);
+  png_set_strip_16(private->png);
+  png_set_expand(private->png);
+  png_set_packing(private->png);
   png_read_update_info(private->png, private->info);
+  imv_log(IMV_DEBUG, "libpng: info width=%d height=%d bit_depth=%d color_type=%d\n",
+      png_get_image_width(private->png, private->info),
+      png_get_image_height(private->png, private->info),
+      png_get_bit_depth(private->png, private->info),
+      png_get_color_type(private->png, private->info));
 
   struct imv_source *source = calloc(1, sizeof *source);
   source->name = strdup(path);
