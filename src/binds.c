@@ -86,7 +86,7 @@ enum bind_result imv_binds_add(struct imv_binds *binds, const struct list *keys,
       /* Create our new node */
       next_node = malloc(sizeof *next_node);
       init_bind_node(next_node);
-      next_node->key = keys->items[i];
+      next_node->key = strdup(keys->items[i]);
       list_append(node->suffixes, next_node);
     } else {
       next_node = node->suffixes->items[child_index];

@@ -286,7 +286,7 @@ static bool add_bind(struct imv *imv, const char *keys, const char *commands)
     commands = next_command;
   }
 
-  list_free(list);
+  list_deep_free(list);
 
   return success;
 }
