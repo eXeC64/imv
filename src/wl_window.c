@@ -655,10 +655,34 @@ static void shutdown_wayland(struct imv_window *window)
   if (window->wl_keyboard) {
     wl_keyboard_destroy(window->wl_keyboard);
   }
-  xdg_toplevel_destroy(window->wl_xdg_toplevel);
-  xdg_surface_destroy(window->wl_xdg_surface);
+  if (window->wl_seat) {
+    wl_seat_destroy(window->wl_seat);
+  }
+  if (window->wl_xdg_toplevel) {
+    xdg_toplevel_destroy(window->wl_xdg_toplevel);
+  }
+  if (window->wl_xdg_surface) {
+    xdg_surface_destroy(window->wl_xdg_surface);
+  }
+  if (window->wl_xdg) {
+    xdg_wm_base_destroy(window->wl_xdg);
+  }
+  if (window->egl_window) {
+    wl_egl_window_destroy(window->egl_window);
+  }
   eglTerminate(window->egl_display);
-  wl_surface_destroy(window->wl_surface);
+  if (window->wl_surface) {
+    wl_surface_destroy(window->wl_surface);
+  }
+  if (window->wl_compositor) {
+    wl_compositor_destroy(window->wl_compositor);
+  }
+  if (window->wl_registry) {
+    wl_registry_destroy(window->wl_registry);
+  }
+  if (window->wl_display) {
+    wl_display_disconnect(window->wl_display);
+  }
 }
 
 struct imv_window *imv_window_create(int width, int height, const char *title)
@@ -673,6 +697,7 @@ struct imv_window *imv_window_create(int width, int height, const char *title)
 
 void imv_window_free(struct imv_window *window)
 {
+  free(window->keymap);
   shutdown_wayland(window);
   list_deep_free(window->wl_outputs);
   free(window);
