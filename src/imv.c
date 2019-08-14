@@ -614,6 +614,14 @@ void imv_free(struct imv *imv)
   if (imv->window) {
     imv_window_free(imv->window);
   }
+
+  struct backend_chain *backend = imv->backends;
+  while (backend) {
+    struct backend_chain *next = backend->next;
+    free(backend);
+    backend = next;
+  }
+
   free(imv);
 }
 
