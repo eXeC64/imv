@@ -1675,6 +1675,9 @@ static void update_env_vars(struct imv *imv)
 {
   char str[64];
 
+  snprintf(str, sizeof str, "%d", getpid());
+  setenv("imv_pid", str, 1);
+
   setenv("imv_current_file", imv_navigator_selection(imv->navigator), 1);
   setenv("imv_scaling_mode", scaling_label[imv->scaling_mode], 1);
   setenv("imv_loading", imv->loading ? "1" : "0", 1);

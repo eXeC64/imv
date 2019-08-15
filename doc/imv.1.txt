@@ -161,6 +161,9 @@ When imv executes a shell command, it provides a number of environment variables
 exposing imv's state. These environment variables are also available when
 customising the window's title, or the overlay text.
 
+*$imv_pid*::
+	The pid of this instance of imv. Useful for running imv-msg in scripts.
+
 *$imv_current_file*::
 	Path of currently selected image.
 
