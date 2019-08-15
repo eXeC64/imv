@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <poll.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,6 +45,9 @@ static void set_nonblocking(int fd)
 
 struct imv_window *imv_window_create(int w, int h, const char *title)
 {
+  /* Ensure event writes will always be atomic */
+  assert(sizeof(struct imv_event) <= PIPE_BUF);
+
   struct imv_window *window = calloc(1, sizeof *window);
   window->pointer.last.x = -1;
   window->pointer.last.y = -1;

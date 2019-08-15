@@ -4,12 +4,13 @@
 
 #include <assert.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <poll.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 #include <wayland-client.h>
 #include <wayland-egl.h>
@@ -687,6 +688,9 @@ static void shutdown_wayland(struct imv_window *window)
 
 struct imv_window *imv_window_create(int width, int height, const char *title)
 {
+  /* Ensure event writes will always be atomic */
+  assert(sizeof(struct imv_event) <= PIPE_BUF);
+
   struct imv_window *window = calloc(1, sizeof *window);
   window->scale = 1;
   window->wl_outputs = list_create();
