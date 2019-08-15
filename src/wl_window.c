@@ -792,7 +792,10 @@ void imv_window_wait_for_event(struct imv_window *window, double timeout)
 
   wl_display_flush(window->wl_display);
 
-  poll(fds, nfds, timeout * 1000);
+  if (poll(fds, nfds, timeout * 1000) <= 0) {
+    wl_display_cancel_read(window->wl_display);
+    return;
+  }
 
   if (fds[0].revents & POLLIN) {
     wl_display_read_events(window->wl_display);
