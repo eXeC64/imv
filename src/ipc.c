@@ -82,6 +82,7 @@ struct imv_ipc *imv_ipc_create(void)
   unlink(desc.sun_path);
 
   if (bind(sockfd, (struct sockaddr*)&desc, sizeof desc) == -1) {
+    close(sockfd);
     return NULL;
   }
 
