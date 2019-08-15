@@ -75,6 +75,7 @@ int imv_navigator_add(struct imv_navigator *nav, const char *path,
   struct stat path_info;
   stat(path, &path_info);
   if (S_ISDIR(path_info.st_mode)) {
+    int result = 0;
     DIR *d = opendir(path);
     if (d) {
       struct dirent *dir;
@@ -88,16 +89,19 @@ int imv_navigator_add(struct imv_navigator *nav, const char *path,
         int is_dir = S_ISDIR(new_path_info.st_mode);
         if (is_dir && recursive) {
           if (imv_navigator_add(nav, path_buf, recursive) != 0) {
-            return 1;
+            result = 1;
+            break;
           }
         } else if (!is_dir) {
           if (add_item(nav, path_buf) != 0) {
-            return 1;
+            result = 1;
+            break;
           }
         }
       }
       closedir(d);
     }
+    return result;
   } else {
     return add_item(nav, path);
   }
