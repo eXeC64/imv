@@ -73,7 +73,9 @@ int imv_navigator_add(struct imv_navigator *nav, const char *path,
 {
   char path_buf[PATH_MAX+1];
   struct stat path_info;
-  stat(path, &path_info);
+  if (stat(path, &path_info)) {
+    return 1;
+  }
   if (S_ISDIR(path_info.st_mode)) {
     int result = 0;
     DIR *d = opendir(path);
@@ -85,7 +87,10 @@ int imv_navigator_add(struct imv_navigator *nav, const char *path,
         }
         snprintf(path_buf, sizeof path_buf, "%s/%s", path, dir->d_name);
         struct stat new_path_info;
-        stat(path_buf, &new_path_info);
+        if (stat(path_buf, &new_path_info)) {
+          result = 1;
+          break;
+        }
         int is_dir = S_ISDIR(new_path_info.st_mode);
         if (is_dir && recursive) {
           if (imv_navigator_add(nav, path_buf, recursive) != 0) {
