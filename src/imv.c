@@ -1411,16 +1411,18 @@ bool imv_load_config(struct imv *imv)
     return true;
   }
 
+  bool result = true;
+
   const int err = ini_parse(path, handle_ini_value, imv);
   if (err == -1) {
     imv_log(IMV_ERROR, "Unable to open config file: %s\n", path);
-    return false;
+    result = false;
   } else if (err > 0) {
     imv_log(IMV_ERROR, "Error in config file: %s:%d\n", path, err);
-    return false;
+    result = false;
   }
   free(path);
-  return true;
+  return result;
 }
 
 static void command_quit(struct list *args, const char *argstr, void *data)
