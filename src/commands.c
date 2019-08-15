@@ -27,10 +27,10 @@ static char *join_str_list(struct list *list, const char *sep, size_t start)
       assert(buf);
     }
 
-    strncat(buf, list->items[i], cap);
+    strncat(buf, list->items[i], cap - 1);
     len += item_len;
 
-    strncat(buf, sep, cap);
+    strncat(buf, sep, cap - 1);
     len += sep_len;
   }
   return buf;
