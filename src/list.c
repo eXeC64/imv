@@ -66,6 +66,11 @@ void list_insert(struct list *list, size_t index, void *item)
   list->len += 1;
 }
 
+void list_clear(struct list *list)
+{
+  list->len = 0;
+}
+
 struct list *list_from_string(const char *string, char delim)
 {
   struct list *list = list_create();

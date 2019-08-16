@@ -215,6 +215,44 @@ void imv_navigator_remove(struct imv_navigator *nav, const char *path)
   nav->changed = 1;
 }
 
+void imv_navigator_remove_at(struct imv_navigator *nav, size_t index)
+{
+  if (index >= nav->paths->len) {
+    return;
+  }
+  struct nav_item *item = nav->paths->items[index];
+  free(item->path);
+  free(item);
+  list_remove(nav->paths, index);
+
+  if (nav->cur_path == index) {
+    /* We just removed the current path */
+    if (nav->last_move_direction < 0) {
+      /* Move left */
+      imv_navigator_select_rel(nav, -1);
+    } else {
+      /* Try to stay where we are, unless we ran out of room */
+      if (nav->cur_path == nav->paths->len) {
+        nav->cur_path = 0;
+        nav->wrapped = 1;
+      }
+    }
+  }
+  nav->changed = 1;
+}
+
+void imv_navigator_remove_all(struct imv_navigator *nav)
+{
+  for (size_t i = 0; i < nav->paths->len; ++i) {
+    struct nav_item *item = nav->paths->items[i];
+    free(item->path);
+    free(item);
+  }
+  list_clear(nav->paths);
+  nav->cur_path = 0;
+  nav->changed = 1;
+}
+
 ssize_t imv_navigator_find_path(struct imv_navigator *nav, const char *path)
 {
   /* first try to match the exact path */

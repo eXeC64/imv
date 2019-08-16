@@ -34,6 +34,13 @@ void imv_navigator_select_abs(struct imv_navigator *nav, ssize_t index);
  * based on the last direction the selection moved. */
 void imv_navigator_remove(struct imv_navigator *nav, const char *path);
 
+/* Removes the given index. The current selection is updated if necessary,
+ * based on the last direction the selection moved. */
+void imv_navigator_remove_at(struct imv_navigator *nav, size_t index);
+
+/* Removes all paths */
+void imv_navigator_remove_all(struct imv_navigator *nav);
+
 /* Return the index of the path given. Returns -1 if not found. */
 ssize_t imv_navigator_find_path(struct imv_navigator *nav, const char *path);
 

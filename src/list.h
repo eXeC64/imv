@@ -24,6 +24,8 @@ void list_remove(struct list *list, size_t index);
 
 void list_insert(struct list *list, size_t index, void *item);
 
+void list_clear(struct list *list);
+
 struct list *list_from_string(const char *string, char delim);
 
 int list_find(

@@ -98,8 +98,9 @@ Commands can be entered by pressing *:*. imv supports the following commands:
 	specified, do so recursively. Shell expansions may be used.
 	Aliased to 'o'.
 
-*close*::
-	Close the currently selected image.
+*close* [index|'all']::
+	Close the currently selected image, or the image at the given index, or
+	all images.
 
 *fullscreen*::
 	Toggle fullscreen.

@@ -1536,9 +1536,20 @@ static void command_close(struct list *args, const char *argstr, void *data)
   (void)args;
   (void)argstr;
   struct imv *imv = data;
-  char* path = strdup(imv_navigator_selection(imv->navigator));
-  imv_navigator_remove(imv->navigator, path);
-  free(path);
+  size_t index = imv_navigator_index(imv->navigator);
+
+  if (args->len == 2) {
+    const char *arg = args->items[1];
+    if (!strcmp("all", arg)) {
+      imv_navigator_remove_all(imv->navigator);
+      imv->slideshow.elapsed = 0;
+      return;
+    }
+
+    index = (size_t)strtol(arg, NULL, 10) - 1;
+  }
+
+  imv_navigator_remove_at(imv->navigator, index);
 
   imv->slideshow.elapsed = 0;
 }
