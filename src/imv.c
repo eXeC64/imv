@@ -1706,10 +1706,10 @@ static void update_env_vars(struct imv *imv)
   }
 
   snprintf(str, sizeof str, "%f", imv->slideshow.duration);
-  setenv("imv_slidshow_duration", str, 1);
+  setenv("imv_slideshow_duration", str, 1);
 
   snprintf(str, sizeof str, "%f", imv->slideshow.elapsed);
-  setenv("imv_slidshow_elapsed", str, 1);
+  setenv("imv_slideshow_elapsed", str, 1);
 }
 
 static size_t generate_env_text(struct imv *imv, char *buf, size_t buf_len, const char *format)
