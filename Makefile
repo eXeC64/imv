@@ -51,7 +51,7 @@ WL_SOURCES = src/wl_window.c src/xdg-shell-protocol.c
 WL_LIBS = -lwayland-client -lwayland-egl -lEGL
 
 X11_SOURCES = src/x11_window.c
-X11_LIBS = -lX11 -lGL -lGLU
+X11_LIBS = -lX11 -lGL -lGLU -lxcb -lxkbcommon-x11
 
 MSG_SOURCES = src/imv_msg.c src/ipc_common.c
 MSG_LIBS =

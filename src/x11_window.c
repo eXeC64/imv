@@ -13,6 +13,11 @@
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 
+#include <xcb/xcb.h>
+#include <xkbcommon/xkbcommon-x11.h>
+
+#include "log.h"
+
 struct imv_window {
   Display    *x_display;
   Window     x_window;
@@ -32,6 +37,7 @@ struct imv_window {
   } pointer;
 
   int pipe_fds[2];
+  char *keymap;
 };
 
 static void set_nonblocking(int fd)
@@ -41,6 +47,44 @@ static void set_nonblocking(int fd)
   flags |= O_NONBLOCK;
   int rc = fcntl(fd, F_SETFL, flags);
   assert(rc != -1);
+}
+
+static void setup_keymap(struct imv_window *window)
+{
+  xcb_connection_t *conn = xcb_connect(NULL, NULL);
+  if (xcb_connection_has_error(conn)) {
+    imv_log(IMV_ERROR, "x11_window: Failed to load keymap. Could not connect via xcb.");
+    return;
+  }
+
+  if (!xkb_x11_setup_xkb_extension(conn,
+        XKB_X11_MIN_MAJOR_XKB_VERSION,
+        XKB_X11_MIN_MINOR_XKB_VERSION,
+        0, NULL, NULL, NULL, NULL)) {
+    xcb_disconnect(conn);
+    imv_log(IMV_ERROR, "x11_window: Failed to load keymap. xkb extension not supported by server.");
+    return;
+  }
+
+  int32_t device = xkb_x11_get_core_keyboard_device_id(conn);
+
+  struct xkb_context *context = xkb_context_new(0);
+  if (!context) {
+    xcb_disconnect(conn);
+    imv_log(IMV_ERROR, "x11_window: Failed to load keymap. Failed to initialise xkb context.");
+    return;
+  }
+
+  struct xkb_keymap *keymap =
+    xkb_x11_keymap_new_from_device(context, conn, device, 0);
+  if (keymap) {
+    window->keymap = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_USE_ORIGINAL_FORMAT);
+  } else {
+    imv_log(IMV_ERROR, "x11_window: Failed to load keymap. xkb_x11_keymap_new_from_device returned NULL.");
+  }
+  xkb_context_unref(context);
+
+  xcb_disconnect(conn);
 }
 
 struct imv_window *imv_window_create(int w, int h, const char *title)
@@ -93,6 +137,8 @@ struct imv_window *imv_window_create(int w, int h, const char *title)
   assert(window->x_glc);
   glXMakeCurrent(window->x_display, window->x_window, window->x_glc);
 
+  setup_keymap(window);
+
   return window;
 }
 
@@ -102,6 +148,7 @@ void imv_window_free(struct imv_window *window)
   close(window->pipe_fds[1]);
   glXDestroyContext(window->x_display, window->x_glc);
   XCloseDisplay(window->x_display);
+  free(window->keymap);
   free(window);
 }
 
@@ -336,8 +383,7 @@ void imv_window_pump_events(struct imv_window *window, imv_event_handler handler
   }
 }
 
-const char *imv_window_keymap(struct imv_window *window)
+const char *imv_window_get_keymap(struct imv_window *window)
 {
-  (void)window;
-  return NULL;
+  return window->keymap;
 }

@@ -73,6 +73,6 @@ typedef void (*imv_event_handler)(void *data, const struct imv_event *e);
 
 void imv_window_pump_events(struct imv_window *window, imv_event_handler handler, void *data);
 
-const char *imv_window_keymap(struct imv_window *window);
+const char *imv_window_get_keymap(struct imv_window *window);
 
 #endif

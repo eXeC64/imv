@@ -10,7 +10,7 @@ packages:
   - graphics/tiff
   - sysutils/cmocka
   - x11-toolkits/pango
-  - x11/libxkbcommon
+  - x11/libxcb
   - x11/libxkbcommon
 sources:
   - https://git.sr.ht/~exec64/imv

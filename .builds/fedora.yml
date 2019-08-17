@@ -7,7 +7,9 @@ packages:
   - libpng-devel
   - librsvg2-devel
   - libtiff-devel
+  - libxcb-devel
   - libxkbcommon-devel
+  - libxkbcommon-x11-devel
   - mesa-libEGL-devel
   - mesa-libGL-devel
   - mesa-libGLU-devel

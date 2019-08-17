@@ -12,7 +12,9 @@ packages:
   - libturbojpeg-dev
   - libwayland-dev
   - libx11-dev
+  - libxcb1-dev
   - libxkbcommon-dev
+  - libxkbcommon-x11-dev
   - mesa-common-dev
 sources:
   - https://git.sr.ht/~exec64/imv

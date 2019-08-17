@@ -8,7 +8,9 @@ packages:
   - librsvg
   - libtiff
   - libx11
+  - libxcb
   - libxkbcommon
+  - libxkbcommon-x11
   - pango
   - wayland
 sources:
