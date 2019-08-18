@@ -13,8 +13,10 @@ struct list *list_create(void)
 
 void list_free(struct list *list)
 {
-  free(list->items);
-  free(list);
+  if (list) {
+    free(list->items);
+    free(list);
+  }
 }
 
 void list_deep_free(struct list *list)

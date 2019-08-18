@@ -155,6 +155,9 @@ struct imv {
   /* if specified by user, the path of the first image to display */
   char *starting_path;
 
+  /* list of startup commands to be run on launch, after loading the config */
+  struct list *startup_commands;
+
   /* the user-specified format strings for the overlay and window title */
   char *title_text;
   char *overlay_text;
@@ -524,6 +527,7 @@ struct imv *imv_create(void)
       " [${imv_width}x${imv_height}] [${imv_scale}%]"
       " $imv_current_file [$imv_scaling_mode]"
   );
+  imv->startup_commands = list_create();
 
   imv_command_register(imv->commands, "quit", &command_quit);
   imv_command_register(imv->commands, "pan", &command_pan);
@@ -623,6 +627,8 @@ void imv_free(struct imv *imv)
     free(backend);
     backend = next;
   }
+
+  list_free(imv->startup_commands);
 
   free(imv);
 }
@@ -762,7 +768,7 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
   int o;
 
  /* TODO getopt_long */
-  while ((o = getopt(argc, argv, "frdxhvlu:s:n:b:t:")) != -1) {
+  while ((o = getopt(argc, argv, "frdxhvlu:s:n:b:t:c:")) != -1) {
     switch(o) {
       case 'f': imv->start_fullscreen = true;                    break;
       case 'r': imv->recursive_load = true;                      break;
@@ -802,6 +808,7 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
           return false;
         }
         break;
+      case 'c': list_append(imv->startup_commands, optarg); break;
       case '?':
         imv_log(IMV_ERROR, "Unknown argument '%c'. Aborting.\n", optopt);
         return false;
@@ -877,6 +884,13 @@ int imv_run(struct imv *imv)
       imv_log(IMV_ERROR, "Invalid starting image: %s\n", imv->starting_path);
     }
   }
+
+  /* Push any startup commands into the event queue */
+  for (size_t i = 0; i < imv->startup_commands->len; ++i) {
+    command_callback(imv->startup_commands->items[i], imv);
+  }
+  list_free(imv->startup_commands);
+  imv->startup_commands = NULL;
 
   /* time keeping */
   double last_time = cur_time();

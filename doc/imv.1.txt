@@ -35,6 +35,12 @@ Options
 	Set the background colour. Can either be a 6-digit hexadecimal colour code
 	or 'checks' to show a chequered background.
 
+*-c* <command>::
+	Specify a command to be run on launch, after the configuration has been
+	loaded. Can be used to configure custom keys with the bind command. This
+	option can be used multiple times. Commands are run in the order that they
+	have been passed to imv.
+
 *-d*::
 	Start with overlay visible.
 
