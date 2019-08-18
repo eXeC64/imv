@@ -150,7 +150,7 @@ else ifeq ($(WINDOWS),x11)
 else ifeq ($(WINDOWS),all)
 		$(INSTALL_PROGRAM) $(TARGET_WL) $(DESTDIR)$(BINPREFIX)/imv-wl
 		$(INSTALL_PROGRAM) $(TARGET_X11) $(DESTDIR)$(BINPREFIX)/imv-x11
-		$(INSTALL_PROGRAM) src/imv.sh $(DESTDIR)$(BINPREFIX)/imv
+		$(INSTALL_PROGRAM) files/imv $(DESTDIR)$(BINPREFIX)/imv
 endif
 	$(INSTALL_PROGRAM) $(TARGET_MSG) $(DESTDIR)$(BINPREFIX)/imv-msg
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
