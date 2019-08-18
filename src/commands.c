@@ -11,31 +11,6 @@ struct command {
   char* alias;
 };
 
-static char *join_str_list(struct list *list, const char *sep, size_t start)
-{
-  size_t len = 0;
-  size_t cap = 512;
-  char *buf = malloc(cap);
-  buf[0] = 0;
-
-  size_t sep_len = strlen(sep);
-  for (size_t i = start; i < list->len; ++i) {
-    size_t item_len = strlen(list->items[i]);
-    if (len + item_len + sep_len >= cap) {
-      cap *= 2;
-      buf = realloc(buf, cap);
-      assert(buf);
-    }
-
-    strncat(buf, list->items[i], cap - 1);
-    len += item_len;
-
-    strncat(buf, sep, cap - 1);
-    len += sep_len;
-  }
-  return buf;
-}
-
 struct imv_commands *imv_commands_create(void)
 {
   struct imv_commands *cmds = malloc(sizeof *cmds);
@@ -90,7 +65,7 @@ int imv_command_exec(struct imv_commands *cmds, const char *command, void *data)
           cmd->handler(args, argstr, data);
           ret = 0;
         } else if(cmd->alias) {
-          char *new_args = join_str_list(args, " ", 1);
+          char *new_args = list_to_string(args, " ", 1);
           size_t cmd_len = strlen(cmd->alias) + 1 + strlen(new_args) + 1;
           char *new_cmd = malloc(cmd_len);
           snprintf(new_cmd, cmd_len, "%s %s", cmd->alias, new_args);

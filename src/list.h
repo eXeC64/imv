@@ -34,6 +34,8 @@ int list_find(
     const void *key
 );
 
+char *list_to_string(struct list *list, const char *sep, size_t start);
+
 #endif
 
 /* vim:set ts=2 sts=2 sw=2 et: */

@@ -196,6 +196,7 @@ static void command_toggle_playing(struct list *args, const char *argstr, void *
 static void command_set_scaling_mode(struct list *args, const char *argstr, void *data);
 static void command_set_slideshow_duration(struct list *args, const char *argstr, void *data);
 static void command_set_background(struct list *args, const char *argstr, void *data);
+static void command_bind(struct list *args, const char *argstr, void *data);
 
 static bool setup_window(struct imv *imv);
 static void consume_internal_event(struct imv *imv, struct internal_event *event);
@@ -542,6 +543,7 @@ struct imv *imv_create(void)
   imv_command_register(imv->commands, "scaling", &command_set_scaling_mode);
   imv_command_register(imv->commands, "slideshow", &command_set_slideshow_duration);
   imv_command_register(imv->commands, "background", &command_set_background);
+  imv_command_register(imv->commands, "bind", &command_bind);
 
   imv_command_alias(imv->commands, "q", "quit");
   imv_command_alias(imv->commands, "n", "next");
@@ -1679,6 +1681,18 @@ static void command_set_background(struct list *args, const char *argstr, void *
   struct imv *imv = data;
   if (args->len == 2) {
     parse_bg(imv, args->items[1]);
+  }
+}
+
+static void command_bind(struct list *args, const char *argstr, void *data)
+{
+  (void)argstr;
+  struct imv *imv = data;
+  if (args->len >= 3) {
+    const char *keys = args->items[1];
+    char *commands = list_to_string(args, " ", 2);
+    add_bind(imv, keys, commands);
+    free(commands);
   }
 }
 

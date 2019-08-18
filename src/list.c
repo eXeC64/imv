@@ -1,5 +1,7 @@
 #include "list.h"
 
+#include <assert.h>
+
 struct list *list_create(void)
 {
   struct list *list = malloc(sizeof *list);
@@ -105,6 +107,31 @@ int list_find(struct list *list, int (*cmp)(const void *, const void *), const v
     }
   }
   return -1;
+}
+
+char *list_to_string(struct list *list, const char *sep, size_t start)
+{
+  size_t len = 0;
+  size_t cap = 512;
+  char *buf = malloc(cap);
+  buf[0] = 0;
+
+  size_t sep_len = strlen(sep);
+  for (size_t i = start; i < list->len; ++i) {
+    size_t item_len = strlen(list->items[i]);
+    if (len + item_len + sep_len >= cap) {
+      cap *= 2;
+      buf = realloc(buf, cap);
+      assert(buf);
+    }
+
+    strncat(buf, list->items[i], cap - 1);
+    len += item_len;
+
+    strncat(buf, sep, cap - 1);
+    len += sep_len;
+  }
+  return buf;
 }
 
 /* vim:set ts=2 sts=2 sw=2 et: */
