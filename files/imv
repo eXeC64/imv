@@ -1,7 +1,7 @@
 #!/usr/bin/sh
 
 if [ -n "${WAYLAND_DISPLAY}" ]; then
-  exec imv-wl "$@"
+  exec imv-wayland "$@"
 else
   exec imv-x11 "$@"
 fi

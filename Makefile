@@ -17,16 +17,16 @@ override CPPFLAGS += -D_XOPEN_SOURCE=700
 override LIBS := -lGL -lpthread -lxkbcommon $(shell pkg-config --libs pangocairo)
 
 BUILDDIR ?= build
-TARGET_WL = $(BUILDDIR)/imv-wl
+TARGET_WAYLAND = $(BUILDDIR)/imv-wayland
 TARGET_X11 = $(BUILDDIR)/imv-x11
 TARGET_MSG = $(BUILDDIR)/imv-msg
 
 ifeq ($(WINDOWS),wayland)
-	TARGETS := $(TARGET_WL) $(TARGET_MSG)
+	TARGETS := $(TARGET_WAYLAND) $(TARGET_MSG)
 else ifeq ($(WINDOWS),x11)
 	TARGETS := $(TARGET_X11) $(TARGET_MSG)
 else ifeq ($(WINDOWS),all)
-	TARGETS := $(TARGET_WL) $(TARGET_X11) $(TARGET_MSG)
+	TARGETS := $(TARGET_WAYLAND) $(TARGET_X11) $(TARGET_MSG)
 endif
 
 SOURCES := src/main.c
@@ -106,7 +106,7 @@ TLIBS := $(LIBS) $(shell pkg-config --libs cmocka)
 
 imv: $(TARGETS)
 
-$(TARGET_WL): $(OBJECTS) $(WL_OBJECTS)
+$(TARGET_WAYLAND): $(OBJECTS) $(WL_OBJECTS)
 	$(CC) -o $@ $^ $(LIBS) $(WL_LIBS) $(LDFLAGS)
 
 $(TARGET_X11): $(OBJECTS) $(X11_OBJECTS)
@@ -144,11 +144,11 @@ doc/%: doc/%.txt
 install: $(TARGETS) doc
 	mkdir -p $(DESTDIR)$(BINPREFIX)
 ifeq ($(WINDOWS),wayland)
-		$(INSTALL_PROGRAM) $(TARGET_WL) $(DESTDIR)$(BINPREFIX)/imv
+		$(INSTALL_PROGRAM) $(TARGET_WAYLAND) $(DESTDIR)$(BINPREFIX)/imv
 else ifeq ($(WINDOWS),x11)
 		$(INSTALL_PROGRAM) $(TARGET_X11) $(DESTDIR)$(BINPREFIX)/imv
 else ifeq ($(WINDOWS),all)
-		$(INSTALL_PROGRAM) $(TARGET_WL) $(DESTDIR)$(BINPREFIX)/imv-wl
+		$(INSTALL_PROGRAM) $(TARGET_WAYLAND) $(DESTDIR)$(BINPREFIX)/imv-wayland
 		$(INSTALL_PROGRAM) $(TARGET_X11) $(DESTDIR)$(BINPREFIX)/imv-x11
 		$(INSTALL_PROGRAM) files/imv $(DESTDIR)$(BINPREFIX)/imv
 endif
@@ -165,7 +165,7 @@ endif
 
 uninstall:
 ifeq ($(WINDOWS),all)
-		$(RM) $(DESTDIR)$(BINPREFIX)/imv-wl
+		$(RM) $(DESTDIR)$(BINPREFIX)/imv-wayland
 		$(RM) $(DESTDIR)$(BINPREFIX)/imv-x11
 endif
 	$(RM) $(DESTDIR)$(BINPREFIX)/imv
