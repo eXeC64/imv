@@ -11,13 +11,13 @@ Features
 --------
 
 * Native Wayland and X11 support
-* Support for over 30 different image file formats including:
+* Support for dozens of image formats including:
   * Photoshop PSD files
-  * Animated GIFS
+  * Animated GIFs
   * Various RAW formats
   * SVG
 * Configurable key bindings and behaviour
-* Controllable via scripts using `imv-msg`
+* Highly scriptable with IPC via imv-msg
 
 Example Usage
 -------------
@@ -44,13 +44,36 @@ For full documentation see the man page.
     curl http://somesi.te/img.png | imv -
 
 ### Advanced use
+
 imv can be used to select images in a pipeline by using the `p` hotkey to print
 the current image's path to stdout. The `-l` flag can also be used to tell imv
 to list the remaining paths on exit for a "open set of images, close unwanted
 ones with `x`, then quit imv to pass the remaining images through" workflow.
 
-Through custom bindings, imv can be configured to perform almost any action
-you like.
+Key bindings can be customised to run arbitrary shell commands. Environment
+variables are exported to expose imv's state to scripts run by it. These
+scripts can in turn modify imv's behaviour by invoking `imv-msg` with
+`$imv_pid`.
+
+For example:
+
+    #!/usr/bin/bash
+    imv "$@" &
+    imv_pid = $!
+
+    while true; do
+      # Some custom logic
+      # ...
+
+      # Close all open files
+      imv-msg $imv_pid close all
+      # Open some new files
+      imv-msg $imv_pid open ~/new_path
+
+      # Run another script against the currently open file
+      imv-msg $imv_pid exec another-script.sh $imv_current_file
+    done
+
 
 #### Deleting unwanted images
 In your imv config:
@@ -90,14 +113,15 @@ To cycle through a folder of pictures, showing each one for 10 seconds:
 
     imv -t 10 ~/Pictures/London
 
-The `-x` switch can be used to exit imv after the last picture instead of
-cycling through the list.
-
 Installation
 ------------
 
-`imv` depends on `pthreads`, `FontConfig`, `SDL2`, `SDL_TTF` and `asciidoc`.
-Additional dependencies are determined by which backends are selected when
+`imv` depends on `pthreads`, `xkbcommon`, and `pangocairo`.
+
+For X11 support, `X11`, `GLU`, `xcb`, and `xkbcommon-x11` are required.
+For Wayland support, `wayland-client`, `EGL`, and `wayland-egl` are required.
+
+Additional dependencies are added depending on which backends are selected when
 building `imv`. You can find a summary of which backends are available and
 control which ones `imv` is built with in [config.mk](config.mk)
 
@@ -119,7 +143,7 @@ mode to inspect commands issued by make:
 Tests
 -----
 
-`imv` has a work-in-progress test suite. The test suite requires `cmocka`.
+`imv` has an almost non-existent test suite. The test suite requires `cmocka`.
 
     $ make check
 

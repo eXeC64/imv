@@ -2,8 +2,8 @@
 
 #Choices:
 # all - Build both, determine which to use at runtime
-# wayland - Use wayland backend
-# x11 - Use X11 backend
+# wayland - Only provide Wayland support
+# x11 - Only provide X11 support
 WINDOWS=all
 
 # Configure available backends:
