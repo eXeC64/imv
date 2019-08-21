@@ -9,7 +9,6 @@ struct imv_backend;
 struct imv *imv_create(void);
 void imv_free(struct imv *imv);
 
-/* Used in reverse addition order. Most recently added is the first used. */
 void imv_install_backend(struct imv *imv, const struct imv_backend *backend);
 
 bool imv_load_config(struct imv *imv);

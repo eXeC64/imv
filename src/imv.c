@@ -49,11 +49,6 @@ enum background_type {
   BACKGROUND_TYPE_COUNT
 };
 
-struct backend_chain {
-  const struct imv_backend *backend;
-  struct backend_chain *next;
-};
-
 enum internal_event_type {
   NEW_IMAGE,
   BAD_IMAGE,
@@ -165,7 +160,7 @@ struct imv {
   /* imv subsystems */
   struct imv_binds *binds;
   struct imv_navigator *navigator;
-  struct backend_chain *backends;
+  struct list *backends;
   struct imv_source *current_source;
   struct imv_source *last_source;
   struct imv_commands *commands;
@@ -512,6 +507,7 @@ struct imv *imv_create(void)
   imv->font.size = 24;
   imv->binds = imv_binds_create();
   imv->navigator = imv_navigator_create();
+  imv->backends = list_create();
   imv->commands = imv_commands_create();
   imv->console = imv_console_create();
   imv_console_set_command_callback(imv->console, &command_callback, imv);
@@ -621,12 +617,7 @@ void imv_free(struct imv *imv)
     imv_window_free(imv->window);
   }
 
-  struct backend_chain *backend = imv->backends;
-  while (backend) {
-    struct backend_chain *next = backend->next;
-    free(backend);
-    backend = next;
-  }
+  list_free(imv->backends);
 
   list_free(imv->startup_commands);
 
@@ -635,10 +626,7 @@ void imv_free(struct imv *imv)
 
 void imv_install_backend(struct imv *imv, const struct imv_backend *backend)
 {
-  struct backend_chain *chain = malloc(sizeof *chain);
-  chain->backend = backend;
-  chain->next = imv->backends;
-  imv->backends = chain;
+  list_append(imv->backends, (void*)backend);
 }
 
 static bool parse_bg(struct imv *imv, const char *bg)
@@ -738,21 +726,19 @@ static void print_help(struct imv *imv)
   printf("imv %s\nSee manual for usage information.\n", IMV_VERSION);
   puts("This version of imv has been compiled with the following backends:\n");
 
-  for (struct backend_chain *chain = imv->backends;
-       chain;
-       chain = chain->next) {
+  for (size_t i = 0; i < imv->backends->len; ++i) {
+    struct imv_backend *backend = imv->backends->items[i];
     printf("Name: %s\n"
            "Description: %s\n"
            "Website: %s\n"
            "License: %s\n\n",
-           chain->backend->name,
-           chain->backend->description,
-           chain->backend->website,
-           chain->backend->license);
+           backend->name,
+           backend->description,
+           backend->website,
+           backend->license);
   }
 
-  puts("Legal:\n"
-       "imv's full source code is published under the terms of the MIT\n"
+  puts("imv's full source code is published under the terms of the MIT\n"
        "license, and can be found at https://github.com/eXeC64/imv\n"
        "\n"
        "imv uses the inih library to parse ini files.\n"
@@ -922,8 +908,9 @@ int imv_run(struct imv *imv)
         if (!imv->backends) {
           imv_log(IMV_ERROR, "No backends installed. Unable to load image.\n");
         }
-        for (struct backend_chain *chain = imv->backends; chain; chain = chain->next) {
-          const struct imv_backend *backend = chain->backend;
+
+        for (size_t i = 0; i < imv->backends->len; ++i) {
+          const struct imv_backend *backend = imv->backends->items[i];
           if (path_is_stdin) {
 
             if (!backend->open_memory) {

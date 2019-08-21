@@ -12,13 +12,9 @@ int main(int argc, char** argv)
 {
   struct imv *imv = imv_create();
 
-  if(!imv) {
+  if (!imv) {
     return 1;
   }
-
-#ifdef IMV_BACKEND_FREEIMAGE
-  imv_install_backend(imv, imv_backend_freeimage());
-#endif
 
 #ifdef IMV_BACKEND_LIBTIFF
   imv_install_backend(imv, imv_backend_libtiff());
@@ -36,12 +32,16 @@ int main(int argc, char** argv)
   imv_install_backend(imv, imv_backend_librsvg());
 #endif
 
-  if(!imv_load_config(imv)) {
+#ifdef IMV_BACKEND_FREEIMAGE
+  imv_install_backend(imv, imv_backend_freeimage());
+#endif
+
+  if (!imv_load_config(imv)) {
     imv_free(imv);
     return 1;
   }
 
-  if(!imv_parse_args(imv, argc, argv)) {
+  if (!imv_parse_args(imv, argc, argv)) {
     imv_free(imv);
     return 1;
   }
