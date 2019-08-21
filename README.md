@@ -124,6 +124,7 @@ Installation
 | xkbcommon-x11  |          | Optional. Required for X11 support.            |
 | wayland-client |          | Optional. Required for Wayland support.        |
 | wayland-egl    |          | Optional. Required for Wayland support.        |
+| EGL            |          | Optional. Required for Wayland support.        |
 | FreeImage      |          | Optional. Provides PNG, JPEG, TIFF, GIF, etc.  |
 | libtiff        |          | Optional. Provides TIFF support.               |
 | libpng         |          | Optional. Provides PNG support.                |
