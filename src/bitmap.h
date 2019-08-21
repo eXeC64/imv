@@ -13,7 +13,10 @@ struct imv_bitmap {
   unsigned char *data;
 };
 
+/* Copy an imv_bitmap */
 struct imv_bitmap *imv_bitmap_clone(struct imv_bitmap *bmp);
+
+/* Clean up a bitmap */
 void imv_bitmap_free(struct imv_bitmap *bmp);
 
 #endif

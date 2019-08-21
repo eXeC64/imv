@@ -22,7 +22,10 @@ struct imv_source_message {
   const char *error;
 };
 
-/* Generic source of one or more images. Essentially a single image file */
+/* While imv_image represents a single frame of an image, be it a bitmap or
+ * vector image, imv_source represents an open handle to an image file, which
+ * can emit one or more imv_images.
+ */
 struct imv_source {
   /* usually the path of the image this is the source of */
   char *name; 

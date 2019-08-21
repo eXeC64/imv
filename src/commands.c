@@ -5,6 +5,10 @@
 #include <stdio.h>
 #include <string.h>
 
+struct imv_commands {
+  struct list *command_list;
+};
+
 struct command {
   char* command;
   void (*handler)(struct list *args, const char *argstr, void *data);

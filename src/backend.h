@@ -12,9 +12,8 @@ enum backend_result {
 };
 
 /* A backend is responsible for taking a path, or a raw data pointer, and
- * converting that into a source that imv can handle. Each backend
- * may be powered by a different image library and support different
- * image formats.
+ * converting that into an imv_source. Each backend may be powered by a
+ * different image library and support different image formats.
  */
 struct imv_backend {
   /* Name of the backend, for debug and user informational purposes */
