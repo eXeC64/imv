@@ -1,4 +1,3 @@
-#include "backend_librsvg.h"
 #include "backend.h"
 #include "source.h"
 
@@ -171,7 +170,7 @@ static enum backend_result open_memory(void *data, size_t len, struct imv_source
   return BACKEND_SUCCESS;
 }
 
-const struct imv_backend librsvg_backend = {
+const struct imv_backend imv_backend_librsvg = {
   .name = "libRSVG",
   .description = "SVG library developed by GNOME",
   .website = "https://wiki.gnome.org/Projects/LibRsvg",
@@ -180,7 +179,3 @@ const struct imv_backend librsvg_backend = {
   .open_memory = &open_memory,
 };
 
-const struct imv_backend *imv_backend_librsvg(void)
-{
-  return &librsvg_backend;
-}

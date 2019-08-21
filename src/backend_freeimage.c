@@ -1,4 +1,3 @@
-#include "backend_freeimage.h"
 #include "backend.h"
 #include "source.h"
 #include "log.h"
@@ -363,7 +362,7 @@ static enum backend_result open_memory(void *data, size_t len, struct imv_source
   return BACKEND_SUCCESS;
 }
 
-const struct imv_backend freeimage_backend = {
+const struct imv_backend imv_backend_freeimage = {
   .name = "FreeImage",
   .description = "Open source image library supporting a large number of formats",
   .website = "http://freeimage.sourceforge.net/",
@@ -371,8 +370,3 @@ const struct imv_backend freeimage_backend = {
   .open_path = &open_path,
   .open_memory = &open_memory,
 };
-
-const struct imv_backend *imv_backend_freeimage(void)
-{
-  return &freeimage_backend;
-}

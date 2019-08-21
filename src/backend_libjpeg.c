@@ -1,4 +1,3 @@
-#include "backend_libjpeg.h"
 #include "backend.h"
 #include "source.h"
 
@@ -205,7 +204,7 @@ static enum backend_result open_memory(void *data, size_t len, struct imv_source
   return BACKEND_SUCCESS;
 }
 
-const struct imv_backend libjpeg_backend = {
+const struct imv_backend imv_backend_libjpeg = {
   .name = "libjpeg-turbo",
   .description = "Fast JPEG codec based on libjpeg. "
                  "This software is based in part on the work "
@@ -215,8 +214,3 @@ const struct imv_backend libjpeg_backend = {
   .open_path = &open_path,
   .open_memory = &open_memory,
 };
-
-const struct imv_backend *imv_backend_libjpeg(void)
-{
-  return &libjpeg_backend;
-}

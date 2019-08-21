@@ -1,14 +1,14 @@
 #include "imv.h"
 
-#include "backend.h"
+struct imv_backend;
 
-#include "backend_freeimage.h"
-#include "backend_libtiff.h"
-#include "backend_libpng.h"
-#include "backend_libjpeg.h"
-#include "backend_librsvg.h"
+extern const struct imv_backend imv_backend_freeimage;
+extern const struct imv_backend imv_backend_libpng;
+extern const struct imv_backend imv_backend_librsvg;
+extern const struct imv_backend imv_backend_libtiff;
+extern const struct imv_backend imv_backend_libjpeg;
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
   struct imv *imv = imv_create();
 
@@ -17,23 +17,23 @@ int main(int argc, char** argv)
   }
 
 #ifdef IMV_BACKEND_LIBTIFF
-  imv_install_backend(imv, imv_backend_libtiff());
+  imv_install_backend(imv, &imv_backend_libtiff);
 #endif
 
 #ifdef IMV_BACKEND_LIBPNG
-  imv_install_backend(imv, imv_backend_libpng());
+  imv_install_backend(imv, &imv_backend_libpng);
 #endif
 
 #ifdef IMV_BACKEND_LIBJPEG
-  imv_install_backend(imv, imv_backend_libjpeg());
+  imv_install_backend(imv, &imv_backend_libjpeg);
 #endif
 
 #ifdef IMV_BACKEND_LIBRSVG
-  imv_install_backend(imv, imv_backend_librsvg());
+  imv_install_backend(imv, &imv_backend_librsvg);
 #endif
 
 #ifdef IMV_BACKEND_FREEIMAGE
-  imv_install_backend(imv, imv_backend_freeimage());
+  imv_install_backend(imv, &imv_backend_freeimage);
 #endif
 
   if (!imv_load_config(imv)) {

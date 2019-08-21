@@ -1,4 +1,3 @@
-#include "backend_libtiff.h"
 #include "backend.h"
 #include "source.h"
 
@@ -218,7 +217,7 @@ static enum backend_result open_memory(void *data, size_t len, struct imv_source
   return BACKEND_SUCCESS;
 }
 
-const struct imv_backend libtiff_backend = {
+const struct imv_backend imv_backend_libtiff = {
   .name = "libtiff",
   .description = "The de-facto tiff library",
   .website = "http://www.libtiff.org/",
@@ -226,8 +225,3 @@ const struct imv_backend libtiff_backend = {
   .open_path = &open_path,
   .open_memory = &open_memory,
 };
-
-const struct imv_backend *imv_backend_libtiff(void)
-{
-  return &libtiff_backend;
-}

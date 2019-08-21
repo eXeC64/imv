@@ -1,4 +1,3 @@
-#include "backend_libpng.h"
 #include "backend.h"
 #include "source.h"
 #include "log.h"
@@ -196,7 +195,7 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
   return BACKEND_SUCCESS;
 }
 
-const struct imv_backend libpng_backend = {
+const struct imv_backend imv_backend_libpng = {
   .name = "libpng",
   .description = "The official PNG reference implementation",
   .website = "http://www.libpng.org/pub/png/libpng.html",
@@ -204,7 +203,3 @@ const struct imv_backend libpng_backend = {
   .open_path = &open_path,
 };
 
-const struct imv_backend *imv_backend_libpng(void)
-{
-  return &libpng_backend;
-}
