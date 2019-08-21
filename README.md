@@ -12,10 +12,13 @@ Features
 
 * Native Wayland and X11 support
 * Support for dozens of image formats including:
-  * Photoshop PSD files
+  * PNG
+  * JPEG
   * Animated GIFs
-  * Various RAW formats
   * SVG
+  * TIFF
+  * Various RAW formats
+  * Photoshop PSD files
 * Configurable key bindings and behaviour
 * Highly scriptable with IPC via imv-msg
 
@@ -23,32 +26,62 @@ Example Usage
 -------------
 
 The following examples are a quick illustration of how you can use imv.
-For full documentation see the man page.
+For detailed documentation see the man page.
 
-### Opening images
+    # Opening images
     imv image1.png another_image.jpeg a_directory
 
-### Opening a directory recursively
+    # Opening a directory recursively
     imv -r Photos
 
-### Opening images via stdin
-    find . "*.png" | imv
+    # Opening images via stdin
+    find . -type f -name "*.svg" | imv
 
-### Open an image fullscreen
+    # Open an image fullscreen
     imv -f image.jpeg
 
-### Viewing images in a random order
-    find . "*.png" | shuf | imv
+    # Viewing images in a random order
+    find . -type f -name "*.png" | shuf | imv
 
-### Viewing images from stdin
+    # Viewing images from stdin
     curl http://somesi.te/img.png | imv -
 
-### Advanced use
+    # Viewing multiple images from the web
+    curl -Osw '%{filename_effective}\n' 'http://www.example.com/[1-10].jpg' | imv
 
-imv can be used to select images in a pipeline by using the `p` hotkey to print
-the current image's path to stdout. The `-l` flag can also be used to tell imv
-to list the remaining paths on exit for a "open set of images, close unwanted
-ones with `x`, then quit imv to pass the remaining images through" workflow.
+### Slideshow
+
+imv can be used to display slideshows. You can set the number of seconds to
+show each image for with the `-t` option at start up, or you can configure it
+at runtime using the `t` and `T` hotkeys to increase and decrease the image
+display time, respectively.
+
+To cycle through a folder of pictures, showing each one for 10 seconds:
+
+    imv -t 10 ~/Pictures/London
+
+#### Custom configuration
+
+imv's key bindings can be customised to trigger custom behaviour:
+
+    [binds]
+
+    # Delete and then close an open image by pressing 'X'
+    <Shift+X> = exec rm "$imv_current_file"; close
+
+    # Rotate the currently open image by 90 degrees by pressing 'R'
+    <Shift+R> = exec mogrify -rotate 90 "$imv_current_file"
+
+    # Use dmenu as a prompt for tagging the current image
+    u = exec echo $imv_current_file >> ~/tags/$(ls ~/tags | dmenu -p "tag")
+
+### Scripting
+
+With the default bindings, imv can be used to select images in a pipeline by
+using the `p` hotkey to print the current image's path to stdout. The `-l` flag
+can also be used to tell imv to list the remaining paths on exit for a "open
+set of images, close unwanted ones with `x`, then quit imv to pass the
+remaining images through" workflow.
 
 Key bindings can be customised to run arbitrary shell commands. Environment
 variables are exported to expose imv's state to scripts run by it. These
@@ -74,44 +107,6 @@ For example:
       imv-msg $imv_pid exec another-script.sh $imv_current_file
     done
 
-
-#### Deleting unwanted images
-In your imv config:
-
-    [binds]
-    <Shift+X> = exec rm "$imv_current_file"; close
-
-Then press 'X' within imv to delete the image and close it.
-
-#### Rotate an image
-In your imv config:
-
-    [binds]
-    <Shift+R> = exec mogrify -rotate 90 "$imv_current_file"
-
-Then press 'R' within imv to rotate the image 90 degrees using imagemagick.
-
-#### Tag images from imv using dmenu as a prompt
-In your imv config:
-
-    [binds]
-    u = exec echo $imv_current_file >> ~/tags/$(ls ~/tags | dmenu -p "tag")
-
-Then press 'u' within imv to tag the current image.
-
-#### Viewing images from the web
-    curl -Osw '%{filename_effective}\n' 'http://www.example.com/[1-10].jpg' | imv
-
-### Slideshow
-
-imv can be used to display slideshows. You can set the number of seconds to
-show each image for with the `-t` option at start up, or you can configure it
-at runtime using the `t` and `T` hotkeys to increase and decrease the image
-display time, respectively.
-
-To cycle through a folder of pictures, showing each one for 10 seconds:
-
-    imv -t 10 ~/Pictures/London
 
 Installation
 ------------
