@@ -116,13 +116,27 @@ To cycle through a folder of pictures, showing each one for 10 seconds:
 Installation
 ------------
 
-`imv` depends on `pthreads`, `xkbcommon`, and `pangocairo`.
+### Dependencies
 
-For X11 support, `X11`, `GLU`, `xcb`, and `xkbcommon-x11` are required.
-For Wayland support, `wayland-client`, `EGL`, and `wayland-egl` are required.
+| Library        |  Version |  Notes                                         |
+|---------------:|:---------|------------------------------------------------|
+| pthreads       |          | Required.                                      |
+| xkbcommon      |          | Required.                                      |
+| pangocairo     |          | Required.                                      |
+| X11            |          | Optional. Required for X11 support.            |
+| GLU            |          | Optional. Required for X11 support.            |
+| xcb            |          | Optional. Required for X11 support.            |
+| xkbcommon-x11  |          | Optional. Required for X11 support.            |
+| wayland-client |          | Optional. Required for Wayland support.        |
+| wayland-egl    |          | Optional. Required for Wayland support.        |
+| FreeImage      |          | Optional. Provides PNG, JPEG, TIFF, GIF, etc.  |
+| libtiff        |          | Optional. Provides TIFF support.               |
+| libpng         |          | Optional. Provides PNG support.                |
+| libjpeg        |          | Optional. Provides JPEG support.               |
+| librsvg        | >=v2.44  | Optional. Provides SVG support.                |
 
-Additional dependencies are added depending on which backends are selected when
-building `imv`. You can find a summary of which backends are available and
+Dependencies are determined by which backends and window systems are enabled
+when building `imv`. You can find a summary of which backends are available and
 control which ones `imv` is built with in [config.mk](config.mk)
 
     $ $EDITOR config.mk
