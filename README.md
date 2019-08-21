@@ -4,9 +4,6 @@ imv - X11/Wayland Image Viewer
 
 `imv` is a command line image viewer intended for use with tiling window managers.
 
-**The master branch of imv is currently UNSTABLE as it contains the in-progress
-work for imv v4**
-
 Features
 --------
 
@@ -145,18 +142,6 @@ available.  Eg. to install `imv` to home directory, run:
 
     $ BINPREFIX=~/bin PREFIX=~/.local make install
 
-In case something goes wrong during installation process you may use verbose
-mode to inspect commands issued by make:
-
-    $ V=1 make
-
-Tests
------
-
-`imv` has an almost non-existent test suite. The test suite requires `cmocka`.
-
-    $ make check
-
 License
 -------
-`imv`'s source is published under the [MIT](LICENSE) license.
+`imv`'s source is published under the terms of the [MIT](LICENSE) license.
