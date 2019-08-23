@@ -569,7 +569,6 @@ struct imv *imv_create(void)
   add_bind(imv, "f", "fullscreen");
   add_bind(imv, "d", "overlay");
   add_bind(imv, "p", "exec echo $imv_current_file");
-  add_bind(imv, "<equal>", "zoom 1");
   add_bind(imv, "<Up>", "zoom 1");
   add_bind(imv, "<Shift+plus>", "zoom 1");
   add_bind(imv, "i", "zoom 1");
