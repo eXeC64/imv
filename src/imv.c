@@ -460,6 +460,12 @@ static void event_handler(void *data, const struct imv_event *e)
     case IMV_EVENT_KEYBOARD:
       key_handler(imv, e->data.keyboard.scancode, e->data.keyboard. pressed);
       break;
+    case IMV_EVENT_KEYBOARD_MODS:
+      imv_keyboard_update_mods(imv->keyboard,
+          e->data.keyboard_mods.depressed,
+          e->data.keyboard_mods.latched,
+          e->data.keyboard_mods.locked);
+      break;
     case IMV_EVENT_MOUSE_MOTION:
       if (imv_window_get_mouse_button(imv->window, 1)) {
         imv_viewport_move(imv->view, e->data.mouse_motion.dx,

@@ -55,6 +55,12 @@ void imv_keyboard_update_key(struct imv_keyboard *keyboard, int scancode, bool p
   xkb_state_update_key(keyboard->state, scancode + scancode_offset, pressed ? XKB_KEY_DOWN : XKB_KEY_UP);
 }
 
+void imv_keyboard_update_mods(struct imv_keyboard *keyboard,
+    int depressed, int latched, int locked)
+{
+  xkb_state_update_mask(keyboard->state, depressed, latched, locked, 0, 0, 0);
+}
+
 static const char *describe_prefix(struct imv_keyboard *keyboard)
 {
   const bool ctrl = (xkb_state_mod_name_is_active(keyboard->state, XKB_MOD_NAME_CTRL, XKB_STATE_MODS_EFFECTIVE) > 0);

@@ -152,13 +152,21 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *keyboard,
     uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched,
     uint32_t mods_locked, uint32_t group)
 {
-  (void)data;
   (void)keyboard;
   (void)serial;
-  (void)mods_depressed;
-  (void)mods_latched;
-  (void)mods_locked;
   (void)group;
+  struct imv_window *window = data;
+  struct imv_event e = {
+    .type = IMV_EVENT_KEYBOARD_MODS,
+    .data = {
+      .keyboard_mods = {
+        .depressed = mods_depressed,
+        .latched = mods_latched,
+        .locked = mods_locked,
+      }
+    }
+  };
+  imv_window_push_event(window, &e);
 }
 
 static void keyboard_repeat(void *data, struct wl_keyboard *keyboard,

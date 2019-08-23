@@ -15,6 +15,10 @@ void imv_keyboard_free(struct imv_keyboard *keyboard);
 /* Notify the keyboard of the state of a key */
 void imv_keyboard_update_key(struct imv_keyboard *keyboard, int scancode, bool pressed);
 
+/* Notify the keyboard of the state of the modifiers */
+void imv_keyboard_update_mods(struct imv_keyboard *keyboard,
+    int depressed, int latched, int locked);
+
 /* Write the null-terminated name of the key corresponding to scancode into buf */
 size_t imv_keyboard_keyname(struct imv_keyboard *keyboard, int scancode, char *buf, size_t buflen);
 

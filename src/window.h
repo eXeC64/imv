@@ -9,6 +9,7 @@ enum imv_event_type {
   IMV_EVENT_CLOSE,
   IMV_EVENT_RESIZE,
   IMV_EVENT_KEYBOARD,
+  IMV_EVENT_KEYBOARD_MODS,
   IMV_EVENT_MOUSE_MOTION,
   IMV_EVENT_MOUSE_BUTTON,
   IMV_EVENT_MOUSE_SCROLL,
@@ -28,6 +29,11 @@ struct imv_event {
       int scancode;
       bool pressed;
     } keyboard;
+    struct {
+      int depressed;
+      int latched;
+      int locked;
+    } keyboard_mods;
     struct {
       double x, y, dx, dy;
     } mouse_motion;
