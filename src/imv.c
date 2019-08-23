@@ -576,7 +576,7 @@ struct imv *imv_create(void)
   add_bind(imv, "<minus>", "zoom -1");
   add_bind(imv, "o", "zoom -1");
   add_bind(imv, "c", "center");
-  add_bind(imv, "s", "scaling_mode next");
+  add_bind(imv, "s", "scaling next");
   add_bind(imv, "a", "zoom actual");
   add_bind(imv, "r", "reset");
   add_bind(imv, "<period>", "next_frame");
