@@ -70,7 +70,7 @@ imv's key bindings can be customised to trigger custom behaviour:
     <Shift+R> = exec mogrify -rotate 90 "$imv_current_file"
 
     # Use dmenu as a prompt for tagging the current image
-    u = exec echo $imv_current_file >> ~/tags/$(ls ~/tags | dmenu -p "tag")
+    u = exec echo "$imv_current_file" >> ~/tags/$(ls ~/tags | dmenu -p "tag")
 
 ### Scripting
 
@@ -101,7 +101,7 @@ For example:
       imv-msg $imv_pid open ~/new_path
 
       # Run another script against the currently open file
-      imv-msg $imv_pid exec another-script.sh $imv_current_file
+      imv-msg $imv_pid exec another-script.sh '$imv_current_file'
     done
 
 
