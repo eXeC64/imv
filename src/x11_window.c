@@ -38,6 +38,7 @@ struct imv_window {
 
   int pipe_fds[2];
   char *keymap;
+  int last_mod_state;
 };
 
 static void set_nonblocking(int fd)
@@ -297,6 +298,21 @@ void imv_window_pump_events(struct imv_window *window, imv_event_handler handler
         handler(data, &e);
       }
     } else if (xev.type == KeyPress || xev.type == KeyRelease) {
+      if (window->last_mod_state != (int)xev.xkey.state) {
+        window->last_mod_state = (int)xev.xkey.state;
+        /* modifiers have changed, push an event for that first */
+        struct imv_event e = {
+          .type = IMV_EVENT_KEYBOARD_MODS,
+          .data = {
+            .keyboard_mods = {
+              .depressed = (int)xev.xkey.state,
+            }
+          }
+        };
+        if (handler) {
+          handler(data, &e);
+        }
+      }
       struct imv_event e = {
         .type = IMV_EVENT_KEYBOARD,
         .data = {
