@@ -31,4 +31,7 @@ size_t imv_keyboard_get_text(struct imv_keyboard *keyboard, int scancode, char *
 /* Initialise the keymap from a string containing the description */
 void imv_keyboard_set_keymap(struct imv_keyboard *keyboard, const char *keymap);
 
+/* Should the key on a given scancode repeat when held down */
+bool imv_keyboard_should_key_repeat(struct imv_keyboard *keyboard, int scancode);
+
 #endif

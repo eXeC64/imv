@@ -130,3 +130,8 @@ void imv_keyboard_set_keymap(struct imv_keyboard *keyboard, const char *keymap)
   xkb_state_unref(keyboard->state);
   keyboard->state = xkb_state_new(keyboard->keymap);
 }
+
+bool imv_keyboard_should_key_repeat(struct imv_keyboard *keyboard, int scancode)
+{
+  return xkb_keymap_key_repeats(keyboard->keymap, scancode + scancode_offset);
+}

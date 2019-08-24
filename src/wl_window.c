@@ -8,9 +8,11 @@
 #include <limits.h>
 #include <poll.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <wayland-client.h>
@@ -40,6 +42,11 @@ struct imv_window {
 
   int display_fd;
   int pipe_fds[2];
+
+  timer_t timer_id;
+  int repeat_scancode; /* scancode of key to repeat */
+  int repeat_delay; /* time before repeat in ms */
+  int repeat_interval; /* time between repeats in ms */
 
   int width;
   int height;
@@ -140,28 +147,15 @@ static void cleanup_event(struct imv_event *event)
   }
 }
 
-static void keyboard_key(void *data, struct wl_keyboard *keyboard,
-    uint32_t serial, uint32_t time, uint32_t key, uint32_t state)
+static void push_keypress(struct imv_window *window, int scancode)
 {
-  (void)serial;
-  (void)keyboard;
-  (void)time;
-  (void)state;
-  struct imv_window *window = data;
-
-  imv_keyboard_update_key(window->keyboard, key, state);
-
-  if (!state) {
-    return;
-  }
-
   char keyname[32] = {0};
-  imv_keyboard_keyname(window->keyboard, key, keyname, sizeof keyname);
+  imv_keyboard_keyname(window->keyboard, scancode, keyname, sizeof keyname);
 
   char text[64] = {0};
-  imv_keyboard_get_text(window->keyboard, key, text, sizeof text);
+  imv_keyboard_get_text(window->keyboard, scancode, text, sizeof text);
 
-  char *desc = imv_keyboard_describe_key(window->keyboard, key);
+  char *desc = imv_keyboard_describe_key(window->keyboard, scancode);
   if (!desc) {
     desc = strdup("");
   }
@@ -170,7 +164,7 @@ static void keyboard_key(void *data, struct wl_keyboard *keyboard,
     .type = IMV_EVENT_KEYBOARD,
     .data = {
       .keyboard = {
-        .scancode = key,
+        .scancode = scancode,
         .keyname = strdup(keyname),
         .description = desc,
         .text = strdup(text),
@@ -178,6 +172,42 @@ static void keyboard_key(void *data, struct wl_keyboard *keyboard,
     }
   };
   imv_window_push_event(window, &e);
+}
+
+static void keyboard_key(void *data, struct wl_keyboard *keyboard,
+    uint32_t serial, uint32_t time, uint32_t key, uint32_t state)
+{
+  (void)serial;
+  (void)keyboard;
+  (void)time;
+  struct imv_window *window = data;
+
+  imv_keyboard_update_key(window->keyboard, key, state);
+
+  if (!state) {
+    /* If a key repeat timer is running, stop it */
+    struct itimerspec off = {0};
+    timer_settime(window->timer_id, 0, &off, NULL);
+    return;
+  }
+
+  push_keypress(window, key);
+
+  if (imv_keyboard_should_key_repeat(window->keyboard, key)) {
+    /* Kick off the key-repeat timer for the current key */
+    window->repeat_scancode = key;
+    struct itimerspec period = {
+      .it_value = {
+        .tv_sec = 0,
+        .tv_nsec = window->repeat_delay * 1000 * 1000,
+      },
+      .it_interval = {
+        .tv_sec = 0,
+        .tv_nsec = window->repeat_interval * 1000 * 1000,
+      },
+    };
+    timer_settime(window->timer_id, 0, &period, NULL);
+  }
 }
 
 static void keyboard_modifiers(void *data, struct wl_keyboard *keyboard,
@@ -198,10 +228,10 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *keyboard,
 static void keyboard_repeat(void *data, struct wl_keyboard *keyboard,
     int32_t rate, int32_t delay)
 {
-  (void)data;
   (void)keyboard;
-  (void)rate;
-  (void)delay;
+  struct imv_window *window = data;
+  window->repeat_delay = delay;
+  window->repeat_interval = 1000 / rate;
 }
 
 static const struct wl_keyboard_listener keyboard_listener = {
@@ -721,6 +751,12 @@ static void shutdown_wayland(struct imv_window *window)
   }
 }
 
+static void on_timer(union sigval sigval)
+{
+  struct imv_window *window = sigval.sival_ptr;
+  push_keypress(window, window->repeat_scancode);
+}
+
 struct imv_window *imv_window_create(int width, int height, const char *title)
 {
   /* Ensure event writes will always be atomic */
@@ -734,11 +770,20 @@ struct imv_window *imv_window_create(int width, int height, const char *title)
   window->wl_outputs = list_create();
   connect_to_wayland(window);
   create_window(window, width, height, title);
+
+  struct sigevent timer_handler = {
+    .sigev_notify = SIGEV_THREAD,
+    .sigev_value.sival_ptr = window,
+    .sigev_notify_function = on_timer,
+  };
+  int timer_rc = timer_create(CLOCK_MONOTONIC, &timer_handler, &window->timer_id);
+  assert(timer_rc == 0);
   return window;
 }
 
 void imv_window_free(struct imv_window *window)
 {
+  timer_delete(&window->timer_id);
   imv_keyboard_free(window->keyboard);
   free(window->keymap);
   shutdown_wayland(window);
