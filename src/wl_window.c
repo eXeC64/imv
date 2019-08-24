@@ -641,6 +641,8 @@ static void create_window(struct imv_window *window, int width, int height,
   assert(window->wl_xdg_toplevel);
 
   xdg_toplevel_add_listener(window->wl_xdg_toplevel, &toplevel_listener, window);
+  xdg_toplevel_set_title(window->wl_xdg_toplevel, title);
+  xdg_toplevel_set_app_id(window->wl_xdg_toplevel, "imv");
 
   wl_surface_commit(window->wl_surface);
   wl_display_roundtrip(window->wl_display);
@@ -650,7 +652,6 @@ static void create_window(struct imv_window *window, int width, int height,
   eglMakeCurrent(window->egl_display, window->egl_surface, window->egl_surface, window->egl_context);
 
   wl_surface_commit(window->wl_surface);
-  xdg_toplevel_set_title(window->wl_xdg_toplevel, title);
   wl_display_roundtrip(window->wl_display);
 }
 

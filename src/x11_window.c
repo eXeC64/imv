@@ -131,6 +131,11 @@ struct imv_window *imv_window_create(int w, int h, const char *title)
   window->x_state = XInternAtom(window->x_display, "_NET_WM_STATE", true);
   window->x_fullscreen = XInternAtom(window->x_display, "_NET_WM_STATE_FULLSCREEN", true);
 
+  XClassHint hint = {
+    .res_name = "imv",
+    .res_class= "imv",
+  };
+  XSetClassHint(window->x_display, window->x_window, &hint);
   XMapWindow(window->x_display, window->x_window);
   XStoreName(window->x_display, window->x_window, title);
 
