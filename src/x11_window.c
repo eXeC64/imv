@@ -39,7 +39,6 @@ struct imv_window {
 
   struct imv_keyboard *keyboard;
   int pipe_fds[2];
-  char *keymap;
 };
 
 static void set_nonblocking(int fd)
@@ -80,7 +79,9 @@ static void setup_keymap(struct imv_window *window)
   struct xkb_keymap *keymap =
     xkb_x11_keymap_new_from_device(context, conn, device, 0);
   if (keymap) {
-    window->keymap = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_USE_ORIGINAL_FORMAT);
+    char *keymap_str = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_USE_ORIGINAL_FORMAT);
+    imv_keyboard_set_keymap(window->keyboard, keymap_str);
+    free(keymap_str);
   } else {
     imv_log(IMV_ERROR, "x11_window: Failed to load keymap. xkb_x11_keymap_new_from_device returned NULL.");
   }
@@ -148,7 +149,6 @@ struct imv_window *imv_window_create(int w, int h, const char *title)
   assert(window->keyboard);
 
   setup_keymap(window);
-  imv_keyboard_set_keymap(window->keyboard, window->keymap);
 
   return window;
 }
@@ -160,7 +160,6 @@ void imv_window_free(struct imv_window *window)
   close(window->pipe_fds[1]);
   glXDestroyContext(window->x_display, window->x_glc);
   XCloseDisplay(window->x_display);
-  free(window->keymap);
   free(window);
 }
 
@@ -423,9 +422,4 @@ void imv_window_pump_events(struct imv_window *window, imv_event_handler handler
       handler(data, &e);
     }
   }
-}
-
-const char *imv_window_get_keymap(struct imv_window *window)
-{
-  return window->keymap;
 }

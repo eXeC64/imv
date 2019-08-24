@@ -53,8 +53,6 @@ struct imv_window {
   bool fullscreen;
   int scale;
 
-  char *keymap;
-
   struct {
     struct {
       double last;
@@ -108,16 +106,10 @@ static void keyboard_keymap(void *data, struct wl_keyboard *keyboard,
   (void)keyboard;
   (void)format;
   struct imv_window *window = data;
-  if (window->keymap) {
-    free(window->keymap);
-  }
-  window->keymap = malloc(size);
   char *src = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
-  memcpy(window->keymap, src, size);
+  imv_keyboard_set_keymap(window->keyboard, src);
   munmap(src, size);
   close(fd);
-
-  imv_keyboard_set_keymap(window->keyboard, window->keymap);
 }
 
 static void keyboard_enter(void *data, struct wl_keyboard *keyboard,
@@ -785,7 +777,6 @@ void imv_window_free(struct imv_window *window)
 {
   timer_delete(&window->timer_id);
   imv_keyboard_free(window->keyboard);
-  free(window->keymap);
   shutdown_wayland(window);
   list_deep_free(window->wl_outputs);
   free(window);
@@ -910,9 +901,4 @@ void imv_window_pump_events(struct imv_window *window, imv_event_handler handler
     }
     cleanup_event(&e);
   }
-}
-
-const char *imv_window_get_keymap(struct imv_window *window)
-{
-  return window->keymap;
 }
