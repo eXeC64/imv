@@ -1,5 +1,6 @@
 #include "window.h"
 
+#include "keyboard.h"
 #include "list.h"
 
 #include <assert.h>
@@ -34,6 +35,7 @@ struct imv_window {
   EGLSurface           egl_surface;
   struct wl_egl_window *egl_window;
 
+  struct imv_keyboard *keyboard;
   struct list *wl_outputs;
 
   int display_fd;
@@ -107,6 +109,8 @@ static void keyboard_keymap(void *data, struct wl_keyboard *keyboard,
   memcpy(window->keymap, src, size);
   munmap(src, size);
   close(fd);
+
+  imv_keyboard_set_keymap(window->keyboard, window->keymap);
 }
 
 static void keyboard_enter(void *data, struct wl_keyboard *keyboard,
@@ -128,20 +132,48 @@ static void keyboard_leave(void *data, struct wl_keyboard *keyboard,
   (void)surface;
 }
 
+static void cleanup_event(struct imv_event *event)
+{
+  if (event->type == IMV_EVENT_KEYBOARD) {
+    free(event->data.keyboard.keyname);
+    free(event->data.keyboard.text);
+  }
+}
+
 static void keyboard_key(void *data, struct wl_keyboard *keyboard,
     uint32_t serial, uint32_t time, uint32_t key, uint32_t state)
 {
   (void)serial;
   (void)keyboard;
   (void)time;
-
+  (void)state;
   struct imv_window *window = data;
+
+  imv_keyboard_update_key(window->keyboard, key, state);
+
+  if (!state) {
+    return;
+  }
+
+  char keyname[32] = {0};
+  imv_keyboard_keyname(window->keyboard, key, keyname, sizeof keyname);
+
+  char text[64] = {0};
+  imv_keyboard_get_text(window->keyboard, key, text, sizeof text);
+
+  char *desc = imv_keyboard_describe_key(window->keyboard, key);
+  if (!desc) {
+    desc = strdup("");
+  }
+
   struct imv_event e = {
     .type = IMV_EVENT_KEYBOARD,
     .data = {
       .keyboard = {
         .scancode = key,
-        .pressed = state
+        .keyname = strdup(keyname),
+        .description = desc,
+        .text = strdup(text),
       }
     }
   };
@@ -156,17 +188,11 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *keyboard,
   (void)serial;
   (void)group;
   struct imv_window *window = data;
-  struct imv_event e = {
-    .type = IMV_EVENT_KEYBOARD_MODS,
-    .data = {
-      .keyboard_mods = {
-        .depressed = mods_depressed,
-        .latched = mods_latched,
-        .locked = mods_locked,
-      }
-    }
-  };
-  imv_window_push_event(window, &e);
+
+  imv_keyboard_update_mods(window->keyboard,
+      mods_depressed,
+      mods_latched,
+      mods_locked);
 }
 
 static void keyboard_repeat(void *data, struct wl_keyboard *keyboard,
@@ -702,6 +728,9 @@ struct imv_window *imv_window_create(int width, int height, const char *title)
 
   struct imv_window *window = calloc(1, sizeof *window);
   window->scale = 1;
+
+  window->keyboard = imv_keyboard_create();
+  assert(window->keyboard);
   window->wl_outputs = list_create();
   connect_to_wayland(window);
   create_window(window, width, height, title);
@@ -710,6 +739,7 @@ struct imv_window *imv_window_create(int width, int height, const char *title)
 
 void imv_window_free(struct imv_window *window)
 {
+  imv_keyboard_free(window->keyboard);
   free(window->keymap);
   shutdown_wayland(window);
   list_deep_free(window->wl_outputs);
@@ -833,6 +863,7 @@ void imv_window_pump_events(struct imv_window *window, imv_event_handler handler
     if (handler) {
       handler(data, &e);
     }
+    cleanup_event(&e);
   }
 }
 

@@ -16,6 +16,7 @@
 #include <xcb/xcb.h>
 #include <xkbcommon/xkbcommon-x11.h>
 
+#include "keyboard.h"
 #include "log.h"
 
 struct imv_window {
@@ -36,9 +37,9 @@ struct imv_window {
     bool mouse1;
   } pointer;
 
+  struct imv_keyboard *keyboard;
   int pipe_fds[2];
   char *keymap;
-  int last_mod_state;
 };
 
 static void set_nonblocking(int fd)
@@ -143,13 +144,18 @@ struct imv_window *imv_window_create(int w, int h, const char *title)
   assert(window->x_glc);
   glXMakeCurrent(window->x_display, window->x_window, window->x_glc);
 
+  window->keyboard = imv_keyboard_create();
+  assert(window->keyboard);
+
   setup_keymap(window);
+  imv_keyboard_set_keymap(window->keyboard, window->keymap);
 
   return window;
 }
 
 void imv_window_free(struct imv_window *window)
 {
+  imv_keyboard_free(window->keyboard);
   close(window->pipe_fds[0]);
   close(window->pipe_fds[1]);
   glXDestroyContext(window->x_display, window->x_glc);
@@ -275,6 +281,47 @@ void imv_window_push_event(struct imv_window *window, struct imv_event *e)
   write(window->pipe_fds[1], e, sizeof *e);
 }
 
+static void handle_keyboard(struct imv_window *window, imv_event_handler handler, void *data, const XEvent *xev)
+{
+  imv_keyboard_update_mods(window->keyboard, (int)xev->xkey.state, 0, 0);
+
+  bool pressed = xev->type == KeyPress;
+  int scancode = xev->xkey.keycode - 8;
+  imv_keyboard_update_key(window->keyboard, scancode, pressed);
+
+  if (!pressed) {
+    return;
+  }
+
+  char keyname[32] = {0};
+  imv_keyboard_keyname(window->keyboard, scancode, keyname, sizeof keyname);
+
+  char text[64] = {0};
+  imv_keyboard_get_text(window->keyboard, scancode, text, sizeof text);
+
+  char *desc = imv_keyboard_describe_key(window->keyboard, scancode);
+  if (!desc) {
+    desc = strdup("");
+  }
+
+  struct imv_event e = {
+    .type = IMV_EVENT_KEYBOARD,
+    .data = {
+      .keyboard = {
+        .scancode = scancode,
+        .keyname = keyname,
+        .description = desc,
+        .text = text,
+      }
+    }
+  };
+
+  if (handler) {
+    handler(data, &e);
+  }
+  free(desc);
+}
+
 void imv_window_pump_events(struct imv_window *window, imv_event_handler handler, void *data)
 {
   XEvent xev;
@@ -303,33 +350,7 @@ void imv_window_pump_events(struct imv_window *window, imv_event_handler handler
         handler(data, &e);
       }
     } else if (xev.type == KeyPress || xev.type == KeyRelease) {
-      if (window->last_mod_state != (int)xev.xkey.state) {
-        window->last_mod_state = (int)xev.xkey.state;
-        /* modifiers have changed, push an event for that first */
-        struct imv_event e = {
-          .type = IMV_EVENT_KEYBOARD_MODS,
-          .data = {
-            .keyboard_mods = {
-              .depressed = (int)xev.xkey.state,
-            }
-          }
-        };
-        if (handler) {
-          handler(data, &e);
-        }
-      }
-      struct imv_event e = {
-        .type = IMV_EVENT_KEYBOARD,
-        .data = {
-          .keyboard = {
-            .scancode = xev.xkey.keycode - 8,
-            .pressed = xev.type == KeyPress
-          }
-        }
-      };
-      if (handler) {
-        handler(data, &e);
-      }
+      handle_keyboard(window, handler, data, &xev);
     } else if (xev.type == ButtonPress || xev.type == ButtonRelease) {
       if (xev.xbutton.button == Button1) {
         window->pointer.mouse1 = xev.type == ButtonPress;

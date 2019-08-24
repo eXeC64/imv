@@ -17,7 +17,6 @@
 #include "image.h"
 #include "ini.h"
 #include "ipc.h"
-#include "keyboard.h"
 #include "list.h"
 #include "log.h"
 #include "navigator.h"
@@ -167,7 +166,6 @@ struct imv {
   struct imv_console *console;
   struct imv_ipc *ipc;
   struct imv_viewport *view;
-  struct imv_keyboard *keyboard;
   struct imv_canvas *canvas;
   struct imv_window *window;
 
@@ -387,53 +385,32 @@ static void command_callback(const char *text, void *data)
   imv_window_push_event(imv->window, &e);
 }
 
-static void key_handler(struct imv *imv, int scancode, bool pressed)
+static void key_handler(struct imv *imv, const struct imv_event *event)
 {
-  imv_keyboard_update_key(imv->keyboard, scancode, pressed);
-
-  if (!pressed) {
-    return;
-  }
-
-  char keyname[128] = {0};
-  imv_keyboard_keyname(imv->keyboard, scancode, keyname, sizeof keyname);
-
   if (imv_console_is_active(imv->console)) {
 
-    if (imv_console_key(imv->console, keyname)) {
+    if (imv_console_key(imv->console, event->data.keyboard.keyname)) {
       imv->need_redraw = true;
       return;
     }
 
-    char text[128];
-    size_t len = imv_keyboard_get_text(imv->keyboard, scancode, text, sizeof text);
-    if (len >= sizeof text) {
-      imv_log(IMV_WARNING, "Keyboard input too large for input buffer. Discarding.\n");
-    } else {
-      imv_console_input(imv->console, text);
-    }
+    imv_console_input(imv->console, event->data.keyboard.text);
 
   } else {
     /* In regular mode see if we should enter command mode, otherwise send input
      * to the bind system.
      */
 
-    if (!strcmp("colon", keyname)) {
+    if (!strcmp("colon", event->data.keyboard.keyname)) {
       imv_console_activate(imv->console);
       imv->need_redraw = true;
       return;
     }
 
-    char *keyname = imv_keyboard_describe_key(imv->keyboard, scancode);
-    if (!keyname) {
-      return;
-    }
-
-    struct list *cmds = imv_bind_handle_event(imv->binds, keyname);
+    struct list *cmds = imv_bind_handle_event(imv->binds, event->data.keyboard.description);
     if (cmds) {
       imv_command_exec_list(imv->commands, cmds, imv);
     }
-    free(keyname);
   }
 
   imv->need_redraw = true;
@@ -458,13 +435,7 @@ static void event_handler(void *data, const struct imv_event *e)
         break;
       }
     case IMV_EVENT_KEYBOARD:
-      key_handler(imv, e->data.keyboard.scancode, e->data.keyboard. pressed);
-      break;
-    case IMV_EVENT_KEYBOARD_MODS:
-      imv_keyboard_update_mods(imv->keyboard,
-          e->data.keyboard_mods.depressed,
-          e->data.keyboard_mods.latched,
-          e->data.keyboard_mods.locked);
+      key_handler(imv, e);
       break;
     case IMV_EVENT_MOUSE_MOTION:
       if (imv_window_get_mouse_button(imv->window, 1)) {
@@ -607,7 +578,6 @@ void imv_free(struct imv *imv)
   imv_console_free(imv->console);
   imv_ipc_free(imv->ipc);
   imv_viewport_free(imv->view);
-  imv_keyboard_free(imv->keyboard);
   imv_canvas_free(imv->canvas);
   if (imv->current_image) {
     imv_image_free(imv->current_image);
@@ -1093,16 +1063,6 @@ static bool setup_window(struct imv *imv)
 
   /* put us in fullscren mode to begin with if requested */
   imv_window_set_fullscreen(imv->window, imv->start_fullscreen);
-
-  {
-    imv->keyboard = imv_keyboard_create();
-    assert(imv->keyboard);
-
-    const char *keymap = imv_window_get_keymap(imv->window);
-    if (keymap) {
-      imv_keyboard_set_keymap(imv->keyboard, keymap);
-    }
-  }
 
   {
     int ww, wh;

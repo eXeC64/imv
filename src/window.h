@@ -27,13 +27,10 @@ struct imv_event {
     } resize;
     struct {
       int scancode;
-      bool pressed;
+      char *keyname;
+      char *description;
+      char *text;
     } keyboard;
-    struct {
-      int depressed;
-      int latched;
-      int locked;
-    } keyboard_mods;
     struct {
       double x, y, dx, dy;
     } mouse_motion;
