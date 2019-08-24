@@ -178,7 +178,16 @@ static void keyboard_key(void *data, struct wl_keyboard *keyboard,
 
   if (!state) {
     /* If a key repeat timer is running, stop it */
-    struct itimerspec off = {0};
+    struct itimerspec off = {
+      .it_value = {
+        .tv_sec = 0,
+        .tv_nsec = 0,
+      },
+      .it_interval = {
+        .tv_sec = 0,
+        .tv_nsec = 0,
+      },
+    };
     timer_settime(window->timer_id, 0, &off, NULL);
     return;
   }
@@ -775,7 +784,7 @@ struct imv_window *imv_window_create(int width, int height, const char *title)
 
 void imv_window_free(struct imv_window *window)
 {
-  timer_delete(&window->timer_id);
+  timer_delete(window->timer_id);
   imv_keyboard_free(window->keyboard);
   shutdown_wayland(window);
   list_deep_free(window->wl_outputs);
