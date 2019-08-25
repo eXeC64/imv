@@ -29,17 +29,11 @@
 #define PATH_MAX 4096
 #endif
 
-enum scaling_mode {
-  SCALING_NONE,
-  SCALING_DOWN,
-  SCALING_FULL,
-  SCALING_MODE_COUNT
-};
-
 static const char *scaling_label[] = {
   "actual size",
   "shrink to fit",
-  "scale to fit"
+  "scale to fit",
+  "crop"
 };
 
 enum background_type {
@@ -435,7 +429,7 @@ static void event_handler(void *data, const struct imv_event *e)
         const int wh = e->data.resize.height;
         const int bw = e->data.resize.buffer_width;
         const int bh = e->data.resize.buffer_height;
-        imv_viewport_update(imv->view, ww, wh, bw, bh, imv->current_image);
+        imv_viewport_update(imv->view, ww, wh, bw, bh, imv->current_image, imv->scaling_mode);
         imv_canvas_resize(imv->canvas, bw, bh);
         break;
       }
@@ -648,6 +642,11 @@ static bool parse_scaling_mode(struct imv *imv, const char *mode)
 
   if (!strcmp(mode, "full")) {
     imv->scaling_mode = SCALING_FULL;
+    return true;
+  }
+
+  if (!strcmp(mode, "crop")) {
+    imv->scaling_mode = SCALING_CROP;
     return true;
   }
 
@@ -960,18 +959,8 @@ int imv_run(struct imv *imv)
     }
 
     if (imv->need_rescale) {
-      int ww, wh;
-      imv_window_get_size(imv->window, &ww, &wh);
-
       imv->need_rescale = false;
-      if (imv->scaling_mode == SCALING_NONE ||
-          (imv->scaling_mode == SCALING_DOWN
-           && ww > imv_image_width(imv->current_image)
-           && wh > imv_image_height(imv->current_image))) {
-        imv_viewport_scale_to_actual(imv->view, imv->current_image);
-      } else {
-        imv_viewport_scale_to_window(imv->view, imv->current_image);
-      }
+      imv_viewport_rescale(imv->view, imv->current_image, imv->scaling_mode);
     }
 
     current_time = cur_time();
