@@ -11,6 +11,7 @@ CONFIGPREFIX ?= /etc
 INSTALL_DATA ?= install -m 0644
 INSTALL_MAN ?= install -m 0644
 INSTALL_PROGRAM ?= install -m 0755
+INSTALL_SCRIPT ?= install -m 0755
 
 override CFLAGS += -std=c99 -W -Wall -Wpedantic -Wextra $(shell pkg-config --cflags pangocairo)
 override CPPFLAGS += -D_XOPEN_SOURCE=700
@@ -150,7 +151,7 @@ else ifeq ($(WINDOWS),x11)
 else ifeq ($(WINDOWS),all)
 		$(INSTALL_PROGRAM) $(TARGET_WAYLAND) $(DESTDIR)$(BINPREFIX)/imv-wayland
 		$(INSTALL_PROGRAM) $(TARGET_X11) $(DESTDIR)$(BINPREFIX)/imv-x11
-		$(INSTALL_PROGRAM) files/imv $(DESTDIR)$(BINPREFIX)/imv
+		$(INSTALL_SCRIPT) files/imv $(DESTDIR)$(BINPREFIX)/imv
 endif
 	$(INSTALL_PROGRAM) $(TARGET_MSG) $(DESTDIR)$(BINPREFIX)/imv-msg
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
