@@ -37,6 +37,11 @@ The *[options]* section accepts the following settings:
 *height* = <height>::
 	Initial height of the imv window. Defaults to 720.
 
+*initial_pan* = <pan_factor_x> <pan_factor_y>::
+	Initial pan/focus position factor of the opened images. A value of 50
+	represents the middle point of the image (50%).
+	Defaults to '50 50'
+
 *list_files_at_exit* = <true|false>::
 	Print open files to stdout at exit, each on a separate line.
 	Defaults to 'false'.

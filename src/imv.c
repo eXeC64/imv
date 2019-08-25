@@ -114,6 +114,10 @@ struct imv {
   /* scale up / down images to match window, or actual size */
   enum scaling_mode scaling_mode;
 
+  /* initial pan factor when opening new images */
+  bool custom_start_pan;
+  double initial_pan_x, initial_pan_y;
+
   struct {
     /* show a solid background colour, or chequerboard pattern */
     enum background_type type;
@@ -670,6 +674,18 @@ static bool parse_upscaling_method(struct imv *imv, const char *method)
   return false;
 }
 
+static bool parse_initial_pan(struct imv *imv, const char *pan_params)
+{
+  char *next_val;
+  long int val_x = strtol(pan_params, &next_val, 10);
+  long int val_y = strtol(next_val, NULL, 10);
+
+  imv->custom_start_pan = true;
+  imv->initial_pan_x = (double)val_x / (double)100;
+  imv->initial_pan_y = (double)val_y / (double)100;
+  return true;
+}
+
 static void *load_paths_from_stdin(void *data)
 {
   struct imv *imv = data;
@@ -1064,6 +1080,10 @@ static bool setup_window(struct imv *imv)
     imv->view = imv_viewport_create(ww, wh, bw, bh);
   }
 
+  if (imv->custom_start_pan) {
+    imv_viewport_set_default_pan_factor(imv->view, imv->initial_pan_x, imv->initial_pan_y);
+  }
+
   /* put us in fullscren mode to begin with if requested */
   imv_window_set_fullscreen(imv->window, imv->start_fullscreen);
 
@@ -1317,6 +1337,10 @@ static int handle_ini_value(void *user, const char *section, const char *name,
 
     if (!strcmp(name, "scaling_mode")) {
       return parse_scaling_mode(imv, value);
+    }
+
+    if (!strcmp(name, "initial_pan")) {
+      return parse_initial_pan(imv, value);
     }
 
     if (!strcmp(name, "background")) {
