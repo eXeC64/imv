@@ -6,6 +6,14 @@
 
 struct imv_viewport;
 
+enum scaling_mode {
+  SCALING_NONE,
+  SCALING_DOWN,
+  SCALING_FULL,
+  SCALING_CROP,
+  SCALING_MODE_COUNT
+};
+
 /* Used to signify how a a user requested a zoom */
 enum imv_zoom_source {
   IMV_ZOOM_MOUSE,
@@ -52,9 +60,17 @@ void imv_viewport_center(struct imv_viewport *view,
 void imv_viewport_scale_to_actual(struct imv_viewport *view,
                                   const struct imv_image *image);
 
-/* Scale the view so that the image fills the window */
+/* Scale the view so that the image fits in the window */
 void imv_viewport_scale_to_window(struct imv_viewport *view,
                                   const struct imv_image *image);
+
+/* Scale the view so that the image fills the window */
+void imv_viewport_crop_to_window(struct imv_viewport *view,
+                                  const struct imv_image *image);
+
+/* Rescale the view with the chosen scaling method */
+void imv_viewport_rescale(struct imv_viewport *view, const struct imv_image *image,
+                          enum scaling_mode);
 
 /* Tell the viewport that it needs to be redrawn */
 void imv_viewport_set_redraw(struct imv_viewport *view);
@@ -63,7 +79,7 @@ void imv_viewport_set_redraw(struct imv_viewport *view);
 void imv_viewport_update(struct imv_viewport *view,
                          int window_width, int window_height,
                          int buffer_width, int buffer_height,
-                         struct imv_image *image);
+                         struct imv_image *image, enum scaling_mode);
 
 /* Poll whether we need to redraw */
 int imv_viewport_needs_redraw(struct imv_viewport *view);

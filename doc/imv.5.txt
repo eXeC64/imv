@@ -63,10 +63,11 @@ The *[options]* section accepts the following settings:
 *recursively* = <true|false>::
 	Load input paths recursively. Defaults to 'false'.
 
-*scaling_mode* = <none|shrink|full>::
+*scaling_mode* = <none|shrink|full|crop>::
 	Set scaling mode to use. 'none' will show each image at its actual size.
 	'shrink' will scale down the image to fit inside the window. 'full' will
 	both scale up and scale down the image to fit perfectly inside the window.
+	'crop' willl scale and crop the image to fill the window.
 	Defaults to 'full'.
 
 *slideshow_duration* = <duration>::

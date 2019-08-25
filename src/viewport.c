@@ -198,15 +198,48 @@ void imv_viewport_scale_to_window(struct imv_viewport *view, const struct imv_im
   view->locked = 0;
 }
 
+void imv_viewport_crop_to_window(struct imv_viewport *view, const struct imv_image *image)
+{
+  const int image_width = imv_image_width(image);
+  const int image_height = imv_image_height(image);
+  const double window_aspect = (double)view->buffer.width / (double)view->buffer.height;
+  const double image_aspect = (double)image_width / (double)image_height;
+
+  /* Scale the image so that it fills the whole window */
+  if(window_aspect > image_aspect) {
+    view->scale = (double)view->buffer.width / (double)image_width;
+  } else {
+    view->scale = (double)view->buffer.height / (double)image_height;
+  }
+
+  imv_viewport_center(view, image);
+  view->locked = 0;
+}
+
 void imv_viewport_set_redraw(struct imv_viewport *view)
 {
   view->redraw = 1;
 }
 
+void imv_viewport_rescale(struct imv_viewport *view, const struct imv_image *image,
+                          enum scaling_mode scaling_mode) {
+  if (scaling_mode == SCALING_NONE ||
+      (scaling_mode == SCALING_DOWN
+       && view->buffer.width > imv_image_width(image)
+       && view->buffer.height > imv_image_height(image))) {
+    imv_viewport_scale_to_actual(view, image);
+  } else if (scaling_mode == SCALING_CROP) {
+    imv_viewport_crop_to_window(view, image);
+  } else {
+    imv_viewport_scale_to_window(view, image);
+  }
+}
+
 void imv_viewport_update(struct imv_viewport *view,
                          int window_width, int window_height,
                          int buffer_width, int buffer_height,
-                         struct imv_image *image)
+                         struct imv_image *image,
+                         enum scaling_mode scaling_mode)
 {
   view->window.width = window_width;
   view->window.height = window_height;
@@ -219,7 +252,7 @@ void imv_viewport_update(struct imv_viewport *view,
   }
 
   imv_viewport_center(view, image);
-  imv_viewport_scale_to_window(view, image);
+  imv_viewport_rescale(view, image, scaling_mode);
 }
 
 int imv_viewport_needs_redraw(struct imv_viewport *view)
