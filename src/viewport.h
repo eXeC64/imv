@@ -34,6 +34,9 @@ void imv_viewport_get_offset(struct imv_viewport *view, int *x, int *y);
 /* Fetch viewport scale */
 void imv_viewport_get_scale(struct imv_viewport *view, double *scale);
 
+/* Set the default pan_factor factor for the x and y position */
+void imv_viewport_set_default_pan_factor(struct imv_viewport *view, double pan_factor_x, double pan_factor_y);
+
 /* Pan the view by the given amounts without letting the image get too far
  * off-screen */
 void imv_viewport_move(struct imv_viewport *view, int x, int y,

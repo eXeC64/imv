@@ -9,6 +9,7 @@ struct imv_viewport {
     int width, height;
   } buffer; /* rendering buffer dimensions */
   int x, y;
+  double pan_factor_x, pan_factor_y;
   int redraw;
   int playing;
   int locked;
@@ -30,6 +31,7 @@ struct imv_viewport *imv_viewport_create(int window_width, int window_height,
   view->buffer.height = buffer_height;
   view->scale = 1;
   view->x = view->y = view->redraw = 0;
+  view->pan_factor_x = view->pan_factor_y = 0.5;
   view->playing = 1;
   view->locked = 0;
   return view;
@@ -78,6 +80,12 @@ void imv_viewport_get_scale(struct imv_viewport *view, double *scale)
   if(scale) {
     *scale = view->scale;
   }
+}
+
+void imv_viewport_set_default_pan_factor(struct imv_viewport *view, double pan_factor_x, double pan_factor_y)
+{
+  view->pan_factor_x = pan_factor_x;
+  view->pan_factor_y = pan_factor_y;
 }
 
 void imv_viewport_move(struct imv_viewport *view, int x, int y,
@@ -172,8 +180,22 @@ void imv_viewport_center(struct imv_viewport *view, const struct imv_image *imag
   const int image_width = imv_image_width(image);
   const int image_height = imv_image_height(image);
 
-  view->x = (view->buffer.width - image_width * view->scale) / 2;
-  view->y = (view->buffer.height - image_height * view->scale) / 2;
+  view->x = view->buffer.width - image_width * view->scale;
+  view->y = view->buffer.height - image_height * view->scale;
+
+  if (view->x > 0) {
+    /* Image is smaller than the window. Center the image */
+    view->x *= 0.5;
+  } else {
+    view->x *= view->pan_factor_x;
+  }
+
+  if (view->y > 0) {
+    /* Image is smaller than the window. Center the image */
+    view->y *= 0.5;
+  } else {
+    view->y *= view->pan_factor_y;
+  }
 
   view->locked = 1;
   view->redraw = 1;
