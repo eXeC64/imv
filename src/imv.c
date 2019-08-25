@@ -190,6 +190,7 @@ static void command_reset(struct list *args, const char *argstr, void *data);
 static void command_next_frame(struct list *args, const char *argstr, void *data);
 static void command_toggle_playing(struct list *args, const char *argstr, void *data);
 static void command_set_scaling_mode(struct list *args, const char *argstr, void *data);
+static void command_set_upscaling_method(struct list *args, const char *argstr, void *data);
 static void command_set_slideshow_duration(struct list *args, const char *argstr, void *data);
 static void command_set_background(struct list *args, const char *argstr, void *data);
 static void command_bind(struct list *args, const char *argstr, void *data);
@@ -518,6 +519,7 @@ struct imv *imv_create(void)
   imv_command_register(imv->commands, "next_frame", &command_next_frame);
   imv_command_register(imv->commands, "toggle_playing", &command_toggle_playing);
   imv_command_register(imv->commands, "scaling", &command_set_scaling_mode);
+  imv_command_register(imv->commands, "upscaling", &command_set_upscaling_method);
   imv_command_register(imv->commands, "slideshow", &command_set_slideshow_duration);
   imv_command_register(imv->commands, "background", &command_set_background);
   imv_command_register(imv->commands, "bind", &command_bind);
@@ -554,6 +556,7 @@ struct imv *imv_create(void)
   add_bind(imv, "o", "zoom -1");
   add_bind(imv, "c", "center");
   add_bind(imv, "s", "scaling next");
+  add_bind(imv, "<Shift+S>", "upscaling next");
   add_bind(imv, "a", "zoom actual");
   add_bind(imv, "r", "reset");
   add_bind(imv, "<period>", "next_frame");
@@ -1599,18 +1602,35 @@ static void command_set_scaling_mode(struct list *args, const char *argstr, void
   if (!strcmp(mode, "next")) {
     imv->scaling_mode++;
     imv->scaling_mode %= SCALING_MODE_COUNT;
-  } else if (!strcmp(mode, "none")) {
-    imv->scaling_mode = SCALING_NONE;
-  } else if (!strcmp(mode, "shrink")) {
-    imv->scaling_mode = SCALING_DOWN;
-  } else if (!strcmp(mode, "full")) {
-    imv->scaling_mode = SCALING_FULL;
-  } else {
+  } else if (!parse_scaling_mode(imv, mode)) {
     /* no changes, don't bother to redraw */
     return;
   }
 
   imv->need_rescale = true;
+  imv->need_redraw = true;
+}
+
+static void command_set_upscaling_method(struct list *args, const char *argstr, void *data)
+{
+  (void)args;
+  (void)argstr;
+  struct imv *imv = data;
+
+  if (args->len != 2) {
+    return;
+  }
+
+  const char *mode = args->items[1];
+
+  if (!strcmp(mode, "next")) {
+    imv->upscaling_method++;
+    imv->upscaling_method %= UPSCALING_METHOD_COUNT;
+  } else if (!parse_upscaling_method(imv, mode)) {
+    /* no changes, don't bother to redraw */
+    return;
+  }
+
   imv->need_redraw = true;
 }
 

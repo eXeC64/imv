@@ -45,6 +45,7 @@ d = overlay
 p = exec echo $imv_current_file
 c = center
 s = scaling next
+<Shift+S> = upscaling next
 a = zoom actual
 r = reset
 

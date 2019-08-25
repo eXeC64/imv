@@ -136,6 +136,10 @@ Commands can be entered by pressing *:*. imv supports the following commands:
 	Set the current scaling mode. Setting the mode to 'next' advances it to the
 	next mode in the list.
 
+*upscaling* <linear|nearest_neighbour|next>::
+	Set the current upscaling method. Setting the method to 'next' advances it to the
+	next method in the list.
+
 *slideshow* <+amount|-amount|duration>::
 	Increase or decrease the slideshow duration by the given amount in seconds,
 	or set its duration directly. Aliased to 'ss'.
