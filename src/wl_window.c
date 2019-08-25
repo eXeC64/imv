@@ -701,9 +701,6 @@ static void create_window(struct imv_window *window, int width, int height,
   xdg_toplevel_set_title(window->wl_xdg_toplevel, title);
   xdg_toplevel_set_app_id(window->wl_xdg_toplevel, "imv");
 
-  wl_surface_commit(window->wl_surface);
-  wl_display_roundtrip(window->wl_display);
-
   window->egl_window = wl_egl_window_create(window->wl_surface, width, height);
   window->egl_surface = eglCreateWindowSurface(window->egl_display, config, window->egl_window, NULL);
   eglMakeCurrent(window->egl_display, window->egl_surface, window->egl_surface, window->egl_context);
