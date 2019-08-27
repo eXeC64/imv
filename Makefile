@@ -98,7 +98,7 @@ MSG_OBJECTS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(MSG_SOURCES))
 
 TESTS := $(patsubst test/%.c,$(BUILDDIR)/test_%,$(TEST_SOURCES))
 
-VERSION != git describe --dirty --always --tags 2> /dev/null || echo v4.0.0-rc3
+VERSION != git describe --dirty --always --tags 2> /dev/null || echo v4.0.0
 
 override CPPFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
 

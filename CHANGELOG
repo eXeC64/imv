@@ -1,6 +1,37 @@
 imv Changelog
 =============
 
+v4.0.0 - 2019-08-27
+
+BREAKING CHANGES:
+* Fixed keyboard layout handling, changing bind syntax
+* Renamed many commands (select_rel -> next/prev, select_abs -> goto, etc.)
+* Temporarily removed autoresize option
+
+* Dropped SDL2 dependency, implementing Wayland and X11 support natively
+  through imv-wayland and imv-x11 binaries
+* Added support for displaying SVGs at native resolution regardless of zoom
+  level
+* Added hidpi support on Wayland
+* Added '-c' argument to specify commands to run at startup
+* Added 'bind' command to add new binds at runtime
+* Added 'background' command to change background colour at runtime
+* Added 'upscaling' command to modify upscaling method at runtime
+* Added optional argument to close command to specify an index or all images
+* Added initial_pan option to configure which part of an image is initially
+  focused on
+* Added support for aliases passing arguments to underlying their commands
+* Added imv-msg program to send commands to a running instance of imv
+* Added $imv_pid environment variable
+* Allowed imv to remain open with no images open
+* Improved unicode support in overlay
+* Fixed typo in $imv_slideshow_duration environment variable
+* Added new crop scaling method, which will zoom in until an image completely
+  fills the window
+* Fixed a bug where 16-bit greyscale images would not load
+* Fixed a memory corruption bug in generic list implementation
+* Fixed several memory leaks
+
 v3.1.2 - 2019-06-24
 
 * Fix manpage packaging regression introduced in v3.1.1
