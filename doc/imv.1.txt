@@ -153,6 +153,95 @@ Commands can be entered by pressing *:*. imv supports the following commands:
 	file, but without an equals sign between the keys and the commands. For
 	more information on syntax, see **imv**(5).
 
+Default Binds
+-------------
+
+imv comes with several binds configured by default
+
+*q*::
+	Quit
+
+*Left arrow,*::
+	Previous image
+
+*Right arrow*::
+	Next Image
+
+*gg*::
+	Go to first image
+
+*G*::
+	Go to last image
+
+*j*::
+	Pan down
+
+*k*::
+	Pan up
+
+*h*::
+	Pan left
+
+*l*::
+	Pan right
+
+*x*::
+	Close current image
+
+*f*::
+	Toggle fullscreen
+
+*d*::
+	Toggle overlay
+
+*p*::
+	Print current image to stdout
+
+*Up arrow*::
+	Zoom in
+
+*Down arrow*::
+	Zoom out
+
+*i*::
+	Zoom in
+
+*o*::
+	Zoom out
+
+*+*::
+	Zoom in
+
+*-*::
+	Zoom out
+
+*c*::
+	Center image
+
+*s*::
+	Next scaling mode
+
+*S*::
+	Next upscaling mode
+
+*a*::
+	Zoom to actual size
+
+*r*::
+	Reset zoom and pan
+
+*.*::
+	Next frame (for animations)
+
+*Space*::
+	Pause/play animations
+
+*t*::
+	Start slideshow/increase delay by 1 second
+
+*T*::
+	Stop slideshow/decrease delay by 1 second
+
 Configuration
 -------------
 
