@@ -531,6 +531,11 @@ struct imv *imv_create(void)
   imv_command_alias(imv->commands, "bg", "background");
   imv_command_alias(imv->commands, "ss", "slideshow");
 
+  /* aliases to improve backwards compatibility with <v4 */
+  imv_command_alias(imv->commands, "select_rel", "next");
+  imv_command_alias(imv->commands, "select_abs", "goto");
+  imv_command_alias(imv->commands, "scaling_method", "scaling");
+
   add_bind(imv, "q", "quit");
   add_bind(imv, "<Left>", "prev");
   add_bind(imv, "<bracketleft>", "prev");
