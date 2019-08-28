@@ -1,6 +1,7 @@
 #include "imv.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <getopt.h>
 #include <stdbool.h>
@@ -237,11 +238,33 @@ static void split_commands(const char *start, const char **out, size_t *len)
   *len = str - start;
 }
 
+static bool is_legacy_bind(const char *keys)
+{
+  const char *prefix = "<Shift+";
+  const size_t prefix_len = strlen(prefix);
+  if (strncmp(keys, prefix, prefix_len)) {
+    return false;
+  }
+  /* Has a Shift prefix. Check for single lower case character. */
+  if (islower(keys[prefix_len]) && keys[prefix_len+1] == '>') {
+    return true;
+  }
+
+  return false;
+}
+
 static bool add_bind(struct imv *imv, const char *keys, const char *commands)
 {
+  if (is_legacy_bind(keys)) {
+    imv_log(IMV_WARNING, "'%s' is the legacy bind syntax.\n"
+        "<Shift+n> would now be <Shift+N>.\n"
+        "Check the imv(5) man page for more syntax examples.\n", keys);
+    return true;
+  }
+
   struct list *list = imv_bind_parse_keys(keys);
   if (!list) {
-    imv_log(IMV_ERROR, "Invalid key combination");
+    imv_log(IMV_ERROR, "Invalid key combination\n");
     return false;
   }
 
