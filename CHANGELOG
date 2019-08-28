@@ -1,6 +1,13 @@
 imv Changelog
 =============
 
+v4.0.1 - 2019-08-28
+
+* Documented default binds in man page
+* Added icon to imv.desktop
+* Added builtin aliases to provide backwards compatibility for removed commands
+* Added warning when legacy bind syntax is detected
+
 v4.0.0 - 2019-08-27
 
 BREAKING CHANGES:
