@@ -22,18 +22,7 @@ Features
 Packages
 --------
 
-imv is officially packaged by several operating systems:
-
- - [Alpine Linux](https://pkgs.alpinelinux.org/packages?name=imv)
- - [Arch Linux](https://www.archlinux.org/packages/community/x86_64/imv/)
- - [Debian](https://packages.debian.org/search?searchon=sourcenames&keywords=imv)
- - [FreeBSD](https://www.freshports.org/graphics/imv/)
- - [Gentoo](https://wiki.gentoo.org/wiki/Imv)
- - [OpenBSD](http://openports.se/graphics/imv)
- - [Ubuntu](https://packages.ubuntu.com/search?keywords=imv)
-
-The age of prepackaged versions of imv may vary greatly. Please ensure you are
-using the latest release before reporting bugs.
+[![Packaging status](https://repology.org/badge/vertical-allrepos/imv.svg)](https://repology.org/project/imv/versions)
 
 Example Usage
 -------------
