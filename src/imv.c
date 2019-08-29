@@ -4,9 +4,11 @@
 #include <ctype.h>
 #include <errno.h>
 #include <getopt.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 #include <wordexp.h>
 
@@ -58,9 +60,6 @@ struct internal_event {
       int frametime;
       bool is_new_image;
     } new_image;
-    struct {
-      char *error;
-    } bad_image;
     struct {
       char *path;
     } new_path;
@@ -318,37 +317,6 @@ static double cur_time(void)
   return ts.tv_sec + (double)ts.tv_nsec * 0.000000001;
 }
 
-static void *async_free_source_thread(void *raw)
-{
-  struct imv_source *src = raw;
-  src->free(src);
-  return NULL;
-}
-
-static void async_free_source(struct imv_source *src)
-{
-  typedef void *(*thread_func)(void*);
-  pthread_t thread;
-  pthread_create(&thread, NULL, (thread_func)async_free_source_thread, src);
-  pthread_detach(thread);
-}
-
-static void async_load_first_frame(struct imv_source *src)
-{
-  typedef void *(*thread_func)(void*);
-  pthread_t thread;
-  pthread_create(&thread, NULL, (thread_func)src->load_first_frame, src);
-  pthread_detach(thread);
-}
-
-static void async_load_next_frame(struct imv_source *src)
-{
-  typedef void *(*thread_func)(void*);
-  pthread_t thread;
-  pthread_create(&thread, NULL, (thread_func)src->load_next_frame, src);
-  pthread_detach(thread);
-}
-
 static void source_callback(struct imv_source_message *msg)
 {
   struct imv *imv = msg->user_data;
@@ -376,8 +344,6 @@ static void source_callback(struct imv_source_message *msg)
     imv->last_source = msg->source;
   } else {
     event->type = BAD_IMAGE;
-    /* TODO: Something more elegant with error messages */
-    event->data.bad_image.error = strdup(msg->error);
   }
 
   struct imv_event e = {
@@ -601,7 +567,7 @@ void imv_free(struct imv *imv)
   imv_binds_free(imv->binds);
   imv_navigator_free(imv->navigator);
   if (imv->current_source) {
-    imv->current_source->free(imv->current_source);
+    imv_source_free(imv->current_source);
   }
   imv_commands_free(imv->commands);
   imv_console_free(imv->console);
@@ -960,12 +926,11 @@ int imv_run(struct imv *imv)
 
         if (result == BACKEND_SUCCESS) {
           if (imv->current_source) {
-            async_free_source(imv->current_source);
+            imv_source_async_free(imv->current_source);
           }
           imv->current_source = new_source;
-          imv->current_source->callback = &source_callback;
-          imv->current_source->user_data = imv;
-          async_load_first_frame(imv->current_source);
+          imv_source_set_callback(imv->current_source, &source_callback, imv);
+          imv_source_async_load_first_frame(imv->current_source);
 
           imv->loading = true;
           imv_viewport_set_playing(imv->view, true);
@@ -1016,8 +981,8 @@ int imv_run(struct imv *imv)
       imv->need_redraw = true;
 
       /* Trigger loading of a new frame, now this one's being displayed */
-      if (imv->current_source && imv->current_source->load_next_frame) {
-        async_load_next_frame(imv->current_source);
+      if (imv->current_source) {
+        imv_source_async_load_next_frame(imv->current_source);
       }
     }
 
@@ -1128,8 +1093,8 @@ static void handle_new_image(struct imv *imv, struct imv_image *image, int frame
   imv->next_frame.duration = 0.0;
 
   /* If this is an animated image, we should kick off loading the next frame */
-  if (imv->current_source && imv->current_source->load_next_frame && frametime) {
-    async_load_next_frame(imv->current_source);
+  if (imv->current_source && frametime) {
+    imv_source_async_load_next_frame(imv->current_source);
   }
 }
 
@@ -1614,8 +1579,8 @@ static void command_next_frame(struct list *args, const char *argstr, void *data
   (void)args;
   (void)argstr;
   struct imv *imv = data;
-  if (imv->current_source && imv->current_source->load_next_frame) {
-    async_load_next_frame(imv->current_source);
+  if (imv->current_source) {
+    imv_source_async_load_next_frame(imv->current_source);
     imv->next_frame.force_next_frame = true;
   }
 }

@@ -1,5 +1,7 @@
 #include "viewport.h"
 
+#include <stdlib.h>
+
 struct imv_viewport {
   double scale;
   struct {

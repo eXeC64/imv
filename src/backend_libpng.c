@@ -1,11 +1,11 @@
 #include "backend.h"
-#include "source.h"
+#include "bitmap.h"
+#include "image.h"
 #include "log.h"
+#include "source.h"
+#include "source_private.h"
 
-#include <assert.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 
 #include <png.h>
 
@@ -15,103 +15,63 @@ struct private {
   png_infop info;
 };
 
-static void source_free(struct imv_source *src)
+static void free_private(void *raw_private)
 {
-  pthread_mutex_lock(&src->busy);
-  free(src->name);
-  src->name = NULL;
+  if (!raw_private) {
+    return;
+  }
 
-  struct private *private = src->private;
+  struct private *private = raw_private;
   png_destroy_read_struct(&private->png, &private->info, NULL);
   if (private->file) {
     fclose(private->file);
   }
-
-  free(src->private);
-  src->private = NULL;
-
-  pthread_mutex_unlock(&src->busy);
-  pthread_mutex_destroy(&src->busy);
-  free(src);
+  free(private);
 }
 
-static struct imv_image *to_image(int width, int height, void *bitmap)
+static void load_image(void *raw_private, struct imv_image **image, int *frametime)
 {
-  struct imv_bitmap *bmp = malloc(sizeof *bmp);
-  bmp->width = width;
-  bmp->height = height;
-  bmp->format = IMV_ABGR;
-  bmp->data = bitmap;
-  struct imv_image *image = imv_image_create_from_bitmap(bmp);
-  return image;
-}
+  *image = NULL;
+  *frametime = 0;
 
-static void report_error(struct imv_source *src)
-{
-  assert(src->callback);
-
-  struct imv_source_message msg;
-  msg.source = src;
-  msg.user_data = src->user_data;
-  msg.image = NULL;
-  msg.error = "Internal error";
-
-  pthread_mutex_unlock(&src->busy);
-  src->callback(&msg);
-}
-
-
-static void send_bitmap(struct imv_source *src, void *bitmap)
-{
-  assert(src->callback);
-
-  struct imv_source_message msg;
-  msg.source = src;
-  msg.user_data = src->user_data;
-  msg.image = to_image(src->width, src->height, bitmap);
-  msg.frametime = 0;
-  msg.error = NULL;
-
-  pthread_mutex_unlock(&src->busy);
-  src->callback(&msg);
-}
-
-static void *load_image(struct imv_source *src)
-{
-  /* Don't run if this source is already active */
-  if (pthread_mutex_trylock(&src->busy)) {
-    return NULL;
-  }
-
-  struct private *private = src->private;
-
+  struct private *private = raw_private;
   if (setjmp(png_jmpbuf(private->png))) {
-    report_error(src);
-    return NULL;
+    return;
   }
 
-  png_bytep *rows = malloc(sizeof(png_bytep) * src->height);
+  const int width = png_get_image_width(private->png, private->info);
+  const int height = png_get_image_height(private->png, private->info);
+
+  png_bytep *rows = malloc(sizeof(png_bytep) * height);
   size_t row_len = png_get_rowbytes(private->png, private->info);
-  rows[0] = malloc(src->height * row_len);
-  for (int y = 1; y < src->height; ++y) {
+  rows[0] = malloc(height * row_len);
+  for (int y = 1; y < height; ++y) {
     rows[y] = rows[0] + row_len * y;
   }
 
   if (setjmp(png_jmpbuf(private->png))) {
-    free(rows[0]);
-    free(rows);
-    report_error(src);
-    return NULL;
+    return;
   }
 
   png_read_image(private->png, rows);
-  void *bmp = rows[0];
+  void *raw_bmp = rows[0];
   free(rows);
   fclose(private->file);
   private->file = NULL;
-  send_bitmap(src, bmp);
-  return NULL;
+
+
+  struct imv_bitmap *bmp = malloc(sizeof *bmp);
+  bmp->width = width;
+  bmp->height = height;
+  bmp->format = IMV_ABGR;
+  bmp->data = raw_bmp;
+  *image = imv_image_create_from_bitmap(bmp);
 }
+
+static const struct imv_source_vtable vtable = {
+  .load_first_frame = load_image,
+  .free = free_private
+};
 
 static enum backend_result open_path(const char *path, struct imv_source **src)
 {
@@ -127,7 +87,7 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
     return BACKEND_UNSUPPORTED;
   }
 
-  struct private *private = malloc(sizeof *private);
+  struct private *private = calloc(1, sizeof *private);
   private->file = f;
   private->png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   if (!private->png) {
@@ -168,30 +128,14 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
       png_get_bit_depth(private->png, private->info),
       png_get_color_type(private->png, private->info));
 
-  struct imv_source *source = calloc(1, sizeof *source);
-  source->name = strdup(path);
   if (setjmp(png_jmpbuf(private->png))) {
-    free(source->name);
-    free(source);
     png_destroy_read_struct(&private->png, &private->info, NULL);
     fclose(private->file);
     free(private);
     return BACKEND_UNSUPPORTED;
   }
 
-  source->width = png_get_image_width(private->png, private->info);
-  source->height = png_get_image_height(private->png, private->info);
-  source->num_frames = 1;
-  source->next_frame = 1;
-  pthread_mutex_init(&source->busy, NULL);
-  source->load_first_frame = &load_image;
-  source->load_next_frame = NULL;
-  source->free = &source_free;
-  source->callback = NULL;
-  source->user_data = NULL;
-  source->private = private;
-
-  *src = source;
+  *src = imv_source_create(&vtable, private);
   return BACKEND_SUCCESS;
 }
 

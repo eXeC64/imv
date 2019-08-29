@@ -2,6 +2,8 @@
 
 #include "bitmap.h"
 
+#include <stdlib.h>
+
 struct imv_image {
   int width;
   int height;
