@@ -89,6 +89,12 @@ ifeq ($(BACKEND_LIBRSVG),yes)
 	override LIBS += $(shell pkg-config --libs librsvg-2.0)
 endif
 
+ifeq ($(BACKEND_LIBNSGIF),yes)
+	SOURCES += src/backend_libnsgif.c
+	override CPPFLAGS += -DIMV_BACKEND_LIBNSGIF $(shell pkg-config --cflags libnsgif)
+	override LIBS += $(shell pkg-config --libs libnsgif)
+endif
+
 
 TEST_SOURCES := test/list.c test/navigator.c
 

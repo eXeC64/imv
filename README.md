@@ -133,6 +133,7 @@ Installation
 | libpng         |          | Optional. Provides PNG support.                |
 | libjpeg-turbo  |          | Optional. Provides JPEG support.               |
 | librsvg        | >=v2.44  | Optional. Provides SVG support.                |
+| libnsgif       |          | Optional. Provides GIF support.                |
 
 Dependencies are determined by which backends and window systems are enabled
 when building `imv`. You can find a summary of which backends are available and

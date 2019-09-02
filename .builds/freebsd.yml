@@ -6,6 +6,7 @@ packages:
   - graphics/freeimage
   - graphics/libGLU
   - graphics/libjpeg-turbo
+  - graphics/libnsgif
   - graphics/librsvg2
   - graphics/png
   - graphics/tiff

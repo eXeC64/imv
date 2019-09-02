@@ -23,6 +23,8 @@ tasks:
   - configure: |
       cd imv
       sed -i -e 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk
+      # libnsgif isn't packaged by ubuntu
+      sed -i -e 's/BACKEND_LIBNSGIF=yes/BACKEND_LIBNSGIF=no/' config.mk
       cat config.mk
   - gcc: |
       cd imv

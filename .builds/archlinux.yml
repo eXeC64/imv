@@ -5,6 +5,7 @@ packages:
   - freeimage
   - icu
   - libjpeg-turbo
+  - libnsgif
   - libpng
   - librsvg
   - libtiff

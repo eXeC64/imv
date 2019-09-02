@@ -16,7 +16,7 @@ BACKEND_FREEIMAGE=yes
 
 # libtiff
 # provides: tiff
-# dependws: libjpeg  zlib  xz  zstd
+# depends: libjpeg  zlib  xz  zstd
 # license: MIT
 BACKEND_LIBTIFF=no
 
@@ -37,3 +37,9 @@ BACKEND_LIBJPEG=no
 # depends: gdk-pixbuf2 pango libcroco
 # license: LGPL
 BACKEND_LIBRSVG=yes
+
+# libnsgif https://www.netsurf-browser.org/projects/libnsgif/
+# provides: animated gif
+# depends: none
+# license: MIT
+BACKEND_LIBNSGIF=no
