@@ -127,7 +127,7 @@ void imv_canvas_font(struct imv_canvas *canvas, const char *name, int size)
   pango_font_description_set_absolute_size(canvas->font, size * PANGO_SCALE);
 }
 
-void imv_canvas_printf(struct imv_canvas *canvas, int x, int y, const char *fmt, ...)
+int imv_canvas_printf(struct imv_canvas *canvas, int x, int y, const char *fmt, ...)
 {
   char line[1024];
   va_list args;
@@ -140,9 +140,14 @@ void imv_canvas_printf(struct imv_canvas *canvas, int x, int y, const char *fmt,
 
   cairo_move_to(canvas->cairo, x, y);
   pango_cairo_show_layout(canvas->cairo, layout);
+
+  PangoRectangle extents;
+  pango_layout_get_pixel_extents(layout, NULL, &extents);
+
   g_object_unref(layout);
 
   va_end(args);
+  return extents.width;
 }
 
 void imv_canvas_draw(struct imv_canvas *canvas)

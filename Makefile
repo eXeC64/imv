@@ -15,7 +15,7 @@ INSTALL_SCRIPT ?= install -m 0755
 
 override CFLAGS += -std=c99 -W -Wall -Wpedantic -Wextra $(shell pkg-config --cflags pangocairo)
 override CPPFLAGS += -D_XOPEN_SOURCE=700
-override LIBS := -lGL -lpthread -lxkbcommon $(shell pkg-config --libs pangocairo)
+override LIBS := -lGL -lpthread -lxkbcommon $(shell pkg-config --libs pangocairo) $(shell pkg-config --libs icu-io)
 
 BUILDDIR ?= build
 TARGET_WAYLAND = $(BUILDDIR)/imv-wayland

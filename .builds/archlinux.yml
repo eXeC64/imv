@@ -3,6 +3,7 @@ packages:
   - clang
   - cmocka
   - freeimage
+  - icu
   - libjpeg-turbo
   - libpng
   - librsvg

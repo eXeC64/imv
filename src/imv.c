@@ -377,7 +377,7 @@ static void key_handler(struct imv *imv, const struct imv_event *event)
 {
   if (imv_console_is_active(imv->console)) {
 
-    if (imv_console_key(imv->console, event->data.keyboard.keyname)) {
+    if (imv_console_key(imv->console, event->data.keyboard.description)) {
       imv->need_redraw = true;
       return;
     }
@@ -1209,8 +1209,20 @@ static void render_window(struct imv *imv)
     imv_canvas_fill_rectangle(imv->canvas, 0, wh - height - bottom_offset,
         ww, height + bottom_offset);
     imv_canvas_color(imv->canvas, 1, 1, 1, 1);
-    imv_canvas_printf(imv->canvas, 0, wh - height - bottom_offset,
-        ":%s\u2588", imv_console_prompt(imv->console));
+
+    int x = 0;
+    /* draw pre-cursor text */
+    x += imv_canvas_printf(imv->canvas, x, wh - height - bottom_offset,
+        ":%.*s",
+        imv_console_prompt_cursor(imv->console),
+        imv_console_prompt(imv->console));
+    /* draw the cursor */
+    imv_canvas_color(imv->canvas, 1, 1, 1, 0.5);
+    imv_canvas_printf(imv->canvas, x, wh - height - bottom_offset, "\u2588");
+    /* any any remaining text on top of the cursor */
+    imv_canvas_color(imv->canvas, 1, 1, 1, 1);
+    imv_canvas_printf(imv->canvas, x, wh - height - bottom_offset, "%s",
+        imv_console_prompt(imv->console) + imv_console_prompt_cursor(imv->console));
   }
 
   imv_canvas_draw(imv->canvas);

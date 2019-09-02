@@ -37,8 +37,8 @@ void imv_canvas_fill_checkers(struct imv_canvas *canvas, int size);
 /* Select the font to draw text with */
 void imv_canvas_font(struct imv_canvas *canvas, const char *name, int size);
 
-/* Draw some text on the canvas */
-void imv_canvas_printf(struct imv_canvas *canvas, int x, int y, const char *fmt, ...);
+/* Draw some text on the canvas, returns the width used in pixels */
+int imv_canvas_printf(struct imv_canvas *canvas, int x, int y, const char *fmt, ...);
 
 /* Blit the canvas to the current OpenGL framebuffer */
 void imv_canvas_draw(struct imv_canvas *canvas);

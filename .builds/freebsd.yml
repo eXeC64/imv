@@ -1,6 +1,7 @@
 image: freebsd/latest
 packages:
   - devel/gmake
+  - devel/icu
   - devel/pkgconf
   - graphics/freeimage
   - graphics/libGLU

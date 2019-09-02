@@ -1,14 +1,64 @@
 #include "console.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unicode/utext.h>
+#include <unicode/ubrk.h>
 
 struct imv_console {
   char *buffer;
   size_t buffer_len;
+  size_t cursor;
+
   imv_console_callback callback;
   void *callback_data;
 };
+
+/* Iterates forwards over characters in a UTF-8 string */
+static size_t next_char(char *buffer, size_t position)
+{
+  size_t result = position;
+  UErrorCode status = U_ZERO_ERROR;
+  UText *ut = utext_openUTF8(NULL, buffer, -1, &status);
+
+  UBreakIterator *it = ubrk_open(UBRK_CHARACTER, NULL, NULL, 0, &status);
+  ubrk_setUText(it, ut, &status);
+
+  int boundary = ubrk_following(it, (int)position);
+  if (boundary != UBRK_DONE) {
+    result = (size_t)boundary;
+  }
+
+  ubrk_close(it);
+
+  utext_close(ut);
+  assert(U_SUCCESS(status));
+  return result;
+}
+
+/* Iterates backwards over characters in a UTF-8 string */
+static size_t prev_char(char *buffer, size_t position)
+{
+  size_t result = position;
+  UErrorCode status = U_ZERO_ERROR;
+  UText *ut = utext_openUTF8(NULL, buffer, -1, &status);
+
+  UBreakIterator *it = ubrk_open(UBRK_CHARACTER, NULL, NULL, 0, &status);
+  ubrk_setUText(it, ut, &status);
+
+  int boundary = ubrk_preceding(it, (int)position);
+  if (boundary != UBRK_DONE) {
+    result = (size_t)boundary;
+  }
+
+  ubrk_close(it);
+
+  utext_close(ut);
+  assert(U_SUCCESS(status));
+  return result;
+}
+
 
 struct imv_console *imv_console_create(void)
 {
@@ -45,6 +95,7 @@ void imv_console_activate(struct imv_console *console)
   }
 
   console->buffer = calloc(1, console->buffer_len);
+  console->cursor = 0;
 }
 
 void imv_console_input(struct imv_console *console, const char *text)
@@ -53,7 +104,21 @@ void imv_console_input(struct imv_console *console, const char *text)
     return;
   }
 
-  strncat(console->buffer, text, console->buffer_len - 1);
+  /* Increase buffer size if needed */
+  if (strlen(text) + strlen(console->buffer) + 1 > console->buffer_len) {
+    console->buffer_len *= 2;
+    console->buffer = realloc(console->buffer, console->buffer_len);
+    assert(console->buffer);
+  }
+
+  /* memmove over everything after the cursor right then copy in the new bytes */
+  size_t to_insert = strlen(text);
+  size_t old_cursor = console->cursor;
+  size_t new_cursor = console->cursor + to_insert;
+  size_t to_shift = strlen(console->buffer) - old_cursor;
+  memmove(&console->buffer[new_cursor], &console->buffer[old_cursor], to_shift);
+  memcpy(&console->buffer[old_cursor], text, to_insert);
+  console->cursor = new_cursor;
 }
 
 bool imv_console_key(struct imv_console *console, const char *key)
@@ -77,11 +142,33 @@ bool imv_console_key(struct imv_console *console, const char *key)
     return true;
   }
 
+  if (!strcmp("Left", key) || !strcmp("Ctrl+b", key)) {
+    console->cursor = prev_char(console->buffer, console->cursor);
+    return true;
+  }
+
+  if (!strcmp("Right", key) || !strcmp("Ctrl+f", key)) {
+    console->cursor = next_char(console->buffer, console->cursor);
+    return true;
+  }
+
+  if (!strcmp("Ctrl+a", key)) {
+    console->cursor = 0;
+    return true;
+  }
+
+  if (!strcmp("Ctrl+e", key)) {
+    console->cursor = strlen(console->buffer);
+    return true;
+  }
+
   if (!strcmp("BackSpace", key)) {
-    const size_t len = strlen(console->buffer);
-    if (len > 0) {
-      console->buffer[len - 1] = '\0';
-    }
+    /* memmove everything after the cursor left */
+    size_t new_cursor = prev_char(console->buffer, console->cursor);
+    size_t old_cursor = console->cursor;
+    size_t to_shift = strlen(console->buffer) - new_cursor;
+    memmove(&console->buffer[new_cursor], &console->buffer[old_cursor], to_shift);
+    console->cursor = new_cursor;
     return true;
   }
 
@@ -91,6 +178,11 @@ bool imv_console_key(struct imv_console *console, const char *key)
 const char *imv_console_prompt(struct imv_console *console)
 {
   return console->buffer;
+}
+
+size_t imv_console_prompt_cursor(struct imv_console *console)
+{
+  return console->cursor;
 }
 
 const char *imv_console_backlog(struct imv_console *console)

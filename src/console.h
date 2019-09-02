@@ -2,6 +2,7 @@
 #define IMV_CONSOLE
 
 #include <stdbool.h>
+#include <unistd.h>
 
 struct imv_console;
 
@@ -32,6 +33,9 @@ bool imv_console_key(struct imv_console *console, const char *key);
 
 /* What is the console prompt's current text? */
 const char *imv_console_prompt(struct imv_console *console);
+
+/* What is the console prompt's current cursor position? (bytes into UTF-8 string) */
+size_t imv_console_prompt_cursor(struct imv_console *console);
 
 /* What is the output history of the console? */
 const char *imv_console_backlog(struct imv_console *console);

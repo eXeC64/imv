@@ -120,6 +120,7 @@ Installation
 | pthreads       |          | Required.                                      |
 | xkbcommon      |          | Required.                                      |
 | pangocairo     |          | Required.                                      |
+| icu            |          | Required.                                      |
 | X11            |          | Optional. Required for X11 support.            |
 | GLU            |          | Optional. Required for X11 support.            |
 | xcb            |          | Optional. Required for X11 support.            |

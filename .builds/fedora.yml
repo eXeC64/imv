@@ -4,6 +4,7 @@ packages:
   - freeimage-devel
   - libX11-devel
   - libcmocka-devel
+  - libicu-devel
   - libpng-devel
   - librsvg2-devel
   - libtiff-devel
