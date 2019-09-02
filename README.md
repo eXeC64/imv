@@ -131,7 +131,7 @@ Installation
 | FreeImage      |          | Optional. Provides PNG, JPEG, TIFF, GIF, etc.  |
 | libtiff        |          | Optional. Provides TIFF support.               |
 | libpng         |          | Optional. Provides PNG support.                |
-| libjpeg        |          | Optional. Provides JPEG support.               |
+| libjpeg-turbo  |          | Optional. Provides JPEG support.               |
 | librsvg        | >=v2.44  | Optional. Provides SVG support.                |
 
 Dependencies are determined by which backends and window systems are enabled
