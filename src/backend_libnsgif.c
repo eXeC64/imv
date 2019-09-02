@@ -118,7 +118,7 @@ static void next_frame(void *raw_private, struct imv_image **image, int *frameti
 
   gif_result code = gif_decode_frame(&private->gif, private->current_frame);
   if (code != GIF_OK) {
-    imv_log(IMV_DEBUG, "libnsgif: failed to decode first frame\n");
+    imv_log(IMV_DEBUG, "libnsgif: failed to decode a frame\n");
     return;
   }
 

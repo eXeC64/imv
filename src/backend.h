@@ -6,9 +6,17 @@
 struct imv_source;
 
 enum backend_result {
-  BACKEND_SUCCESS = 0, /* successful load */
-  BACKEND_BAD_PATH = 1, /* no such file, bad permissions, etc. */
-  BACKEND_UNSUPPORTED = 2, /* unsupported file format */
+
+  /* The backend recognises the file's data and thinks it can load it */
+  BACKEND_SUCCESS = 0,
+
+  /* Represents a bad file or path, implies that other backends would also fail
+   * and shouln't be tried.
+   */
+  BACKEND_BAD_PATH = 1,
+
+  /* There's data, but this backend doesn't understand it. */
+  BACKEND_UNSUPPORTED = 2,
 };
 
 /* A backend is responsible for taking a path, or a raw data pointer, and
@@ -16,6 +24,7 @@ enum backend_result {
  * different image library and support different image formats.
  */
 struct imv_backend {
+
   /* Name of the backend, for debug and user informational purposes */
   const char *name;
 
@@ -28,13 +37,13 @@ struct imv_backend {
   /* License the backend is used under */
   const char *license;
 
-  /* Input: path to open
-   * Output: initialises the imv_source instance passed in
+  /* Tries to open the given path. If successful, BACKEND_SUCCESS is returned
+   * and src will point to an imv_source instance for the given path.
    */
   enum backend_result (*open_path)(const char *path, struct imv_source **src);
 
-  /* Input: pointer to data and length of data
-   * Output: initialises the imv_source instance passed in
+  /* Tries to read the passed data. If successful, BACKEND_SUCCESS is returned
+   * and src will point to an imv_source instance for the given data.
    */
   enum backend_result (*open_memory)(void *data, size_t len, struct imv_source **src);
 };
