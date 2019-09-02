@@ -1,6 +1,7 @@
 #include "console.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unicode/utext.h>
@@ -101,6 +102,11 @@ void imv_console_activate(struct imv_console *console)
 void imv_console_input(struct imv_console *console, const char *text)
 {
   if (!console || !console->buffer) {
+    return;
+  }
+
+  /* Don't allow newlines or control characters. */
+  if (*text == '\n' || iscntrl(*text)) {
     return;
   }
 
