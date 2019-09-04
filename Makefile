@@ -1,4 +1,4 @@
-.PHONY: imv debug clean check install uninstall doc
+.PHONY: all imv debug clean check install uninstall doc
 
 include config.mk
 
@@ -111,6 +111,8 @@ override CPPFLAGS += -DIMV_VERSION=\""$(VERSION)"\"
 
 TFLAGS ?= -g $(CFLAGS) $(CPPFLAGS) $(shell pkg-config --cflags cmocka)
 TLIBS := $(LIBS) $(shell pkg-config --libs cmocka)
+
+all: imv doc
 
 imv: $(TARGETS)
 
