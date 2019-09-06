@@ -12,7 +12,7 @@ suppress_default_binds = true
 # alias = command to run
 
 [binds]
-# Deinfe some key bindings
+# Define some key bindings
 q = quit
 y = exec echo working!
 
