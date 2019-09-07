@@ -1,5 +1,6 @@
 image: debian/stable
 packages:
+  - asciidoc
   - clang
   - libcmocka-dev
   - libegl1-mesa-dev

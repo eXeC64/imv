@@ -1,5 +1,6 @@
 image: fedora/latest
 packages:
+  - asciidoc
   - clang
   - freeimage-devel
   - libX11-devel

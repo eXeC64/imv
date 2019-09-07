@@ -1,5 +1,6 @@
 image: archlinux
 packages:
+  - asciidoc
   - clang
   - cmocka
   - freeimage
