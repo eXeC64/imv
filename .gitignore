@@ -1,3 +1,7 @@
 imv
 *.o
 test_*
+build/
+imv.1
+imv.5
+doc/imv-msg.1
