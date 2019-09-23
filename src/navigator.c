@@ -73,10 +73,8 @@ int imv_navigator_add(struct imv_navigator *nav, const char *path,
 {
   char path_buf[PATH_MAX+1];
   struct stat path_info;
-  if (stat(path, &path_info)) {
-    return 1;
-  }
-  if (S_ISDIR(path_info.st_mode)) {
+  if (stat(path, &path_info) &&
+      S_ISDIR(path_info.st_mode)) {
     int result = 0;
     DIR *d = opendir(path);
     if (d) {
