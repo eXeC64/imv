@@ -133,9 +133,9 @@ void imv_navigator_select_rel(struct imv_navigator *nav, ssize_t direction)
   }
 
   if (direction > 1) {
-    direction = direction % nav->paths->len;
+    direction = div(direction, nav->paths->len).rem;
   } else if (direction < -1) {
-    direction = direction % nav->paths->len;
+    direction = div(direction, nav->paths->len).rem;
   } else if (direction == 0) {
     return;
   }
