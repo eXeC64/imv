@@ -96,6 +96,9 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
     return BACKEND_UNSUPPORTED;
   }
 
+  /* set max PNG chunk size to 50MB, instead of 8MB default */
+  png_set_chunk_malloc_max(private->png, 1024 * 1024 * 50);
+
   private->info = png_create_info_struct(private->png);
   if (!private->info) {
     png_destroy_read_struct(&private->png, NULL, NULL);
