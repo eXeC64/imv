@@ -4,7 +4,9 @@ packages:
   - clang
   - cmocka
   - freeimage
+  - glu
   - icu
+  - libglvnd
   - libjpeg-turbo
   - libnsgif
   - libpng
