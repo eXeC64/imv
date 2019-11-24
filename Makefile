@@ -48,6 +48,7 @@ SOURCES += src/log.c
 SOURCES += src/navigator.c
 SOURCES += src/source.c
 SOURCES += src/viewport.c
+SOURCES += src/reload.c
 
 WL_SOURCES = src/wl_window.c src/xdg-shell-protocol.c
 WL_LIBS = -lwayland-client -lwayland-egl -lEGL -lrt

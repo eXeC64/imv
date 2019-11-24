@@ -308,6 +308,11 @@ int imv_navigator_poll_changed(struct imv_navigator *nav)
   return 0;
 }
 
+void imv_navigator_set_changed(struct imv_navigator *nav, int changed)
+{
+  nav->changed = changed;
+}
+
 int imv_navigator_wrapped(struct imv_navigator *nav)
 {
   return nav->wrapped;

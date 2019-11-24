@@ -27,6 +27,10 @@
 #include "viewport.h"
 #include "window.h"
 
+#ifdef __linux__
+#include "reload.h"
+#endif
+
 /* Some systems like GNU/Hurd don't define PATH_MAX */
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -166,6 +170,10 @@ struct imv {
   struct imv_viewport *view;
   struct imv_canvas *canvas;
   struct imv_window *window;
+  /* inotify support is linux only */
+  #ifdef __linux__
+  struct imv_reload *reload;
+  #endif
 
   /* if reading an image from stdin, this is the buffer for it */
   void *stdin_image_data;
@@ -478,6 +486,9 @@ struct imv *imv_create(void)
   imv_console_set_command_callback(imv->console, &command_callback, imv);
   imv->ipc = imv_ipc_create();
   imv_ipc_set_command_callback(imv->ipc, &command_callback, imv);
+  #ifdef __linux__
+  imv->reload = imv_reload_create();
+  #endif
   imv->title_text = strdup(
       "imv - [${imv_current_index}/${imv_file_count}]"
       " [${imv_width}x${imv_height}] [${imv_scale}%]"
@@ -574,6 +585,9 @@ void imv_free(struct imv *imv)
   imv_ipc_free(imv->ipc);
   imv_viewport_free(imv->view);
   imv_canvas_free(imv->canvas);
+  #ifdef __linux__
+  imv_reload_free(imv->reload);
+  #endif
   if (imv->current_image) {
     imv_image_free(imv->current_image);
   }
@@ -586,7 +600,7 @@ void imv_free(struct imv *imv)
   if (imv->window) {
     imv_window_free(imv->window);
   }
-
+  
   list_free(imv->backends);
 
   list_free(imv->startup_commands);
@@ -877,6 +891,13 @@ int imv_run(struct imv *imv)
       break;
     }
 
+    #ifdef __linux__
+    if (imv_reload_changed(imv->reload)) {
+      printf("[imv]: inotify changed.\n");
+      imv_navigator_set_changed(imv->navigator, 1);
+    }
+    #endif
+
     /* If the user has changed image, start loading the new one. It's possible
      * that there are lots of unsupported files listed back to back, so we
      * may immediate close one and navigate onto the next. So we attempt to
@@ -949,6 +970,9 @@ int imv_run(struct imv *imv)
           imv->current_image = NULL;
         }
       }
+      #ifdef __linux__
+      imv_reload_watch(imv->reload, current_path);
+      #endif
     }
 
     if (imv->need_rescale) {
@@ -1012,7 +1036,11 @@ int imv_run(struct imv *imv)
     }
 
     /* sleep until we have something to do */
-    double timeout = 1.0; /* seconds */
+    #ifdef __linux__
+    double timeout = 0.1; 
+    #else
+    double timeout = 1.0;
+    #endif
 
     /* If we need to display the next frame of an animation soon we should
      * limit our sleep until the next frame is due.
@@ -1037,7 +1065,7 @@ int imv_run(struct imv *imv)
     /* Handle the new events that have arrived */
     imv_window_pump_events(imv->window, event_handler, imv);
   }
-
+  
   if (imv->list_files_at_exit) {
     for (size_t i = 0; i < imv_navigator_length(imv->navigator); ++i)
       puts(imv_navigator_at(imv->navigator, i));
