@@ -48,7 +48,7 @@ ssize_t imv_navigator_find_path(struct imv_navigator *nav, const char *path);
  * changed since last called */
 int imv_navigator_poll_changed(struct imv_navigator *nav);
 
-/* Assign a value to the "changed" field of a navigator */
+/* Indicate to navigator that underlying file changed */
 void imv_navigator_set_changed(struct imv_navigator *nav, int changed);
 
 /* Check whether navigator wrapped around paths list */

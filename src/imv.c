@@ -26,7 +26,7 @@
 #include "source.h"
 #include "viewport.h"
 #include "window.h"
-
+/* inotify support is linux only */
 #ifdef __linux__
 #include "reload.h"
 #endif
@@ -170,7 +170,6 @@ struct imv {
   struct imv_viewport *view;
   struct imv_canvas *canvas;
   struct imv_window *window;
-  /* inotify support is linux only */
   #ifdef __linux__
   struct imv_reload *reload;
   #endif
@@ -1065,7 +1064,7 @@ int imv_run(struct imv *imv)
     /* Handle the new events that have arrived */
     imv_window_pump_events(imv->window, event_handler, imv);
   }
-  
+
   if (imv->list_files_at_exit) {
     for (size_t i = 0; i < imv_navigator_length(imv->navigator); ++i)
       puts(imv_navigator_at(imv->navigator, i));
