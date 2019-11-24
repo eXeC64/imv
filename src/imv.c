@@ -891,7 +891,11 @@ int imv_run(struct imv *imv)
     }
 
     #ifdef __linux__
+    /* Ask inotify if the current image has been modified */
     if (imv_reload_changed(imv->reload)) {
+      /* Inform navigator about the file change. Without this information,
+       *  imv_navigator_poll_changed will return true twice in a row.
+       */
       imv_navigator_set_changed(imv->navigator, 1);
     }
     #endif
@@ -969,6 +973,7 @@ int imv_run(struct imv *imv)
         }
       }
       #ifdef __linux__
+      /* Update the inotify watch descriptor with the new path */
       imv_reload_watch(imv->reload, current_path);
       #endif
     }
