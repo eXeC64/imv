@@ -892,7 +892,6 @@ int imv_run(struct imv *imv)
 
     #ifdef __linux__
     if (imv_reload_changed(imv->reload)) {
-      printf("[imv]: inotify changed.\n");
       imv_navigator_set_changed(imv->navigator, 1);
     }
     #endif

@@ -1,6 +1,8 @@
 #ifndef IMV_RELOAD_H
 #define IMV_RELOAD_H
 
+struct imv_reload;
+
 /* Create an imv_reload instance */
 void imv_reload_free(struct imv_reload *rld);
 
