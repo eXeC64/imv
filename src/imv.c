@@ -600,7 +600,7 @@ void imv_free(struct imv *imv)
   if (imv->window) {
     imv_window_free(imv->window);
   }
-  
+
   list_free(imv->backends);
 
   list_free(imv->startup_commands);
