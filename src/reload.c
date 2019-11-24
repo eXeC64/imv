@@ -20,13 +20,11 @@ struct imv_reload *imv_reload_create(void)
   }
 
   rld->wd = 0;
-  printf("[inotify]: Instance initialized\n");
   return rld;
 }
 
 void imv_reload_watch(struct imv_reload *rld, const char *path)
 {
-  printf("[inotify]: Reloading inotify watch.\n");
   if(rld->wd != 0) {
     inotify_rm_watch(rld->fd, rld->wd);
   }
@@ -41,15 +39,12 @@ int imv_reload_changed(struct imv_reload *rld)
 {
   struct inotify_event ev;
   ssize_t len = read(rld->fd, &ev, sizeof(ev));
-  /* printf("[inotify]: inotify event error %d.\n", errno); */
 
   if(len < 0) {
     if(errno != EAGAIN) {
-      printf("[inotify]: error.\n");
       perror("imv_reload_changed");
     }
   } else if(ev.mask & IN_CLOSE_WRITE) {
-    printf("[inotify]: Changed image. Reloading.\n");
     return 1;
   }
 
