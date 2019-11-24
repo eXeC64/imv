@@ -48,7 +48,6 @@ SOURCES += src/log.c
 SOURCES += src/navigator.c
 SOURCES += src/source.c
 SOURCES += src/viewport.c
-SOURCES += src/reload.c
 
 WL_SOURCES = src/wl_window.c src/xdg-shell-protocol.c
 WL_LIBS = -lwayland-client -lwayland-egl -lEGL -lrt
@@ -96,6 +95,11 @@ ifeq ($(BACKEND_LIBNSGIF),yes)
 	override LIBS += $(shell pkg-config --libs libnsgif)
 endif
 
+# Only add inotify support on linux
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+	SOURCES += src/reload.c
+endif
 
 TEST_SOURCES := test/list.c test/navigator.c
 
