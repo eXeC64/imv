@@ -1040,7 +1040,8 @@ int imv_run(struct imv *imv)
 
     /* sleep until we have something to do */
     #ifdef __linux__
-    double timeout = 0.1; 
+    /* to benefit from inotify, a lower timeout is required  */
+    double timeout = 0.1; /* seconds */ 
     #else
     double timeout = 1.0;
     #endif
