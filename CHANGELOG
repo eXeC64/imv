@@ -1,6 +1,20 @@
 imv Changelog
 =============
 
+v4.1.0 - 2019-12-21
+
+* Added libsngif backend
+* Added command history to console
+* Added proper UTF-8 support to the console
+* Fixed name of libjpeg-turbo backend
+* Fixed reading images from stdin
+* Increased maximum supported PNG file size
+* Added Keywords to imv.desktop
+* Set NoDisplay in imv.desktop
+* Simplified async logic in backends
+* Fixed typo in manpages
+* Fixed name of the LGPL
+
 v4.0.1 - 2019-08-28
 
 * Documented default binds in man page
