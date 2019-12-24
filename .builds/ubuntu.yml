@@ -22,23 +22,10 @@ packages:
 sources:
   - https://git.sr.ht/~exec64/imv
 tasks:
-  - configure: |
-      cd imv
-      sed -i -e 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk
-      # libnsgif isn't packaged by ubuntu
-      sed -i -e 's/BACKEND_LIBNSGIF=yes/BACKEND_LIBNSGIF=no/' config.mk
-      cat config.mk
-  - make_gcc: |
-      cd imv
-      CC=gcc BUILDDIR=gcc make
-      CC=gcc BUILDDIR=gcc make check
-  - make_clang: |
-      cd imv
-      CC=clang BUILDDIR=clang make
-      CC=clang BUILDDIR=clang make check
-  - meson_gcc: |
+  # libnsgif isn't packaged by ubuntu
+  - gcc: |
       CC=gcc meson imv build_gcc -D auto_features=enabled -D libnsgif=disabled
       CC=gcc ninja -C build_gcc test
-  - meson_clang: |
+  - clang: |
       CC=clang meson imv build_clang -D auto_features=enabled -D libnsgif=disabled
       CC=clang ninja -C build_clang test
