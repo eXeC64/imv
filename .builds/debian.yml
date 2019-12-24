@@ -22,27 +22,16 @@ packages:
 sources:
   - https://git.sr.ht/~exec64/imv
 tasks:
-  - configure: |
-      cd imv
-      sed -i -e 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk
-      # libnsgif isn't packaged by debian
-      sed -i -e 's/BACKEND_LIBNSGIF=yes/BACKEND_LIBNSGIF=no/' config.mk
-      cat config.mk
-  - make_gcc: |
-      cd imv
-      CC=gcc BUILDDIR=gcc make
-      CC=gcc BUILDDIR=gcc make check
-  - make_clang: |
-      cd imv
-      CC=clang BUILDDIR=clang make
-      CC=clang BUILDDIR=clang make check
+  - dummy: |
+      true
 #FIXME:
 # the old meson package in debian has a bug and crashes with
 # our meson.build; re-enable this once debian packages a version
 # newer than 0.49.2
-# - meson_gcc: |
+      # libnsgif isn't packaged by debian
+# - gcc: |
 #     CC=gcc meson imv build_gcc -D auto_features=enabled -D libnsgif=disabled
 #     CC=gcc ninja -C build_gcc test
-# - meson_clang: |
+# - clang: |
 #     CC=clang meson imv build_clang -D auto_features=enabled -D libnsgif=disabled
 #     CC=clang ninja -C build_clang test

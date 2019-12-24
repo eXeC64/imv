@@ -1,6 +1,5 @@
 image: freebsd/latest
 packages:
-  - devel/gmake
   - devel/icu
   - devel/meson
   - devel/pkgconf
@@ -19,12 +18,6 @@ packages:
 sources:
   - https://git.sr.ht/~exec64/imv
 tasks:
-  - make: |
-      cd imv
-      sed -i -e 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk
-      cat config.mk
-      gmake
-      gmake check
   - meson: |
       meson imv build -D auto_features=enabled -D c_link_args='-L/usr/local/lib'
       ninja -C build test
