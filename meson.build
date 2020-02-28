@@ -43,6 +43,7 @@ deps_for_imv = [
   dependency('threads'),
   dependency('xkbcommon'),
   dependency('icu-io'),
+  dependency('inih', fallback : ['inih', 'inih_dep']),
 ]
 
 files_common = files(
@@ -53,7 +54,6 @@ files_common = files(
   'src/console.c',
   'src/image.c',
   'src/imv.c',
-  'src/ini.c',
   'src/ipc.c',
   'src/ipc_common.c',
   'src/keyboard.c',
