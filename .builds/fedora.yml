@@ -3,6 +3,7 @@ packages:
   - asciidoc
   - clang
   - freeimage-devel
+  - inih
   - libX11-devel
   - libcmocka-devel
   - libicu-devel

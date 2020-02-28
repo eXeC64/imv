@@ -8,6 +8,7 @@ packages:
   - libglu-dev
   - libheif-dev
   - libicu-dev
+  - libinih-dev
   - libpango1.0-dev
   - libpng-dev
   - librsvg2-dev
