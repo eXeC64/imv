@@ -1,9 +1,12 @@
 #include "viewport.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
 
 struct imv_viewport {
   double scale;
+  double rotation;
+  bool mirrored;
   struct {
     int width, height;
   } window; /* window dimensions */
@@ -32,6 +35,8 @@ struct imv_viewport *imv_viewport_create(int window_width, int window_height,
   view->buffer.width = buffer_width;
   view->buffer.height = buffer_height;
   view->scale = 1;
+  view->rotation = 0;
+  view->mirrored = false;
   view->x = view->y = view->redraw = 0;
   view->pan_factor_x = view->pan_factor_y = 0.5;
   view->playing = 1;
@@ -81,6 +86,20 @@ void imv_viewport_get_scale(struct imv_viewport *view, double *scale)
 {
   if(scale) {
     *scale = view->scale;
+  }
+}
+
+void imv_viewport_get_rotation(struct imv_viewport *view, double *rotation)
+{
+  if(rotation) {
+    *rotation = view->rotation;
+  }
+}
+
+void imv_viewport_get_mirrored(struct imv_viewport *view, bool *mirrored)
+{
+  if(mirrored) {
+    *mirrored = view->mirrored;
   }
 }
 
@@ -175,6 +194,23 @@ void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *image,
 
   view->redraw = 1;
   view->locked = 1;
+}
+
+void imv_viewport_rotate(struct imv_viewport *view, double degrees) {
+  view->rotation += degrees;
+}
+
+void imv_viewport_rotate_to(struct imv_viewport *view, double degrees) {
+  view->rotation = degrees;
+}
+
+void imv_viewport_flip_h(struct imv_viewport *view) {
+  view->mirrored = !view->mirrored;
+}
+
+void imv_viewport_flip_v(struct imv_viewport *view) {
+  view->mirrored = !view->mirrored;
+  view->rotation = -(180.0 - view->rotation);
 }
 
 void imv_viewport_center(struct imv_viewport *view, const struct imv_image *image)

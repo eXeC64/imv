@@ -179,6 +179,9 @@ static void command_next(struct list *args, const char *argstr, void *data);
 static void command_prev(struct list *args, const char *argstr, void *data);
 static void command_goto(struct list *args, const char *argstr, void *data);
 static void command_zoom(struct list *args, const char *argstr, void *data);
+static void command_rotate(struct list *args, const char *argstr, void *data);
+static void command_rotate_to(struct list *args, const char *argstr, void *data);
+static void command_flip(struct list *args, const char *argstr, void *data);
 static void command_open(struct list *args, const char *argstr, void *data);
 static void command_close(struct list *args, const char *argstr, void *data);
 static void command_fullscreen(struct list *args, const char *argstr, void *data);
@@ -497,6 +500,9 @@ struct imv *imv_create(void)
   imv_command_register(imv->commands, "prev", &command_prev);
   imv_command_register(imv->commands, "goto", &command_goto);
   imv_command_register(imv->commands, "zoom", &command_zoom);
+  imv_command_register(imv->commands, "rotate", &command_rotate);
+  imv_command_register(imv->commands, "rotate_to", &command_rotate_to);
+  imv_command_register(imv->commands, "flip", &command_flip);
   imv_command_register(imv->commands, "open", &command_open);
   imv_command_register(imv->commands, "close", &command_close);
   imv_command_register(imv->commands, "fullscreen", &command_fullscreen);
@@ -1183,10 +1189,15 @@ static void render_window(struct imv *imv)
   /* draw our actual image */
   if (imv->current_image) {
     int x, y;
-    double scale;
+    double scale, rotation;
+    bool mirrored;
     imv_viewport_get_offset(imv->view, &x, &y);
     imv_viewport_get_scale(imv->view, &scale);
-    imv_canvas_draw_image(imv->canvas, imv->current_image, x, y, scale, imv->upscaling_method, imv->cache_invalidated);
+    imv_viewport_get_rotation(imv->view, &rotation);
+    imv_viewport_get_mirrored(imv->view, &mirrored);
+    imv_canvas_draw_image(imv->canvas, imv->current_image,
+                          x, y, scale, rotation, mirrored,
+                          imv->upscaling_method, imv->cache_invalidated);
   }
 
   imv_canvas_clear(imv->canvas);
@@ -1497,6 +1508,39 @@ static void command_zoom(struct list *args, const char *argstr, void *data)
   }
 }
 
+static void command_rotate(struct list *args, const char *argstr, void *data)
+{
+  (void)argstr;
+  struct imv *imv = data;
+  if (args->len == 2) {
+    double degrees = strtod(args->items[1], NULL);
+    imv_viewport_rotate(imv->view, degrees);
+  }
+}
+
+static void command_rotate_to(struct list *args, const char *argstr, void *data)
+{
+  (void)argstr;
+  struct imv *imv = data;
+  if (args->len == 2) {
+    double degrees = strtod(args->items[1], NULL);
+    imv_viewport_rotate_to(imv->view, degrees);
+  }
+}
+
+static void command_flip(struct list *args, const char *argstr, void *data)
+{
+  (void)argstr;
+  struct imv *imv = data;
+  if (args->len == 2) {
+    if (!strcmp(args->items[1], "vertical")) {
+      imv_viewport_flip_v(imv->view);
+    } else if (!strcmp(args->items[1], "horizontal")) {
+      imv_viewport_flip_h(imv->view);
+    }
+  }
+}
+
 static void command_open(struct list *args, const char *argstr, void *data)
 {
   (void)argstr;
@@ -1584,6 +1628,7 @@ static void command_reset(struct list *args, const char *argstr, void *data)
   (void)args;
   (void)argstr;
   struct imv *imv = data;
+  imv_viewport_rotate_to(imv->view, 0);
   imv->need_rescale = true;
   imv->need_redraw = true;
 }
