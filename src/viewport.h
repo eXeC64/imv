@@ -62,7 +62,7 @@ void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *image,
                        enum imv_zoom_source, int mouse_x, int mouse_y, int amount);
 
 /* Rotate the view by the given number of degrees */
-void imv_viewport_rotate(struct imv_viewport *view, double degrees);
+void imv_viewport_rotate_by(struct imv_viewport *view, double degrees);
 
 /* Rotate the view to the given number of degrees */
 void imv_viewport_rotate_to(struct imv_viewport *view, double degrees);
@@ -72,6 +72,9 @@ void imv_viewport_flip_h(struct imv_viewport *view);
 
 /* Flip vertically (across horizontal axis) */
 void imv_viewport_flip_v(struct imv_viewport *view);
+
+/* Flip vertically (across horizontal axis) */
+void imv_viewport_reset_transform(struct imv_viewport *view);
 
 /* Recenter the view to be in the middle of the image */
 void imv_viewport_center(struct imv_viewport *view,

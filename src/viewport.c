@@ -196,7 +196,7 @@ void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *image,
   view->locked = 1;
 }
 
-void imv_viewport_rotate(struct imv_viewport *view, double degrees) {
+void imv_viewport_rotate_by(struct imv_viewport *view, double degrees) {
   view->rotation += degrees;
 }
 
@@ -210,7 +210,12 @@ void imv_viewport_flip_h(struct imv_viewport *view) {
 
 void imv_viewport_flip_v(struct imv_viewport *view) {
   view->mirrored = !view->mirrored;
-  view->rotation = -(180.0 - view->rotation);
+  view->rotation = view->rotation - 180;
+}
+
+void imv_viewport_reset_transform(struct imv_viewport *view) {
+  view->mirrored = false;
+  view->rotation = 0;
 }
 
 void imv_viewport_center(struct imv_viewport *view, const struct imv_image *image)
