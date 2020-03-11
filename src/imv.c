@@ -1458,6 +1458,7 @@ static void command_next(struct list *args, const char *argstr, void *data)
   }
 
   imv_navigator_select_rel(imv->navigator, index);
+  imv_viewport_reset_transform(imv->view);
 
   imv->slideshow.elapsed = 0;
 }
@@ -1473,6 +1474,7 @@ static void command_prev(struct list *args, const char *argstr, void *data)
   }
 
   imv_navigator_select_rel(imv->navigator, -index);
+  imv_viewport_reset_transform(imv->view);
 
   imv->slideshow.elapsed = 0;
 }
@@ -1487,6 +1489,7 @@ static void command_goto(struct list *args, const char *argstr, void *data)
 
   long int index = strtol(args->items[1], NULL, 10);
   imv_navigator_select_abs(imv->navigator, index - 1);
+  imv_viewport_reset_transform(imv->view);
 
   imv->slideshow.elapsed = 0;
 }
