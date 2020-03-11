@@ -99,11 +99,8 @@ Commands can be entered by pressing *:*. imv supports the following commands:
 	'actual' resets the zoom to 100%, showing the image at its actual size.
 	Aliased to 'z'.
 
-*rotate* <amount>::
-	Rotate image clockwise by the given amount in degrees.
-
-*rotate_to* <angle>::
-	Rotate image clockwise to the given angle in degrees.
+*rotate* <'to'|'by'> <angle>::
+	Rotate image clockwise by/to the given amount in degrees.
 
 *flip* <'horizontal'|'vertical'>::
 	Flip image horizontally/vertically (across vertical/horizontal axis).
