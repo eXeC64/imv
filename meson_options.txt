@@ -57,3 +57,11 @@ option('libnsgif',
   type : 'feature',
   description : 'provides: animated gif'
 )
+
+# libheif http://www.libheif.org
+# depends: none
+# license: LGPL
+option('libheif',
+  type : 'feature',
+  description : 'provides: heif'
+)
