@@ -6,6 +6,7 @@ packages:
   - libegl1-mesa-dev
   - libfreeimage-dev
   - libglu-dev
+  - libheif-dev
   - libicu-dev
   - libpango1.0-dev
   - libpng-dev

@@ -22,10 +22,11 @@ packages:
 sources:
   - https://git.sr.ht/~exec64/imv
 tasks:
+  # libheif ins't packaged by fedora
   # libnsgif isn't packaged by fedora
   - gcc: |
-      CC=gcc meson imv build_gcc -D auto_features=enabled -D libnsgif=disabled
+      CC=gcc meson imv build_gcc -D auto_features=enabled -D libheif=disabled -D libnsgif=disabled
       CC=gcc ninja -C build_gcc test
   - clang: |
-      CC=clang meson imv build_clang -D auto_features=enabled -D libnsgif=disabled
+      CC=clang meson imv build_clang -D auto_features=enabled -D libheif=disabled -D libnsgif=disabled
       CC=clang ninja -C build_clang test
