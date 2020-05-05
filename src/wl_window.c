@@ -3,6 +3,8 @@
 #include "keyboard.h"
 #include "list.h"
 
+#include <stdio.h>
+
 #include <assert.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -18,6 +20,26 @@
 #include <GL/gl.h>
 #include "xdg-shell-client-protocol.h"
 
+struct imv_point {
+  double x;
+  double y;
+};
+
+struct imv_touch_point {
+  struct wl_list link;
+  struct imv_point initial, current;
+  int32_t id;
+};
+
+enum imv_touch_state {
+	TOUCH_STATE_IDLE,
+	TOUCH_STATE_TAP,
+	TOUCH_STATE_PAN_START,
+	TOUCH_STATE_PAN_CHANGE,
+	TOUCH_STATE_ZOOM_START,
+	TOUCH_STATE_ZOOM_CHANGE
+};
+
 struct imv_window {
   struct wl_display    *wl_display;
   struct wl_registry   *wl_registry;
@@ -29,6 +51,7 @@ struct imv_window {
   struct wl_seat       *wl_seat;
   struct wl_keyboard   *wl_keyboard;
   struct wl_pointer    *wl_pointer;
+  struct wl_touch      *wl_touch;
   EGLDisplay           egl_display;
   EGLContext           egl_context;
   EGLSurface           egl_surface;
@@ -50,6 +73,7 @@ struct imv_window {
   bool fullscreen;
   int scale;
 
+  
   struct {
     struct {
       double last;
@@ -68,6 +92,13 @@ struct imv_window {
       double dy;
     } scroll;
   } pointer;
+
+  struct {
+    struct wl_list points;
+    enum imv_touch_state state;
+  } touch;
+
+  
 };
 
 struct output_data {
@@ -398,6 +429,237 @@ static const struct wl_pointer_listener pointer_listener = {
   .axis_discrete = pointer_axis_discrete
 };
 
+static void touch_down(void *data, struct wl_touch *touch, uint32_t serial,
+    uint32_t time, struct wl_surface *surface, int32_t id,
+    wl_fixed_t surface_x, wl_fixed_t surface_y)
+{
+  (void)touch;
+  (void)serial;
+  (void)surface;
+
+  struct imv_window *window = data;
+
+  uint32_t num_points = wl_list_length(&window->touch.points);
+  
+  if (num_points == 2) {
+	  (void)id;
+	  (void)time;
+	  (void)surface_x;
+	  (void)surface_y;
+	  return;
+  }
+  if (num_points == 0) {
+	  window->touch.state = TOUCH_STATE_TAP;
+  } 
+
+  double x = wl_fixed_to_double(surface_x);
+  double y = wl_fixed_to_double(surface_y);
+
+  struct imv_touch_point *point = calloc(1, sizeof(struct imv_touch_point));
+
+  point->initial.x = x;
+  point->initial.y = y;
+  point->current.x = x;
+  point->current.y = y;
+  point->id = id;
+
+  wl_list_insert(&window->touch.points, &point->link);
+}
+
+static void touch_up(void *data, struct wl_touch *touch, uint32_t serial,
+    uint32_t time, int32_t id)
+{
+  (void)touch;
+  (void)serial;
+
+  struct imv_window *window = data;
+
+  struct imv_touch_point *point, *tmp;
+  wl_list_for_each_safe(point, tmp, &window->touch.points, link) {
+    if (point->id == id) {
+
+      uint32_t num_points = wl_list_length(&window->touch.points);
+      if (num_points == 1
+	  && window->touch.state == TOUCH_STATE_TAP) {
+
+	struct imv_event e = {
+          .type = IMV_EVENT_TOUCH_TAP,
+	  .data = {
+	    .touch_tap = {
+	      .x = point->current.x,
+	      .y = point->current.y,
+	      .height = window->height,
+	      .width = window->width
+	    }
+	  }
+	};
+	imv_window_push_event(window, &e);
+	
+	window->touch.state = TOUCH_STATE_IDLE;
+      } else if (num_points == 2) {
+	window->touch.state = TOUCH_STATE_PAN_START;
+      }
+      
+      wl_list_remove(&point->link);
+    }
+  }
+}
+
+static inline double measure_distance(double x1, double y1,
+			       double x2, double y2)
+{
+  return sqrt((x2-x1) * (x2-x1) + (y2 - y1) * (y2-y1));
+}
+
+static void touch_motion(void *data, struct wl_touch *touch, uint32_t time,
+  int32_t id, wl_fixed_t x, wl_fixed_t y)
+{
+  (void)touch;
+
+  struct imv_window *window = data;
+  struct imv_touch_point *point;
+  wl_list_for_each(point, &window->touch.points, link) {
+    if (point->id == id) {
+      point->current.x = wl_fixed_to_double(x);
+      point->current.y = wl_fixed_to_double(y);
+
+      uint32_t num_points = wl_list_length(&window->touch.points);
+      if (num_points == 1) {
+	double distance =
+	  measure_distance(point->current.x,
+	    point->current.y,
+	    point->initial.x,
+	    point->initial.y);
+
+	if (distance > 10.0) {
+	  enum imv_event_type event_type;
+	  switch (window->touch.state) {
+	    case TOUCH_STATE_PAN_START:
+	    case TOUCH_STATE_PAN_CHANGE:
+	      {
+		window->touch.state = TOUCH_STATE_PAN_CHANGE;
+		event_type = IMV_EVENT_TOUCH_PAN_CHANGE;
+	      }
+	      break;
+	    default:
+	      {
+		window->touch.state = TOUCH_STATE_PAN_START;
+		event_type = IMV_EVENT_TOUCH_PAN_START;
+	      }
+	      break;
+	  }
+	  
+	  struct imv_event e = {
+	    .type = event_type,
+	    .data = {
+	      .touch_pan = {
+		.initial_x = (int) point->initial.x,
+	        .initial_y = (int) point->initial.y,
+		.current_x = (int) point->current.x,
+		.current_y = (int) point->current.y
+	      }
+	    }
+	  };
+	  imv_window_push_event(window, &e);
+	}
+      } else {
+        struct imv_touch_point  *point2;
+	wl_list_for_each(point2, &window->touch.points, link) {
+	  if (point2->id != point->id) {
+	    double initial_distance =
+	      measure_distance(point->initial.x,
+		point->initial.y,
+	        point2->initial.x,
+	        point2->initial.y);
+	    double current_distance =
+	      measure_distance(point->current.x,
+	        point->current.y,
+	        point2->current.x,
+	        point2->current.y);
+
+	    double zoom_ratio = current_distance / initial_distance;
+	    double cx = fabs(point->initial.x + point2->initial.x)/2;
+	    double cy = fabs(point->initial.y + point2->initial.y)/2;
+
+	    enum imv_event_type event_type;
+	    
+	    switch (window->touch.state) {
+	      case TOUCH_STATE_ZOOM_CHANGE:
+	      case TOUCH_STATE_ZOOM_START:
+		event_type = IMV_EVENT_TOUCH_ZOOM_CHANGE;
+		window->touch.state = TOUCH_STATE_ZOOM_CHANGE;
+		break;
+	      default:
+		event_type = IMV_EVENT_TOUCH_ZOOM_START;
+		window->touch.state = TOUCH_STATE_ZOOM_START;
+		break;
+		};
+
+	    struct imv_event e = {
+	      .type = event_type,
+	      .data = {
+		.touch_zoom = {
+		  .x = cx,
+		  .y = cy,
+		  .zoom = zoom_ratio
+		}
+	      }
+	    };
+	    imv_window_push_event(window, &e);
+	    
+	    break;
+	  }
+	}
+      }
+      break;
+    }
+  }
+
+}
+
+static void touch_frame(void *data, struct wl_touch *touch)
+{
+  (void)data;
+  (void)touch;
+}
+
+static void touch_orientation(void *data, struct wl_touch *touch, int32_t id,
+                                 wl_fixed_t orientation)
+{
+  (void)data;
+  (void)touch;
+  (void)id;
+  (void)orientation;
+}
+
+static void touch_cancel(void *data, struct wl_touch *touch)
+{
+  (void)data;
+  (void)touch;
+}
+
+static void touch_shape(void *data, struct wl_touch *touch, int32_t id,
+                           wl_fixed_t major, wl_fixed_t minor)
+{
+  (void)data;
+  (void)touch;
+  (void)id;
+  (void)major;
+  (void)minor;
+}
+
+  
+static const struct wl_touch_listener touch_listener =
+{
+ .down = touch_down,
+ .up = touch_up,
+ .motion = touch_motion,
+ .frame = touch_frame,
+ .orientation = touch_orientation,
+ .shape = touch_shape,
+ .cancel = touch_cancel,
+};
+
 static void seat_capabilities(void *data, struct wl_seat *seat, uint32_t capabilities)
 {
   (void)seat;
@@ -424,6 +686,18 @@ static void seat_capabilities(void *data, struct wl_seat *seat, uint32_t capabil
     if (window->wl_keyboard) {
       wl_keyboard_release(window->wl_keyboard);
       window->wl_keyboard = NULL;
+    }
+  }
+
+  if (capabilities & WL_SEAT_CAPABILITY_TOUCH) {
+    if (!window->wl_touch) {
+      window->wl_touch = wl_seat_get_touch(window->wl_seat);
+      wl_touch_add_listener(window->wl_touch, &touch_listener, window);
+    } else {
+      if (window->wl_touch) {
+	wl_touch_release(window->wl_touch);
+	window->wl_touch = NULL;
+      }
     }
   }
 }
@@ -710,6 +984,9 @@ static void shutdown_wayland(struct imv_window *window)
 {
   close(window->pipe_fds[0]);
   close(window->pipe_fds[1]);
+  if (window->wl_touch) {
+    wl_touch_destroy(window->wl_touch);
+  }
   if (window->wl_pointer) {
     wl_pointer_destroy(window->wl_pointer);
   }
@@ -762,6 +1039,10 @@ struct imv_window *imv_window_create(int width, int height, const char *title)
 
   window->keyboard = imv_keyboard_create();
   assert(window->keyboard);
+  
+  wl_list_init(&window->touch.points);
+  window->touch.state = TOUCH_STATE_IDLE;
+  
   window->wl_outputs = list_create();
   connect_to_wayland(window);
   create_window(window, width, height, title);
@@ -780,6 +1061,7 @@ void imv_window_free(struct imv_window *window)
 {
   timer_delete(window->timer_id);
   imv_keyboard_free(window->keyboard);
+  wl_list_remove(&window->touch.points);
   shutdown_wayland(window);
   list_deep_free(window->wl_outputs);
   free(window);

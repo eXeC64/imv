@@ -5,3 +5,6 @@ build/
 imv.1
 imv.5
 doc/imv-msg.1
+*.png
+*.jpg
+src/G*

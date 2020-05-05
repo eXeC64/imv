@@ -170,6 +170,12 @@ struct imv {
   /* if reading an image from stdin, this is the buffer for it */
   void *stdin_image_data;
   size_t stdin_image_data_len;
+
+  /* initial scale for correct pinch zoom*/
+  double initial_zoom;
+
+  /* initial view offset for correct touch pan*/
+  int initial_view_x, initial_view_y;
 };
 
 static void command_quit(struct list *args, const char *argstr, void *data);
@@ -442,6 +448,60 @@ static void event_handler(void *data, const struct imv_event *e)
     case IMV_EVENT_CUSTOM:
       consume_internal_event(imv, e->data.custom);
       break;
+    case IMV_EVENT_TOUCH_TAP:
+      {
+	double current_scale;
+	imv_viewport_get_scale(imv->view, &current_scale);
+	double default_scale =
+	  imv_viewport_get_scale_to_window(imv->view, imv->current_image);
+	double x = e->data.touch_tap.x;
+	double width = e->data.touch_tap.width;
+	if (current_scale <= default_scale) {
+	  if (x < width / 4) {
+	    imv_navigator_select_rel(imv->navigator, -1);
+	  } else if (x > width * 3  / 4) {
+	    imv_navigator_select_rel(imv->navigator, 1);
+	  } 
+        } 
+	if (x > width / 4 && x < width * 3 / 4) {
+	  imv->overlay_enabled = !imv->overlay_enabled;
+	  imv->need_redraw = true;
+	}
+      }
+      break;
+    case IMV_EVENT_TOUCH_ZOOM_START:
+      {
+	double current_scale;
+	imv_viewport_get_scale(imv->view, &current_scale);
+	imv->initial_zoom = current_scale;
+      }
+      break;
+    case IMV_EVENT_TOUCH_ZOOM_CHANGE:
+      {
+	double new_zoom = imv->initial_zoom * e->data.touch_zoom.zoom;
+	int new_zoom_int = (int) (new_zoom * 100);
+	imv_viewport_zoom(imv->view, imv->current_image, IMV_ZOOM_TOUCH,
+			  e->data.touch_zoom.x, e->data.touch_zoom.y,
+			  new_zoom_int);
+      }
+      break;
+    case IMV_EVENT_TOUCH_PAN_START:
+      {
+	int x,y;
+	imv_viewport_get_offset(imv->view, &x, &y);
+	imv->initial_view_x = x;
+	imv->initial_view_y = y;
+      }
+      break;
+    case IMV_EVENT_TOUCH_PAN_CHANGE:
+      {
+	imv_viewport_move_relative(imv->view,
+	    imv->initial_view_x,
+	    imv->initial_view_y,
+	    (int) (e->data.touch_pan.current_x - e->data.touch_pan.initial_x),
+	    (int) (e->data.touch_pan.current_y - e->data.touch_pan.initial_y),
+	    imv->current_image);
+      }
     default:
       break;
   }
