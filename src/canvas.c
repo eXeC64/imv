@@ -258,7 +258,7 @@ static void draw_bitmap(struct imv_canvas *canvas,
   if (mirrored) {
     glScaled(-1, 1, 1);
   }
-  glRotated(-rotation, 0, 0, 1);
+  glRotated(rotation, 0, 0, 1);
   glTranslated(-center_x, -center_y, 0);
 
   glEnable(GL_BLEND);
