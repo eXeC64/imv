@@ -10,6 +10,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #ifdef IMV_BACKEND_LIBRSVG
 #include <librsvg/rsvg.h>
@@ -203,7 +204,7 @@ static int convert_pixelformat(enum imv_pixelformat fmt)
 static void draw_bitmap(struct imv_canvas *canvas,
                         struct imv_bitmap *bitmap,
                         int bx, int by, double scale,
-                        enum upscaling_method upscaling_method)
+                        enum upscaling_method upscaling_method, bool cache_invalidated)
 {
   GLint viewport[4];
   glGetIntegerv(GL_VIEWPORT, viewport);
@@ -219,9 +220,19 @@ static void draw_bitmap(struct imv_canvas *canvas,
 
   glBindTexture(GL_TEXTURE_RECTANGLE, canvas->cache.texture);
 
-  if (canvas->cache.bitmap != bitmap) {
-    glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  GLint upscaling = 0;
+  if (upscaling_method == UPSCALING_LINEAR) {
+    upscaling = GL_LINEAR;
+  } else if (upscaling_method == UPSCALING_NEAREST_NEIGHBOUR) {
+    upscaling = GL_NEAREST;
+  } else {
+    imv_log(IMV_ERROR, "Unknown upscaling method: %d\n", upscaling_method);
+    abort();
+  }
+
+  if (canvas->cache.bitmap != bitmap || cache_invalidated) {
+    glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, upscaling);
+    glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, upscaling);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, bitmap->width);
     glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
     glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
@@ -232,14 +243,7 @@ static void draw_bitmap(struct imv_canvas *canvas,
 
   glEnable(GL_TEXTURE_RECTANGLE);
 
-  if (upscaling_method == UPSCALING_LINEAR) {
-    glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  } else if (upscaling_method == UPSCALING_NEAREST_NEIGHBOUR) {
-    glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  } else {
-    imv_log(IMV_ERROR, "Unknown upscaling method: %d\n", upscaling_method);
-    abort();
-  }
+  glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, upscaling);
 
   const int left = bx;
   const int top = by;
@@ -269,11 +273,11 @@ RsvgHandle *imv_image_get_svg(const struct imv_image *image);
 
 void imv_canvas_draw_image(struct imv_canvas *canvas, struct imv_image *image,
                            int x, int y, double scale,
-                           enum upscaling_method upscaling_method)
+                           enum upscaling_method upscaling_method, bool cache_invalidated)
 {
   struct imv_bitmap *bitmap = imv_image_get_bitmap(image);
   if (bitmap) {
-    draw_bitmap(canvas, bitmap, x, y, scale, upscaling_method);
+    draw_bitmap(canvas, bitmap, x, y, scale, upscaling_method, cache_invalidated);
     return;
   }
 

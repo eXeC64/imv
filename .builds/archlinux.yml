@@ -7,6 +7,7 @@ packages:
   - glu
   - icu
   - libglvnd
+  - libheif
   - libjpeg-turbo
   - libnsgif
   - libpng
@@ -16,20 +17,15 @@ packages:
   - libxcb
   - libxkbcommon
   - libxkbcommon-x11
+  - meson
   - pango
   - wayland
 sources:
   - https://git.sr.ht/~exec64/imv
 tasks:
-  - configure: |
-      cd imv
-      sed -i -e 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk
-      cat config.mk
   - gcc: |
-      cd imv
-      CC=gcc BUILDDIR=gcc make
-      CC=gcc BUILDDIR=gcc make check
+      CC=gcc meson imv build_gcc -D auto_features=enabled
+      CC=gcc ninja -C build_gcc test
   - clang: |
-      cd imv
-      CC=clang BUILDDIR=clang make
-      CC=clang BUILDDIR=clang make check
+      CC=clang meson imv build_clang -D auto_features=enabled
+      CC=clang ninja -C build_clang test

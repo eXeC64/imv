@@ -131,6 +131,7 @@ static void keyboard_leave(void *data, struct wl_keyboard *keyboard,
 static void cleanup_event(struct imv_event *event)
 {
   if (event->type == IMV_EVENT_KEYBOARD) {
+    free(event->data.keyboard.description);
     free(event->data.keyboard.keyname);
     free(event->data.keyboard.text);
   }

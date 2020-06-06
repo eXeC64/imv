@@ -6,6 +6,7 @@ packages:
   - libegl1-mesa-dev
   - libfreeimage-dev
   - libglu-dev
+  - libheif-dev
   - libicu-dev
   - libpango1.0-dev
   - libpng-dev
@@ -18,20 +19,14 @@ packages:
   - libxkbcommon-dev
   - libxkbcommon-x11-dev
   - mesa-common-dev
+  - meson
 sources:
   - https://git.sr.ht/~exec64/imv
 tasks:
-  - configure: |
-      cd imv
-      sed -i -e 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk
-      # libnsgif isn't packaged by ubuntu
-      sed -i -e 's/BACKEND_LIBNSGIF=yes/BACKEND_LIBNSGIF=no/' config.mk
-      cat config.mk
+  # libnsgif isn't packaged by ubuntu
   - gcc: |
-      cd imv
-      CC=gcc BUILDDIR=gcc make
-      CC=gcc BUILDDIR=gcc make check
+      CC=gcc meson imv build_gcc -D auto_features=enabled -D libnsgif=disabled
+      CC=gcc ninja -C build_gcc test
   - clang: |
-      cd imv
-      CC=clang BUILDDIR=clang make
-      CC=clang BUILDDIR=clang make check
+      CC=clang meson imv build_clang -D auto_features=enabled -D libnsgif=disabled
+      CC=clang ninja -C build_clang test

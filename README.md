@@ -133,21 +133,21 @@ Installation
 | libpng         |          | Optional. Provides PNG support.                |
 | libjpeg-turbo  |          | Optional. Provides JPEG support.               |
 | librsvg        | >=v2.44  | Optional. Provides SVG support.                |
-| libnsgif       |          | Optional. Provides GIF support.                |
+| libnsgif       |          | Optional. Provides animated GIF support.       |
 
 Dependencies are determined by which backends and window systems are enabled
-when building `imv`. You can find a summary of which backends are available and
-control which ones `imv` is built with in [config.mk](config.mk)
+when building `imv`. You can find a summary of which backends are available
+in [meson_options.txt](meson_options.txt)
 
-    $ $EDITOR config.mk
-    $ make
-    # make install
+    $ meson builddir/
+    $ ninja -C builddir/
+    # ninja -C builddir/ install
 
-Macro `PREFIX` controls installation prefix.  If more control over installation
-paths is required, macros `BINPREFIX`, `MANPREFIX` and `DATAPREFIX` are
+`--prefix` controls installation prefix.  If more control over installation
+paths is required, `--bindir`, `--mandir` and `--datadir` are
 available.  Eg. to install `imv` to home directory, run:
 
-    $ BINPREFIX=~/bin PREFIX=~/.local make install
+    $ meson --bindir=~/bin --prefix=~/.local
 
 License
 -------

@@ -15,23 +15,18 @@ packages:
   - mesa-libEGL-devel
   - mesa-libGL-devel
   - mesa-libGLU-devel
+  - meson
   - pango-devel
   - turbojpeg-devel
   - wayland-devel
 sources:
   - https://git.sr.ht/~exec64/imv
 tasks:
-  - configure: |
-      cd imv
-      sed -i -e 's/BACKEND_\(.*\)=no/BACKEND_\1=yes/' config.mk
-      # libnsgif isn't packaged by fedora
-      sed -i -e 's/BACKEND_LIBNSGIF=yes/BACKEND_LIBNSGIF=no/' config.mk
-      cat config.mk
+  # libheif ins't packaged by fedora
+  # libnsgif isn't packaged by fedora
   - gcc: |
-      cd imv
-      CC=gcc BUILDDIR=gcc make
-      CC=gcc BUILDDIR=gcc make check
+      CC=gcc meson imv build_gcc -D auto_features=enabled -D libheif=disabled -D libnsgif=disabled
+      CC=gcc ninja -C build_gcc test
   - clang: |
-      cd imv
-      CC=clang BUILDDIR=clang make
-      CC=clang BUILDDIR=clang make check
+      CC=clang meson imv build_clang -D auto_features=enabled -D libheif=disabled -D libnsgif=disabled
+      CC=clang ninja -C build_clang test

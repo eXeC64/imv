@@ -100,7 +100,7 @@ const struct imv_backend imv_backend_librsvg = {
   .name = "libRSVG",
   .description = "SVG library developed by GNOME",
   .website = "https://wiki.gnome.org/Projects/LibRsvg",
-  .license = "Lesser GNU Public License",
+  .license = "GNU Lesser General Public License v2.1+",
   .open_path = &open_path,
   .open_memory = &open_memory,
 };

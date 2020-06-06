@@ -1,0 +1,67 @@
+# all - Build both, determine which to use at runtime
+# wayland - Only provide Wayland support
+# x11 - Only provide X11 support
+option('windows',
+  type : 'combo',
+  value : 'all',
+  choices : ['all', 'wayland', 'x11'],
+  description : 'window system to use'
+)
+
+# Available backends:
+
+# FreeImage http://freeimage.sourceforge.net
+# depends: libjpeg, openexr, openjpeg2, libwebp, libraw, jxrlib
+# license: FIPL v1.0
+option('freeimage',
+  type : 'feature',
+  description : 'provides: png, jpg, animated gif, raw, psd, bmp, tiff, webp, etc.'
+)
+
+# libtiff
+# depends: libjpeg  zlib  xz  zstd
+# license: MIT
+option('libtiff',
+  type : 'feature',
+  description : 'provides: tiff'
+)
+
+# libpng http://www.libpng.org/pub/png/libpng.html
+# depends: zlib
+# license: libpng license
+option('libpng',
+  type : 'feature',
+  description : 'provides: png'
+)
+
+# libjpeg-turbo https://libjpeg-turbo.org/
+# depends: none
+# license: modified bsd
+option('libjpeg',
+  type : 'feature',
+  description : 'provides: jpeg'
+)
+
+# librsvg https://wiki.gnome.org/Projects/LibRsvg
+# depends: gdk-pixbuf2 pango libcroco
+# license: LGPL
+option('librsvg',
+  type : 'feature',
+  description : 'provides: svg'
+)
+
+# libnsgif https://www.netsurf-browser.org/projects/libnsgif/
+# depends: none
+# license: MIT
+option('libnsgif',
+  type : 'feature',
+  description : 'provides: animated gif'
+)
+
+# libheif http://www.libheif.org
+# depends: none
+# license: LGPL
+option('libheif',
+  type : 'feature',
+  description : 'provides: heif'
+)
