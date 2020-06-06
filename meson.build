@@ -52,6 +52,7 @@ files_common = files(
   'src/commands.c',
   'src/console.c',
   'src/image.c',
+  'src/reload.c',
   'src/imv.c',
   'src/ini.c',
   'src/ipc.c',
