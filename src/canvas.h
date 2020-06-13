@@ -1,7 +1,7 @@
-#include <stdbool.h>
-
 #ifndef IMV_CANVAS_H
 #define IMV_CANVAS_H
+
+#include <stdbool.h>
 
 struct imv_canvas;
 struct imv_image;
@@ -48,6 +48,8 @@ void imv_canvas_draw(struct imv_canvas *canvas);
 /* Blit the given image to the current OpenGL framebuffer */
 void imv_canvas_draw_image(struct imv_canvas *canvas, struct imv_image *image,
                            int x, int y, double scale,
-                           enum upscaling_method upscaling_method, bool cache_invalidated);
+                           double rotation, bool mirrored,
+                           enum upscaling_method upscaling_method,
+                           bool cache_invalidated);
 
 #endif

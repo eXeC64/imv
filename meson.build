@@ -7,7 +7,7 @@ project(
   default_options: ['buildtype=debugoptimized', 'c_std=c99'],
 )
 
-version = '"@0@"'.format(meson.project_version())
+version = '@0@'.format(meson.project_version())
 prog_git = find_program('git', required: false)
 if prog_git.found()
   git_description = run_command([prog_git.path(), 'describe', '--dirty', '--always', '--tags'])
@@ -103,7 +103,7 @@ files_msg = files('src/imv_msg.c', 'src/ipc_common.c')
 enabled_backends = []
 foreach backend : [
   ['freeimage', 'library', 'freeimage'],
-  ['libtiff', 'library', 'tiff'],
+  ['libtiff', 'dependency', 'libtiff-4', []],
   ['libpng', 'dependency', 'libpng', []],
   ['libjpeg', 'dependency', 'libturbojpeg', []],
   ['librsvg', 'dependency', 'librsvg-2.0', '>= 2.44'],

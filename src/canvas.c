@@ -8,9 +8,9 @@
 #include <cairo/cairo.h>
 #include <pango/pangocairo.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 #ifdef IMV_BACKEND_LIBRSVG
 #include <librsvg/rsvg.h>
@@ -204,7 +204,9 @@ static int convert_pixelformat(enum imv_pixelformat fmt)
 static void draw_bitmap(struct imv_canvas *canvas,
                         struct imv_bitmap *bitmap,
                         int bx, int by, double scale,
-                        enum upscaling_method upscaling_method, bool cache_invalidated)
+                        double rotation, bool mirrored,
+                        enum upscaling_method upscaling_method,
+                        bool cache_invalidated)
 {
   GLint viewport[4];
   glGetIntegerv(GL_VIEWPORT, viewport);
@@ -249,6 +251,15 @@ static void draw_bitmap(struct imv_canvas *canvas,
   const int top = by;
   const int right = left + bitmap->width * scale;
   const int bottom = top + bitmap->height * scale;
+  const int center_x = left + bitmap->width * scale / 2;
+  const int center_y = top + bitmap->height * scale / 2;
+
+  glTranslated(center_x, center_y, 0);
+  if (mirrored) {
+    glScaled(-1, 1, 1);
+  }
+  glRotated(rotation, 0, 0, 1);
+  glTranslated(-center_x, -center_y, 0);
 
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -273,11 +284,14 @@ RsvgHandle *imv_image_get_svg(const struct imv_image *image);
 
 void imv_canvas_draw_image(struct imv_canvas *canvas, struct imv_image *image,
                            int x, int y, double scale,
-                           enum upscaling_method upscaling_method, bool cache_invalidated)
+                           double rotation, bool mirrored,
+                           enum upscaling_method upscaling_method,
+                           bool cache_invalidated)
 {
   struct imv_bitmap *bitmap = imv_image_get_bitmap(image);
   if (bitmap) {
-    draw_bitmap(canvas, bitmap, x, y, scale, upscaling_method, cache_invalidated);
+    draw_bitmap(canvas, bitmap, x, y, scale, rotation, mirrored,
+                upscaling_method, cache_invalidated);
     return;
   }
 

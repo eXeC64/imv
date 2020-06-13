@@ -42,6 +42,12 @@ void imv_viewport_get_offset(struct imv_viewport *view, int *x, int *y);
 /* Fetch viewport scale */
 void imv_viewport_get_scale(struct imv_viewport *view, double *scale);
 
+/* Fetch viewport rotation */
+void imv_viewport_get_rotation(struct imv_viewport *view, double *rotation);
+
+/* Fetch viewport mirror status */
+void imv_viewport_get_mirrored(struct imv_viewport *view, bool *mirrored);
+
 /* Set the default pan_factor factor for the x and y position */
 void imv_viewport_set_default_pan_factor(struct imv_viewport *view, double pan_factor_x, double pan_factor_y);
 
@@ -54,6 +60,21 @@ void imv_viewport_move(struct imv_viewport *view, int x, int y,
  * dimensions */
 void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *image,
                        enum imv_zoom_source, int mouse_x, int mouse_y, int amount);
+
+/* Rotate the view by the given number of degrees */
+void imv_viewport_rotate_by(struct imv_viewport *view, double degrees);
+
+/* Rotate the view to the given number of degrees */
+void imv_viewport_rotate_to(struct imv_viewport *view, double degrees);
+
+/* Flip horizontally (across vertical axis) */
+void imv_viewport_flip_h(struct imv_viewport *view);
+
+/* Flip vertically (across horizontal axis) */
+void imv_viewport_flip_v(struct imv_viewport *view);
+
+/* Flip vertically (across horizontal axis) */
+void imv_viewport_reset_transform(struct imv_viewport *view);
 
 /* Recenter the view to be in the middle of the image */
 void imv_viewport_center(struct imv_viewport *view,
