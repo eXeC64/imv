@@ -140,9 +140,9 @@ Dependencies are determined by which backends and window systems are enabled
 when building `imv`. You can find a summary of which backends are available
 in [meson_options.txt](meson_options.txt)
 
-    $ meson builddir/
-    $ ninja -C builddir/
-    # ninja -C builddir/ install
+    $ meson build/
+    $ ninja -C build/
+    # ninja -C build/ install
 
 `--prefix` controls installation prefix.  If more control over installation
 paths is required, `--bindir`, `--mandir` and `--datadir` are
