@@ -17,6 +17,11 @@
 #include <librsvg/rsvg.h>
 #endif
 
+// 16x16 chequerboard texture data
+#define REPEAT8(...) __VA_ARGS__, __VA_ARGS__, __VA_ARGS__, __VA_ARGS__, __VA_ARGS__, __VA_ARGS__, __VA_ARGS__, __VA_ARGS__
+unsigned char checkers_data[] = { REPEAT8(REPEAT8(0xCC, 0xCC, 0xCC, 0xFF), REPEAT8(0x80, 0x80, 0x80, 0xFF)),
+                                  REPEAT8(REPEAT8(0x80, 0x80, 0x80, 0xFF), REPEAT8(0xCC, 0xCC, 0xCC, 0xFF)) };
+
 struct imv_canvas {
   cairo_surface_t *surface;
   cairo_t *cairo;
@@ -28,6 +33,7 @@ struct imv_canvas {
     struct imv_bitmap *bitmap;
     GLuint texture;
   } cache;
+  GLuint checkers_texture;
 };
 
 struct imv_canvas *imv_canvas_create(int width, int height)
@@ -44,6 +50,20 @@ struct imv_canvas *imv_canvas_create(int width, int height)
 
   glGenTextures(1, &canvas->texture);
   assert(canvas->texture);
+
+  glGenTextures(1, &canvas->checkers_texture);
+  assert(canvas->checkers_texture);
+
+  glBindTexture(GL_TEXTURE_2D, canvas->checkers_texture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glPixelStorei(GL_UNPACK_ROW_LENGTH, 16);
+  glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+  glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 16, 16, 0, GL_RGBA,
+               GL_UNSIGNED_INT_8_8_8_8_REV, checkers_data);
 
   canvas->width = width;
   canvas->height = height;
@@ -66,6 +86,7 @@ void imv_canvas_free(struct imv_canvas *canvas)
   if (canvas->cache.texture) {
     glDeleteTextures(1, &canvas->cache.texture);
   }
+  glDeleteTextures(1, &canvas->checkers_texture);
   free(canvas);
 }
 
@@ -111,16 +132,45 @@ void imv_canvas_fill(struct imv_canvas *canvas)
   cairo_fill(canvas->cairo);
 }
 
-void imv_canvas_fill_checkers(struct imv_canvas *canvas, int size)
+void imv_canvas_fill_checkers(struct imv_canvas *canvas, struct imv_image *image,
+                              int bx, int by, double scale,
+                              double rotation, bool mirrored)
 {
-  for (int x = 0; x < canvas->width; x += size) {
-    for (int y = 0; y < canvas->height; y += size) {
-      float color = ((x/size + y/size) % 2 == 0) ? 0.25 : 0.75;
-      cairo_set_source_rgba(canvas->cairo, color, color, color, 1);
-      cairo_rectangle(canvas->cairo, x, y, size, size);
-      cairo_fill(canvas->cairo);
-    }
+  GLint viewport[4];
+  glGetIntegerv(GL_VIEWPORT, viewport);
+
+  glPushMatrix();
+  glOrtho(0.0, viewport[2], viewport[3], 0.0, 0.0, 10.0);
+
+  glBindTexture(GL_TEXTURE_2D, canvas->checkers_texture);
+  glEnable(GL_TEXTURE_2D);
+
+  const int left = bx;
+  const int top = by;
+  const int right = left + imv_image_width(image) * scale;
+  const int bottom = top + imv_image_height(image) * scale;
+  const int center_x = left + imv_image_width(image) * scale / 2;
+  const int center_y = top + imv_image_height(image) * scale / 2;
+  const float s = (right - left) / 16.0;
+  const float t = s * imv_image_height(image) / imv_image_width(image);
+
+  glTranslated(center_x, center_y, 0);
+  if (mirrored) {
+    glScaled(-1, 1, 1);
   }
+  glRotated(rotation, 0, 0, 1);
+  glTranslated(-center_x, -center_y, 0);
+
+  glBegin(GL_TRIANGLE_FAN);
+  glTexCoord2f(0, 0); glVertex2i(left, top);
+  glTexCoord2f(s, 0); glVertex2i(right, top);
+  glTexCoord2f(s, t); glVertex2i(right, bottom);
+  glTexCoord2f(0, t); glVertex2i(left, bottom);
+  glEnd();
+
+  glBindTexture(GL_TEXTURE_2D, 0);
+  glDisable(GL_TEXTURE_2D);
+  glPopMatrix();
 }
 
 void imv_canvas_font(struct imv_canvas *canvas, const char *name, int size)
