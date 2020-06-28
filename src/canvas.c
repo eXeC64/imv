@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #ifdef IMV_BACKEND_LIBRSVG
 #include <librsvg/rsvg.h>
@@ -301,6 +302,12 @@ void imv_canvas_draw_image(struct imv_canvas *canvas, struct imv_image *image,
     imv_canvas_clear(canvas);
     cairo_translate(canvas->cairo, x, y);
     cairo_scale(canvas->cairo, scale, scale);
+    cairo_translate(canvas->cairo, imv_image_width(image) / 2, imv_image_height(image) / 2);
+    if (mirrored) {
+      cairo_scale(canvas->cairo, -1, 1);
+    }
+    cairo_rotate(canvas->cairo, rotation * M_PI / 180.0);
+    cairo_translate(canvas->cairo, -imv_image_width(image) / 2, -imv_image_height(image) / 2);
     rsvg_handle_render_cairo(svg, canvas->cairo);
     cairo_identity_matrix(canvas->cairo);
     imv_canvas_draw(canvas);
