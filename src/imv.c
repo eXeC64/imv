@@ -1178,10 +1178,6 @@ static void render_window(struct imv *imv)
         1.0);
     imv_canvas_fill(imv->canvas);
     imv_canvas_draw(imv->canvas);
-  } else {
-    /* chequered background */
-    imv_canvas_fill_checkers(imv->canvas, 16);
-    imv_canvas_draw(imv->canvas);
   }
 
   /* draw our actual image */
@@ -1193,6 +1189,10 @@ static void render_window(struct imv *imv)
     imv_viewport_get_scale(imv->view, &scale);
     imv_viewport_get_rotation(imv->view, &rotation);
     imv_viewport_get_mirrored(imv->view, &mirrored);
+    if (imv->background.type == BACKGROUND_CHEQUERED) {
+      imv_canvas_fill_checkers(imv->canvas, imv->current_image,
+                               x, y, scale, rotation, mirrored);
+    }
     imv_canvas_draw_image(imv->canvas, imv->current_image,
                           x, y, scale, rotation, mirrored,
                           imv->upscaling_method, imv->cache_invalidated);
