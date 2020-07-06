@@ -159,7 +159,9 @@ void imv_window_free(struct imv_window *window)
   imv_keyboard_free(window->keyboard);
   close(window->pipe_fds[0]);
   close(window->pipe_fds[1]);
+  glXMakeCurrent(window->x_display, None, NULL);
   glXDestroyContext(window->x_display, window->x_glc);
+  XDestroyWindow(window->x_display, window->x_window);
   XCloseDisplay(window->x_display);
   free(window);
 }
