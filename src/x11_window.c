@@ -82,6 +82,7 @@ static void setup_keymap(struct imv_window *window)
     char *keymap_str = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_USE_ORIGINAL_FORMAT);
     imv_keyboard_set_keymap(window->keyboard, keymap_str);
     free(keymap_str);
+    xkb_keymap_unref(keymap);
   } else {
     imv_log(IMV_ERROR, "x11_window: Failed to load keymap. xkb_x11_keymap_new_from_device returned NULL.");
   }
