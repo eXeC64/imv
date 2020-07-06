@@ -151,6 +151,8 @@ struct imv_window *imv_window_create(int w, int h, const char *title)
 
   setup_keymap(window);
 
+  XFree(vi);
+
   return window;
 }
 
