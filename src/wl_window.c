@@ -105,9 +105,12 @@ static void keyboard_keymap(void *data, struct wl_keyboard *keyboard,
   (void)keyboard;
   (void)format;
   struct imv_window *window = data;
-  char *src = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
-  imv_keyboard_set_keymap(window->keyboard, src);
-  munmap(src, size);
+  char *src = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
+
+  if (src != MAP_FAILED) {
+    imv_keyboard_set_keymap(window->keyboard, src);
+    munmap(src, size);
+  }
   close(fd);
 }
 
