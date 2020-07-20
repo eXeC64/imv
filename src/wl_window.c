@@ -34,6 +34,8 @@ struct imv_window {
   EGLSurface           egl_surface;
   struct wl_egl_window *egl_window;
 
+  bool xdg_configured;
+
   struct imv_keyboard *keyboard;
   struct list *wl_outputs;
 
@@ -523,6 +525,9 @@ static void on_remove_global(void *data, struct wl_registry *registry, uint32_t 
 
 static void update_scale(struct imv_window *window)
 {
+  if (!window->xdg_configured) {
+    return;
+  }
   int new_scale = 1;
   for (size_t i = 0; i < window->wl_outputs->len; ++i) {
     struct output_data *data = window->wl_outputs->items[i];
@@ -587,6 +592,8 @@ static void surface_configure(void *data, struct xdg_surface *surface, uint32_t 
 {
   struct imv_window *window = data;
   xdg_surface_ack_configure(surface, serial);
+  window->xdg_configured = true;
+  update_scale(data);
   wl_surface_commit(window->wl_surface);
 }
 
@@ -853,7 +860,9 @@ void imv_window_get_mouse_position(struct imv_window *window, double *x, double 
 
 void imv_window_present(struct imv_window *window)
 {
-  eglSwapBuffers(window->egl_display, window->egl_surface);
+  if (window->xdg_configured) {
+    eglSwapBuffers(window->egl_display, window->egl_surface);
+  }
 }
 
 void imv_window_wait_for_event(struct imv_window *window, double timeout)
