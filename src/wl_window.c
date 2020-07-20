@@ -658,7 +658,7 @@ static void connect_to_wayland(struct imv_window *window)
   assert(window->wl_registry);
 
   wl_registry_add_listener(window->wl_registry, &registry_listener, window);
-  wl_display_dispatch(window->wl_display);
+  wl_display_roundtrip(window->wl_display);
   assert(window->wl_compositor);
   assert(window->wl_xdg);
   assert(window->wl_seat);
