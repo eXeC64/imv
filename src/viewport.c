@@ -109,14 +109,9 @@ void imv_viewport_set_default_pan_factor(struct imv_viewport *view, double pan_f
   view->pan_factor_y = pan_factor_y;
 }
 
-void imv_viewport_move(struct imv_viewport *view, int x, int y,
+void imv_viewport_keep_onscreen(struct imv_viewport *view,
     const struct imv_image *image)
 {
-  input_xy_to_render_xy(view, &x, &y);
-  view->x += x;
-  view->y += y;
-  view->redraw = 1;
-  view->locked = 1;
   int w = (int)(imv_image_width(image) * view->scale);
   int h = (int)(imv_image_height(image) * view->scale);
   if (view->x < -w) {
@@ -133,6 +128,29 @@ void imv_viewport_move(struct imv_viewport *view, int x, int y,
   }
 }
 
+void imv_viewport_move(struct imv_viewport *view, int x, int y,
+    const struct imv_image *image)
+{
+  input_xy_to_render_xy(view, &x, &y);
+  view->x += x;
+  view->y += y;
+  view->redraw = 1;
+  view->locked = 1;
+  imv_viewport_keep_onscreen(view, image);
+}
+
+void imv_viewport_move_relative(struct imv_viewport *view,
+				int initial_x, int initial_y,
+				int delta_x, int delta_y,
+				struct imv_image *image)
+{
+  view->x = initial_x + delta_x;
+  view->y = initial_y + delta_y;
+  view->redraw = 1;
+  view->locked = 1;
+  imv_viewport_keep_onscreen(view, image);
+}
+
 void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *image,
                        enum imv_zoom_source src, int mouse_x, int mouse_y, int amount)
 {
@@ -143,7 +161,7 @@ void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *image,
   const int image_height = imv_image_height(image);
 
   /* x and y cordinates are relative to the image */
-  if(src == IMV_ZOOM_MOUSE) {
+  if(src == IMV_ZOOM_MOUSE || src == IMV_ZOOM_TOUCH) {
     input_xy_to_render_xy(view, &mouse_x, &mouse_y);
     x = mouse_x - view->x;
     y = mouse_y - view->y;
@@ -159,8 +177,12 @@ void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *image,
   const int wc_x = view->buffer.width/2;
   const int wc_y = view->buffer.height/2;
 
-  double delta_scale = 0.04 * view->buffer.width * amount / image_width;
-  view->scale += delta_scale;
+  if (src == IMV_ZOOM_TOUCH) {
+    view->scale = amount / 100.0f;
+  } else {
+    double delta_scale = 0.04 * view->buffer.width * amount / image_width;
+    view->scale += delta_scale;
+  }
 
   const double min_scale = 0.1;
   const double max_scale = 100;
@@ -244,7 +266,8 @@ void imv_viewport_center(struct imv_viewport *view, const struct imv_image *imag
   view->redraw = 1;
 }
 
-void imv_viewport_scale_to_window(struct imv_viewport *view, const struct imv_image *image)
+double imv_viewport_get_scale_to_window(struct imv_viewport *view,
+					const struct imv_image *image)
 {
   const int image_width = imv_image_width(image);
   const int image_height = imv_image_height(image);
@@ -253,12 +276,16 @@ void imv_viewport_scale_to_window(struct imv_viewport *view, const struct imv_im
 
   if(window_aspect > image_aspect) {
     /* Image will become too tall before it becomes too wide */
-    view->scale = (double)view->buffer.height / (double)image_height;
+    return (double)view->buffer.height / (double)image_height;
   } else {
     /* Image will become too wide before it becomes too tall */
-    view->scale = (double)view->buffer.width / (double)image_width;
+    return (double)view->buffer.width / (double)image_width;
   }
+}
 
+void imv_viewport_scale_to_window(struct imv_viewport *view, const struct imv_image *image)
+{
+  view->scale = imv_viewport_get_scale_to_window(view, image);
   imv_viewport_center(view, image);
   view->locked = 0;
 }

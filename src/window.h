@@ -13,6 +13,11 @@ enum imv_event_type {
   IMV_EVENT_MOUSE_MOTION,
   IMV_EVENT_MOUSE_BUTTON,
   IMV_EVENT_MOUSE_SCROLL,
+  IMV_EVENT_TOUCH_TAP,
+  IMV_EVENT_TOUCH_ZOOM_START,
+  IMV_EVENT_TOUCH_ZOOM_CHANGE,
+  IMV_EVENT_TOUCH_PAN_START,
+  IMV_EVENT_TOUCH_PAN_CHANGE,
   IMV_EVENT_CUSTOM
 };
 
@@ -41,6 +46,18 @@ struct imv_event {
     struct {
       double dx, dy;
     } mouse_scroll;
+    struct {
+      double x,y;
+      int height, width;
+    } touch_tap;
+    struct {
+      double x,y;
+      double zoom;
+    } touch_zoom;
+    struct {
+      double initial_x, initial_y;
+      double current_x, current_y;
+    } touch_pan;
     void *custom;
   } data;
 };

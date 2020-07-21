@@ -17,7 +17,8 @@ enum scaling_mode {
 /* Used to signify how a a user requested a zoom */
 enum imv_zoom_source {
   IMV_ZOOM_MOUSE,
-  IMV_ZOOM_KEYBOARD
+  IMV_ZOOM_KEYBOARD,
+  IMV_ZOOM_TOUCH
 };
 
 /* Creates an instance of imv_viewport */
@@ -56,6 +57,10 @@ void imv_viewport_set_default_pan_factor(struct imv_viewport *view, double pan_f
 void imv_viewport_move(struct imv_viewport *view, int x, int y,
     const struct imv_image *image);
 
+/* Pan the view relatively by coordinates */
+void imv_viewport_move_relative(struct imv_viewport *view, int initial_x,
+    int initial_y, int delta_x, int delta_y, struct imv_image *image);
+
 /* Zoom the view by the given amount. imv_image* is used to get the image
  * dimensions */
 void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *image,
@@ -83,6 +88,10 @@ void imv_viewport_center(struct imv_viewport *view,
 /* Scale the view so that the image appears at its actual resolution */
 void imv_viewport_scale_to_actual(struct imv_viewport *view,
                                   const struct imv_image *image);
+
+/*get scale when scaled to window*/
+double imv_viewport_get_scale_to_window(struct imv_viewport *view,
+					const struct imv_image *image);
 
 /* Scale the view so that the image fits in the window */
 void imv_viewport_scale_to_window(struct imv_viewport *view,
