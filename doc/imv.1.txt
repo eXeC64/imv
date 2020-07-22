@@ -154,6 +154,10 @@ Commands can be entered by pressing *:*. imv supports the following commands:
 	Set the background color. 'checks' for a chequerboard pattern, or specify
 	a 6-digit hexadecimal color code. Aliased to 'bg'.
 
+*set* <option_name> <option_value>::
+	Set an option to a specific. See **OPTIONS** in **imv**(5) for the right option_name and
+	option_values.
+
 *bind* <keys> <commands>::
 	Binds an action to a set of key inputs. Uses the same syntax as the config
 	file, but without an equals sign between the keys and the commands. For
