@@ -52,8 +52,8 @@ enum internal_event_type {
   COMMAND
 };
 
-struct color_rgba {
-  unsigned char r, g, b, a;
+struct color_rgb {
+  unsigned char r, g, b;
 };
 
 struct internal_event {
@@ -93,8 +93,10 @@ struct imv {
     bool enabled;
     /* the user-specified format strings for the overlay*/
     char *text;
-    struct color_rgba text_color;
-    struct color_rgba background_color;
+    struct color_rgb text_color;
+    unsigned char text_alpha;
+    struct color_rgb background_color;
+    unsigned char background_alpha;
 
     /* overlay position */
     bool position_at_bottom;
@@ -138,7 +140,7 @@ struct imv {
     /* show a solid background colour, or chequerboard pattern */
     enum background_type type;
     /* the aforementioned background colour */
-    struct { unsigned char r, g, b; } color;
+    struct color_rgb color;
   } background;
 
   /* slideshow state tracking */
@@ -466,21 +468,36 @@ static void event_handler(void *data, const struct imv_event *e)
 
 }
 
-static bool hex_value_to_color_rgba(const char* hex, struct color_rgba* color)
+static bool hex_value_to_color_rgb(const char* hex, struct color_rgb* color)
 {
+    if (*hex == '#')
+      hex++;
+
     char *ep;
     uint32_t n = strtoul(hex, &ep, 16);
-    if (*ep != '\0' || ep - hex != 8 || n > 0xFFFFFFFF) {
+    if (*ep != '\0' || ep - hex != 6 || n > 0xFFFFFF) {
       imv_log(IMV_ERROR, "Invalid hex color: '%s'\n", hex);
       return false;
     }
-    color->a = n & 0xFF;
-    color->b = (n >> 8) & 0xFF;
-    color->g = (n >> 16) & 0xFF;
-    color->r = (n >> 24);
+    color->b = n & 0xFF;
+    color->g = (n >> 8) & 0xFF;
+    color->r = (n >> 16);
     return true;
 }
 
+static bool hex_value_to_alpha(const char* hex, unsigned char *alpha)
+{
+    if (*hex == '#')
+      hex++;
+    char *ep;
+    uint32_t n = strtoul(hex, &ep, 16);
+    if (*ep != '\0' || ep - hex != 2 || n > 0xFF) {
+      imv_log(IMV_ERROR, "Invalid hex color: '%s'\n", hex);
+      return false;
+    }
+    *alpha = n & 0xFF;
+    return true;
+}
 
 static void log_to_stderr(enum imv_log_level level, const char *text, void *data)
 {
@@ -525,8 +542,11 @@ struct imv *imv_create(void)
   imv->overlay.text_color.r = 255;
   imv->overlay.text_color.g = 255;
   imv->overlay.text_color.b = 255;
-  imv->overlay.text_color.a = 255;
-  imv->overlay.background_color.a = 195;
+  imv->overlay.text_alpha = 255;
+  imv->overlay.background_color.r = 0;
+  imv->overlay.background_color.g = 0;
+  imv->overlay.background_color.b = 0;
+  imv->overlay.background_alpha = 195;
   imv->overlay.position_at_bottom = false;
   imv->startup_commands = list_create();
 
@@ -647,17 +667,7 @@ static bool parse_bg(struct imv *imv, const char *bg)
     imv->background.type = BACKGROUND_CHEQUERED;
   } else {
     imv->background.type = BACKGROUND_SOLID;
-    if (*bg == '#')
-      ++bg;
-    char *ep;
-    uint32_t n = strtoul(bg, &ep, 16);
-    if (*ep != '\0' || ep - bg != 6 || n > 0xFFFFFF) {
-      imv_log(IMV_ERROR, "Invalid hex color: '%s'\n", bg);
-      return false;
-    }
-    imv->background.color.b = n & 0xFF;
-    imv->background.color.g = (n >> 8) & 0xFF;
-    imv->background.color.r = (n >> 16);
+    return hex_value_to_color_rgb(bg, &imv->background.color);
   }
   return true;
 }
@@ -1244,7 +1254,7 @@ static void render_window(struct imv *imv)
         imv->overlay.background_color.r / 255.f,
         imv->overlay.background_color.g / 255.f,
         imv->overlay.background_color.b / 255.f,
-        imv->overlay.background_color.a / 255.f);
+        imv->overlay.background_alpha / 255.f);
     int y = 0 ;
     const int bottom_offset = 5;
     if (imv->overlay.position_at_bottom)
@@ -1256,7 +1266,7 @@ static void render_window(struct imv *imv)
         imv->overlay.text_color.r / 255.f,
         imv->overlay.text_color.g / 255.f,
         imv->overlay.text_color.b / 255.f,
-        imv->overlay.text_color.a / 255.f);
+        imv->overlay.text_alpha / 255.f);
     char overlay_text[1024];
     generate_env_text(imv, overlay_text, sizeof overlay_text, imv->overlay.text);
     imv_canvas_printf(imv->canvas, 0, y, "%s", overlay_text);
@@ -1414,7 +1424,28 @@ static int handle_ini_value(void *user, const char *section, const char *name,
     }
 
     if (!strcmp(name, "overlay_text_color")) {
-      if (!hex_value_to_color_rgba(value, &imv->overlay.text_color)) {
+      if (!hex_value_to_color_rgb(value, &imv->overlay.text_color)) {
+        return false;
+      }
+      return 1;
+    }
+
+    if (!strcmp(name, "overlay_text_alpha")) {
+      if (!hex_value_to_alpha(value, &imv->overlay.text_alpha)) {
+        return false;
+      }
+      return 1;
+    }
+
+    if (!strcmp(name, "overlay_background_color")) {
+      if (!hex_value_to_color_rgb(value, &imv->overlay.background_color)) {
+        return false;
+      }
+      return 1;
+    }
+
+    if (!strcmp(name, "overlay_background_alpha")) {
+      if (!hex_value_to_alpha(value, &imv->overlay.background_alpha)) {
         return false;
       }
       return 1;
@@ -1422,13 +1453,6 @@ static int handle_ini_value(void *user, const char *section, const char *name,
 
     if (!strcmp(name, "overlay_position_bottom")) {
       imv->overlay.position_at_bottom = parse_bool(value);
-      return 1;
-    }
-
-    if (!strcmp(name, "overlay_background_color")) {
-      if (!hex_value_to_color_rgba(value, &imv->overlay.background_color)) {
-        return false;
-      }
       return 1;
     }
 

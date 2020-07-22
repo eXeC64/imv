@@ -60,6 +60,22 @@ The *[options]* section accepts the following settings:
 	expanded, so the output of commands can be used: '$(ls)' as can environment
 	variables, including the ones accessible to imv's 'exec' command.
 
+*overlay_text_color* = <hex-code>::
+	Set the color for the text in the overlay. Is a 6-digit hexadecimal color
+	code. Defaults to 'ffffff'.
+
+*overlay_text_alpha* = <hex-code>::
+	Set the alpha for the text in the overlay. Is a 2-digit hexadecimal color
+	code. Defaults to 'ff'.
+
+*overlay_background_color* = <hex-code>::
+	Set the color for the background of the overlay. Is a 6-digit hexadecimal color
+	code. Defaults to '000000'.
+
+*overlay_background_alpha* = <hex-code>::
+	Set the alpha for the background of the overlay. Is a 2-digit hexadecimal color
+	code. Defaults to 'c3'.
+
 *recursively* = <true|false>::
 	Load input paths recursively. Defaults to 'false'.
 
