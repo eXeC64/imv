@@ -24,7 +24,7 @@ static void test_navigator_add_remove(void **state)
   /* Check poll_changed */
   assert_false(imv_navigator_poll_changed(nav));
 
-  /* Add 6 paths, one non-existant should fail */
+  /* Add 6 paths, one non-existent should fail */
   assert_false(imv_navigator_add(nav, FILENAME1, 0));
   assert_false(imv_navigator_add(nav, FILENAME2, 0));
   assert_false(imv_navigator_add(nav, FILENAME3, 0));
