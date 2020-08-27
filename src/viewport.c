@@ -142,7 +142,7 @@ void imv_viewport_zoom(struct imv_viewport *view, const struct imv_image *image,
   const int image_width = imv_image_width(image);
   const int image_height = imv_image_height(image);
 
-  /* x and y cordinates are relative to the image */
+  /* x and y coordinates are relative to the image */
   if(src == IMV_ZOOM_MOUSE) {
     input_xy_to_render_xy(view, &mouse_x, &mouse_y);
     x = mouse_x - view->x;
