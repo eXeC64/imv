@@ -415,9 +415,14 @@ static void key_handler(struct imv *imv, const struct imv_event *event)
       return;
     }
 
-    struct list *cmds = imv_bind_handle_event(imv->binds, event->data.keyboard.description);
-    if (cmds) {
-      imv_command_exec_list(imv->commands, cmds, imv);
+    /* Keys such as Shift on their own come through as '', we should skip them
+     * since they'll turn up later as 'Shift+W', etc.
+     */
+    if (*event->data.keyboard.description != '\0') {
+      struct list *cmds = imv_bind_handle_event(imv->binds, event->data.keyboard.description);
+      if (cmds) {
+        imv_command_exec_list(imv->commands, cmds, imv);
+      }
     }
   }
 
