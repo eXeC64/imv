@@ -48,8 +48,7 @@ void imv_image_free(struct imv_image *image)
 
 #ifdef IMV_BACKEND_LIBRSVG
   if (image->svg) {
-    GError *error = NULL;
-    rsvg_handle_close(image->svg, &error);
+    g_object_unref(image->svg);
   }
 #endif
 

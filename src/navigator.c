@@ -76,10 +76,11 @@ int imv_navigator_add(struct imv_navigator *nav, const char *path,
   if ((stat(path, &path_info) == 0) &&
       S_ISDIR(path_info.st_mode)) {
     int result = 0;
-    DIR *d = opendir(path);
-    if (d) {
-      struct dirent *dir;
-      while ((dir = readdir(d)) != NULL) {
+    struct dirent **dir_list;
+    int total_dirs = scandir(path, &dir_list, 0, alphasort);
+    if (total_dirs >= 0) {
+      for (int i = 0; i < total_dirs; ++i) {
+        struct dirent *dir = dir_list[i];
         if (strcmp(dir->d_name, "..") == 0 || strcmp(dir->d_name, ".") == 0) {
           continue;
         }
@@ -101,8 +102,9 @@ int imv_navigator_add(struct imv_navigator *nav, const char *path,
             break;
           }
         }
+        free(dir_list[i]);
       }
-      closedir(d);
+      free(dir_list);
     }
     return result;
   } else {

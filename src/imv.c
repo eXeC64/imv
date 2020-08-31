@@ -56,6 +56,10 @@ enum internal_event_type {
   COMMAND
 };
 
+struct color_rgb {
+  unsigned char r, g, b;
+};
+
 struct internal_event {
   enum internal_event_type type;
   union {
@@ -87,8 +91,27 @@ struct imv {
   int initial_width;
   int initial_height;
 
-  /* display some textual info onscreen */
-  bool overlay_enabled;
+  /* overlay */
+  struct {
+    /* display some textual info onscreen */
+    bool enabled;
+    /* the user-specified format strings for the overlay*/
+    char *text;
+    struct color_rgb text_color;
+    unsigned char text_alpha;
+    struct color_rgb background_color;
+    unsigned char background_alpha;
+
+    /* overlay position */
+    bool position_at_bottom;
+
+    /* overlay font */
+    struct {
+      char *name;
+      int size;
+    } font;
+  } overlay;
+
 
   /* method for scaling up images: interpolate or nearest neighbour */
   enum upscaling_method upscaling_method;
@@ -121,7 +144,7 @@ struct imv {
     /* show a solid background colour, or chequerboard pattern */
     enum background_type type;
     /* the aforementioned background colour */
-    struct { unsigned char r, g, b; } color;
+    struct color_rgb color;
   } background;
 
   /* slideshow state tracking */
@@ -143,11 +166,6 @@ struct imv {
 
   struct imv_image *current_image;
 
-  /* overlay font */
-  struct {
-    char *name;
-    int size;
-  } font;
 
   /* if specified by user, the path of the first image to display */
   char *starting_path;
@@ -157,7 +175,6 @@ struct imv {
 
   /* the user-specified format strings for the overlay and window title */
   char *title_text;
-  char *overlay_text;
 
   /* imv subsystems */
   struct imv_binds *binds;
@@ -458,6 +475,37 @@ static void event_handler(void *data, const struct imv_event *e)
 
 }
 
+static bool hex_value_to_color_rgb(const char* hex, struct color_rgb* color)
+{
+    if (*hex == '#')
+      hex++;
+
+    char *ep;
+    uint32_t n = strtoul(hex, &ep, 16);
+    if (*ep != '\0' || ep - hex != 6 || n > 0xFFFFFF) {
+      imv_log(IMV_ERROR, "Invalid hex color: '%s'\n", hex);
+      return false;
+    }
+    color->b = n & 0xFF;
+    color->g = (n >> 8) & 0xFF;
+    color->r = (n >> 16);
+    return true;
+}
+
+static bool hex_value_to_alpha(const char* hex, unsigned char *alpha)
+{
+    if (*hex == '#')
+      hex++;
+    char *ep;
+    uint32_t n = strtoul(hex, &ep, 16);
+    if (*ep != '\0' || ep - hex != 2 || n > 0xFF) {
+      imv_log(IMV_ERROR, "Invalid hex color: '%s'\n", hex);
+      return false;
+    }
+    *alpha = n & 0xFF;
+    return true;
+}
+
 static void log_to_stderr(enum imv_log_level level, const char *text, void *data)
 {
   (void)data;
@@ -478,8 +526,8 @@ struct imv *imv_create(void)
   imv->need_rescale = true;
   imv->scaling_mode = SCALING_FULL;
   imv->loop_input = true;
-  imv->font.name = strdup("Monospace");
-  imv->font.size = 24;
+  imv->overlay.font.name = strdup("Monospace");
+  imv->overlay.font.size = 24;
   imv->binds = imv_binds_create();
   imv->navigator = imv_navigator_create();
   imv->backends = list_create();
@@ -496,11 +544,20 @@ struct imv *imv_create(void)
       " [${imv_width}x${imv_height}] [${imv_scale}%]"
       " $imv_current_file [$imv_scaling_mode]"
   );
-  imv->overlay_text = strdup(
+  imv->overlay.text = strdup(
       "[${imv_current_index}/${imv_file_count}]"
       " [${imv_width}x${imv_height}] [${imv_scale}%]"
       " $imv_current_file [$imv_scaling_mode]"
   );
+  imv->overlay.text_color.r = 255;
+  imv->overlay.text_color.g = 255;
+  imv->overlay.text_color.b = 255;
+  imv->overlay.text_alpha = 255;
+  imv->overlay.background_color.r = 0;
+  imv->overlay.background_color.g = 0;
+  imv->overlay.background_color.b = 0;
+  imv->overlay.background_alpha = 195;
+  imv->overlay.position_at_bottom = false;
   imv->startup_commands = list_create();
 
   imv_command_register(imv->commands, "quit", &command_quit);
@@ -576,9 +633,9 @@ struct imv *imv_create(void)
 
 void imv_free(struct imv *imv)
 {
-  free(imv->font.name);
+  free(imv->overlay.font.name);
   free(imv->title_text);
-  free(imv->overlay_text);
+  free(imv->overlay.text);
   imv_binds_free(imv->binds);
   imv_navigator_free(imv->navigator);
   if (imv->current_source) {
@@ -623,17 +680,7 @@ static bool parse_bg(struct imv *imv, const char *bg)
     imv->background.type = BACKGROUND_CHEQUERED;
   } else {
     imv->background.type = BACKGROUND_SOLID;
-    if (*bg == '#')
-      ++bg;
-    char *ep;
-    uint32_t n = strtoul(bg, &ep, 16);
-    if (*ep != '\0' || ep - bg != 6 || n > 0xFFFFFF) {
-      imv_log(IMV_ERROR, "Invalid hex color: '%s'\n", bg);
-      return false;
-    }
-    imv->background.color.b = n & 0xFF;
-    imv->background.color.g = (n >> 8) & 0xFF;
-    imv->background.color.r = (n >> 16);
+    return hex_value_to_color_rgb(bg, &imv->background.color);
   }
   return true;
 }
@@ -763,7 +810,7 @@ bool imv_parse_args(struct imv *imv, int argc, char **argv)
     switch(o) {
       case 'f': imv->start_fullscreen = true;                    break;
       case 'r': imv->recursive_load = true;                      break;
-      case 'd': imv->overlay_enabled = true;                     break;
+      case 'd': imv->overlay.enabled = true;                     break;
       case 'x': imv->loop_input = false;                         break;
       case 'l': imv->list_files_at_exit = true;                  break;
       case 'n': imv->starting_path = optarg;                     break;
@@ -1110,7 +1157,7 @@ static bool setup_window(struct imv *imv)
     int ww, wh;
     imv_window_get_size(imv->window, &ww, &wh);
     imv->canvas = imv_canvas_create(ww, wh);
-    imv_canvas_font(imv->canvas, imv->font.name, imv->font.size);
+    imv_canvas_font(imv->canvas, imv->overlay.font.name, imv->overlay.font.size);
   }
 
   return true;
@@ -1233,20 +1280,34 @@ static void render_window(struct imv *imv)
   imv_canvas_clear(imv->canvas);
 
   /* if the overlay needs to be drawn, draw that too */
-  if (imv->overlay_enabled) {
-    const int height = imv->font.size * 1.2;
-    imv_canvas_color(imv->canvas, 0, 0, 0, 0.75);
-    imv_canvas_fill_rectangle(imv->canvas, 0, 0, ww, height);
-    imv_canvas_color(imv->canvas, 1, 1, 1, 1);
+  if (imv->overlay.enabled) {
+    const int height = imv->overlay.font.size * 1.2;
+    imv_canvas_color(imv->canvas,
+        imv->overlay.background_color.r / 255.f,
+        imv->overlay.background_color.g / 255.f,
+        imv->overlay.background_color.b / 255.f,
+        imv->overlay.background_alpha / 255.f);
+    int y = 0 ;
+    const int bottom_offset = 5;
+    if (imv->overlay.position_at_bottom)
+    {
+      y = wh - height - bottom_offset;
+    }
+    imv_canvas_fill_rectangle(imv->canvas, 0, y, ww, height + bottom_offset);
+    imv_canvas_color(imv->canvas,
+        imv->overlay.text_color.r / 255.f,
+        imv->overlay.text_color.g / 255.f,
+        imv->overlay.text_color.b / 255.f,
+        imv->overlay.text_alpha / 255.f);
     char overlay_text[1024];
-    generate_env_text(imv, overlay_text, sizeof overlay_text, imv->overlay_text);
-    imv_canvas_printf(imv->canvas, 0, 0, "%s", overlay_text);
+    generate_env_text(imv, overlay_text, sizeof overlay_text, imv->overlay.text);
+    imv_canvas_printf(imv->canvas, 0, y, "%s", overlay_text);
   }
 
   /* draw command entry bar if needed */
   if (imv_console_prompt(imv->console)) {
     const int bottom_offset = 5;
-    const int height = imv->font.size * 1.2;
+    const int height = imv->overlay.font.size * 1.2;
     imv_canvas_color(imv->canvas, 0, 0, 0, 0.75);
     imv_canvas_fill_rectangle(imv->canvas, 0, wh - height - bottom_offset,
         ww, height + bottom_offset);
@@ -1349,7 +1410,7 @@ static int handle_ini_value(void *user, const char *section, const char *name,
     }
 
     if (!strcmp(name, "overlay")) {
-      imv->overlay_enabled = parse_bool(value);
+      imv->overlay.enabled = parse_bool(value);
       return 1;
     }
 
@@ -1394,22 +1455,55 @@ static int handle_ini_value(void *user, const char *section, const char *name,
       return 1;
     }
 
+    if (!strcmp(name, "overlay_text_color")) {
+      if (!hex_value_to_color_rgb(value, &imv->overlay.text_color)) {
+        return false;
+      }
+      return 1;
+    }
+
+    if (!strcmp(name, "overlay_text_alpha")) {
+      if (!hex_value_to_alpha(value, &imv->overlay.text_alpha)) {
+        return false;
+      }
+      return 1;
+    }
+
+    if (!strcmp(name, "overlay_background_color")) {
+      if (!hex_value_to_color_rgb(value, &imv->overlay.background_color)) {
+        return false;
+      }
+      return 1;
+    }
+
+    if (!strcmp(name, "overlay_background_alpha")) {
+      if (!hex_value_to_alpha(value, &imv->overlay.background_alpha)) {
+        return false;
+      }
+      return 1;
+    }
+
+    if (!strcmp(name, "overlay_position_bottom")) {
+      imv->overlay.position_at_bottom = parse_bool(value);
+      return 1;
+    }
+
     if (!strcmp(name, "overlay_font")) {
-      free(imv->font.name);
-      imv->font.name = strdup(value);
-      char *sep = strchr(imv->font.name, ':');
+      free(imv->overlay.font.name);
+      imv->overlay.font.name = strdup(value);
+      char *sep = strchr(imv->overlay.font.name, ':');
       if (sep) {
         *sep = 0;
-        imv->font.size = atoi(sep + 1);
+        imv->overlay.font.size = atoi(sep + 1);
       } else {
-        imv->font.size = 24;
+        imv->overlay.font.size = 24;
       }
       return 1;
     }
 
     if (!strcmp(name, "overlay_text")) {
-      free(imv->overlay_text);
-      imv->overlay_text = strdup(value);
+      free(imv->overlay.text);
+      imv->overlay.text = strdup(value);
       return 1;
     }
 
@@ -1631,7 +1725,7 @@ static void command_overlay(struct list *args, const char *argstr, void *data)
   (void)args;
   (void)argstr;
   struct imv *imv = data;
-  imv->overlay_enabled = !imv->overlay_enabled;
+  imv->overlay.enabled = !imv->overlay.enabled;
   imv->need_redraw = true;
 }
 

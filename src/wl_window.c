@@ -34,6 +34,8 @@ struct imv_window {
   EGLSurface           egl_surface;
   struct wl_egl_window *egl_window;
 
+  bool xdg_configured;
+
   struct imv_keyboard *keyboard;
   struct list *wl_outputs;
 
@@ -103,9 +105,12 @@ static void keyboard_keymap(void *data, struct wl_keyboard *keyboard,
   (void)keyboard;
   (void)format;
   struct imv_window *window = data;
-  char *src = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
-  imv_keyboard_set_keymap(window->keyboard, src);
-  munmap(src, size);
+  char *src = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
+
+  if (src != MAP_FAILED) {
+    imv_keyboard_set_keymap(window->keyboard, src);
+    munmap(src, size);
+  }
   close(fd);
 }
 
@@ -523,6 +528,9 @@ static void on_remove_global(void *data, struct wl_registry *registry, uint32_t 
 
 static void update_scale(struct imv_window *window)
 {
+  if (!window->xdg_configured) {
+    return;
+  }
   int new_scale = 1;
   for (size_t i = 0; i < window->wl_outputs->len; ++i) {
     struct output_data *data = window->wl_outputs->items[i];
@@ -587,6 +595,8 @@ static void surface_configure(void *data, struct xdg_surface *surface, uint32_t 
 {
   struct imv_window *window = data;
   xdg_surface_ack_configure(surface, serial);
+  window->xdg_configured = true;
+  update_scale(data);
   wl_surface_commit(window->wl_surface);
 }
 
@@ -658,7 +668,7 @@ static void connect_to_wayland(struct imv_window *window)
   assert(window->wl_registry);
 
   wl_registry_add_listener(window->wl_registry, &registry_listener, window);
-  wl_display_dispatch(window->wl_display);
+  wl_display_roundtrip(window->wl_display);
   assert(window->wl_compositor);
   assert(window->wl_xdg);
   assert(window->wl_seat);
@@ -853,7 +863,9 @@ void imv_window_get_mouse_position(struct imv_window *window, double *x, double 
 
 void imv_window_present(struct imv_window *window)
 {
-  eglSwapBuffers(window->egl_display, window->egl_surface);
+  if (window->xdg_configured) {
+    eglSwapBuffers(window->egl_display, window->egl_surface);
+  }
 }
 
 void imv_window_wait_for_event(struct imv_window *window, double timeout)

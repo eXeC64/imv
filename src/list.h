@@ -23,7 +23,7 @@ void list_deep_free(struct list *list);
 /* Append an item to the list. Automatically resizes the list if needed */
 void list_append(struct list *list, void *item);
 
-/* Grow the list's storage to a given size, useful for avoiding unneccessary
+/* Grow the list's storage to a given size, useful for avoiding unnecessary
  * reallocations prior to inserting many items
  */
 void list_grow(struct list *list, size_t min_size);

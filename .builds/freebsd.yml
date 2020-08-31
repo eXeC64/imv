@@ -8,7 +8,7 @@ packages:
   - graphics/libheif
   - graphics/libjpeg-turbo
   - graphics/libnsgif
-  - graphics/librsvg2
+  - graphics/librsvg2-rust
   - graphics/png
   - graphics/tiff
   - sysutils/cmocka

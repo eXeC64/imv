@@ -11,7 +11,7 @@ enum backend_result {
   BACKEND_SUCCESS = 0,
 
   /* Represents a bad file or path, implies that other backends would also fail
-   * and shouln't be tried.
+   * and shouldn't be tried.
    */
   BACKEND_BAD_PATH = 1,
 
