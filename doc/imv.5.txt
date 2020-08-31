@@ -76,6 +76,9 @@ The *[options]* section accepts the following settings:
 	Set the alpha for the background of the overlay. Is a 2-digit hexadecimal color
 	code. Defaults to 'c3'.
 
+*overlay_position_bottom* = <true|false>::
+	Display the overlay at the bottom of the imv window, instead of the top.
+
 *recursively* = <true|false>::
 	Load input paths recursively. Defaults to 'false'.
 
