@@ -1,6 +1,7 @@
 image: freebsd/latest
 packages:
   - devel/icu
+  - devel/libinotify
   - devel/meson
   - devel/pkgconf
   - graphics/freeimage
