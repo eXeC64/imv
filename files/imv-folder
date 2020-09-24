@@ -1,3 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 image="$1"
-exec imv "$(dirname "$image")"/* -n "$image"
+declare -a ARGS
+for a in "$(dirname "$image")"/*; do
+	if [ -f "$a" ]; then
+		ARGS+=("$a")
+	fi
+done
+exec imv "${ARGS[@]}" -n "$image"
