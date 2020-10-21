@@ -129,6 +129,9 @@ struct imv {
   /* read paths from stdin, as opposed to image data */
   bool paths_from_stdin;
 
+  /* FILE to use when reading paths from stdin */
+  FILE *stdin_pipe;
+
   /* scale up / down images to match window, or actual size */
   enum scaling_mode scaling_mode;
 
@@ -738,6 +741,24 @@ static bool parse_initial_pan(struct imv *imv, const char *pan_params)
   return true;
 }
 
+static void *pipe_stdin(void *data)
+{
+  int *fd = data;
+  while (1) {
+    char buf[PIPE_BUF];
+    ssize_t err = read(STDIN_FILENO, buf, PIPE_BUF);
+    if (err > 0) {
+      /* writes up to PIPE_BUF are atomic */
+      write(*fd, buf, err);
+    } else if (err == 0 || errno != EINTR) {
+      /* break if EOF or actual read error */
+      break;
+    }
+  }
+
+  return NULL;
+}
+
 static void *load_paths_from_stdin(void *data)
 {
   struct imv *imv = data;
@@ -745,7 +766,7 @@ static void *load_paths_from_stdin(void *data)
   imv_log(IMV_INFO, "Reading paths from stdin...\n");
 
   char buf[PATH_MAX];
-  while (fgets(buf, sizeof(buf), stdin) != NULL) {
+  while (fgets(buf, sizeof(buf), imv->stdin_pipe) != NULL) {
     size_t len = strlen(buf);
     if (buf[len-1] == '\n') {
       buf[--len] = 0;
@@ -894,10 +915,25 @@ int imv_run(struct imv *imv)
 
   /* if loading paths from stdin, kick off a thread to do that - we'll receive
    * events back via internal events */
+  int *stdin_pipe_fds = NULL;
+  pthread_t pipe_stdin_thread;
+  pthread_t load_paths_thread;
   if (imv->paths_from_stdin) {
-    pthread_t thread;
-    pthread_create(&thread, NULL, load_paths_from_stdin, imv);
-    pthread_detach(thread);
+    /* this array is allocated on the heap because it's passed to pthread_create */
+    stdin_pipe_fds = calloc(2, sizeof *stdin_pipe_fds);
+
+    if (pipe(stdin_pipe_fds)) {
+      /* if pipe creation fails, we should exit */
+      free(stdin_pipe_fds);
+      return 1;
+    }
+
+    imv->stdin_pipe = fdopen(stdin_pipe_fds[0], "re");
+
+    if (pthread_create(&load_paths_thread, NULL, load_paths_from_stdin, imv)
+        || pthread_create(&pipe_stdin_thread, NULL, pipe_stdin, stdin_pipe_fds + 1)) {
+      return 1;
+    }
   }
 
   if (imv->starting_path) {
@@ -1100,6 +1136,21 @@ int imv_run(struct imv *imv)
   if (imv->list_files_at_exit) {
     for (size_t i = 0; i < imv_navigator_length(imv->navigator); ++i)
       puts(imv_navigator_at(imv->navigator, i));
+  }
+
+  if (imv->paths_from_stdin) {
+    /* stop the thread before closing the pipe */
+    pthread_cancel(pipe_stdin_thread);
+    pthread_join(pipe_stdin_thread, NULL);
+
+    /* will cause the thread running load_paths_from_stdin() to exit */
+    close(stdin_pipe_fds[1]);
+    free(stdin_pipe_fds);
+
+    /* join the other thread to avoid a race when closing imv->stdin_pipe */
+    pthread_join(load_paths_thread, NULL);
+
+    fclose(imv->stdin_pipe);
   }
 
   return 0;
