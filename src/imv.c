@@ -533,7 +533,9 @@ struct imv *imv_create(void)
   imv->console = imv_console_create();
   imv_console_set_command_callback(imv->console, &command_callback, imv);
   imv->ipc = imv_ipc_create();
-  imv_ipc_set_command_callback(imv->ipc, &command_callback, imv);
+  if (imv->ipc) {
+    imv_ipc_set_command_callback(imv->ipc, &command_callback, imv);
+  }
   imv->title_text = strdup(
       "imv - [${imv_current_index}/${imv_file_count}]"
       " [${imv_width}x${imv_height}] [${imv_scale}%]"
