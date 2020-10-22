@@ -92,6 +92,9 @@ struct imv_ipc *imv_ipc_create(void)
   }
 
   struct imv_ipc *ipc = calloc(1, sizeof *ipc);
+  if (ipc == NULL) {
+    return NULL;
+  }
   ipc->fd = sockfd;
 
   pthread_t thread;
