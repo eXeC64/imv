@@ -508,7 +508,7 @@ static void log_to_stderr(enum imv_log_level level, const char *text, void *data
 {
   (void)data;
   if (level >= IMV_INFO) {
-    fprintf(stderr, "%s", text);
+    fputs(text, stderr);
   }
 }
 
@@ -740,7 +740,7 @@ static void *load_paths_from_stdin(void *data)
 {
   struct imv *imv = data;
 
-  imv_log(IMV_INFO, "Reading paths from stdin...");
+  imv_log(IMV_INFO, "Reading paths from stdin...\n");
 
   char buf[PATH_MAX];
   while (fgets(buf, sizeof(buf), stdin) != NULL) {
