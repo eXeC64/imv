@@ -37,9 +37,15 @@ else
   target_single_ws = false
 endif
 
+gl_dep = dependency('gl', required: false)
+if not gl_dep.found()
+  # libglvnd fallback for pure-wayland systems
+  gl_dep = dependency('opengl')
+endif
+
 deps_for_imv = [
   dependency('pangocairo'),
-  dependency('gl'),
+  gl_dep,
   dependency('threads'),
   dependency('xkbcommon'),
   dependency('icu-io'),
