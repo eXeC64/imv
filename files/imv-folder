@@ -1,7 +1,8 @@
 #!/bin/bash
 image="$1"
-declare -a ARGS
-for a in "$(dirname "$image")"/*; do
+declare -a ARGS order
+readarray -t -d '' order < <(printf '%s\0' "$(dirname "$image")"/* | sort -z --sort=version)
+for a in "${order[@]}"; do
 	if [ -f "$a" ]; then
 		ARGS+=("$a")
 	fi
