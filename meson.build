@@ -169,45 +169,49 @@ install_data(
   install_mode: 'rw-r--r--',
 )
 
-dep_cmocka = dependency('cmocka')
+dep_cmocka = dependency('cmocka', required: get_option('test'))
 
-foreach test : ['list', 'navigator']
-  test(
-    'test_@0@'.format(test),
-    executable(
+if dep_cmocka.found()
+  foreach test : ['list', 'navigator']
+    test(
       'test_@0@'.format(test),
-      [files('test/@0@.c'.format(test), 'src/dummy_window.c'), files_common],
-      include_directories: include_directories('src'),
-      dependencies: [deps_for_imv, dep_cmocka],
+      executable(
+        'test_@0@'.format(test),
+        [files('test/@0@.c'.format(test), 'src/dummy_window.c'), files_common],
+        include_directories: include_directories('src'),
+        dependencies: [deps_for_imv, dep_cmocka],
+      )
     )
-  )
-endforeach
+  endforeach
+endif
 
-prog_a2x = find_program('a2x')
+prog_a2x = find_program('a2x', required: get_option('man'))
 
-foreach man : [
-  [1, 'imv'],
-  [1, 'imv-msg'],
-  [5, 'imv'],
-]
-  _section = man[0]
-  _topic = man[1]
-  custom_target(
-    '@0@(@1@)'.format(_topic, _section),
-    input: 'doc/@0@.@1@.txt'.format(_topic, _section),
-    output: '@0@.@1@'.format(_topic, _section),
-    command: [
-      prog_a2x,
-      '--no-xmllint',
-      '--doctype', 'manpage',
-      '--format', 'manpage',
-      '--destination-dir', meson.current_build_dir(),
-      '@INPUT@'
-    ],
-    install: true,
-    install_dir: '@0@/man@1@'.format(get_option('mandir'), _section)
-  )
-endforeach
+if prog_a2x.found()
+  foreach man : [
+    [1, 'imv'],
+    [1, 'imv-msg'],
+    [5, 'imv'],
+  ]
+    _section = man[0]
+    _topic = man[1]
+    custom_target(
+      '@0@(@1@)'.format(_topic, _section),
+      input: 'doc/@0@.@1@.txt'.format(_topic, _section),
+      output: '@0@.@1@'.format(_topic, _section),
+      command: [
+        prog_a2x,
+        '--no-xmllint',
+        '--doctype', 'manpage',
+        '--format', 'manpage',
+        '--destination-dir', meson.current_build_dir(),
+        '@INPUT@'
+      ],
+      install: true,
+      install_dir: '@0@/man@1@'.format(get_option('mandir'), _section)
+    )
+  endforeach
+endif
 
 message('\n\n'
 + 'Building imv @0@\n\n'.format(meson.project_version())
