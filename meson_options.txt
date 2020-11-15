@@ -8,6 +8,16 @@ option('windows',
   description : 'window system to use'
 )
 
+option('test',
+  type : 'feature',
+  description : 'enable tests'
+)
+
+option('man',
+  type : 'feature',
+  description : 'enable man pages'
+)
+
 # Available backends:
 
 # FreeImage http://freeimage.sourceforge.net
