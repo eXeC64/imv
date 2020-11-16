@@ -56,10 +56,11 @@ Options
 *-r*::
 	Load directories recursively.
 
-*-s* <none|shrink|full>::
+*-s* <none|shrink|full|crop>::
 	Set scaling mode to use. 'none' will show each image at its actual size.
 	'shrink' will scale down the image to fit inside the window. 'full' will
 	both scale up and scale down the image to fit perfectly inside the window.
+	'crop' will scale and crop the image to fill the window.
 	Defaults to 'full'.
 
 *-t* <slideshow_duration>::
