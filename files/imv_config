@@ -38,6 +38,9 @@ i = zoom 1
 <minus> = zoom -1
 o = zoom -1
 
+# Rotate Clockwise by 90 degrees
+<Ctrl+r> = rotate by 90
+
 # Other commands
 x = close
 f = fullscreen

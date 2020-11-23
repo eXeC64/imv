@@ -222,6 +222,9 @@ imv comes with several binds configured by default
 *-*::
 	Zoom out
 
+*Ctrl+r*::
+	Rotate clockwise by 90 degrees
+
 *c*::
 	Center image
 
