@@ -610,8 +610,11 @@ static void toplevel_configure(void *data, struct xdg_toplevel *toplevel,
   (void)toplevel;
 
   struct imv_window *window = data;
-  window->width = width;
-  window->height = height;
+
+  if (width > 0 && height > 0) {
+    window->width = width;
+    window->height = height;
+  }
   window->fullscreen = false;
 
   enum xdg_toplevel_state *state;
@@ -629,10 +632,10 @@ static void toplevel_configure(void *data, struct xdg_toplevel *toplevel,
     .type = IMV_EVENT_RESIZE,
     .data = {
       .resize = {
-        .width = width,
-        .height = height,
-        .buffer_width = width * window->scale,
-        .buffer_height = height * window->scale
+        .width = window->width,
+        .height = window->height,
+        .buffer_width = window->width * window->scale,
+        .buffer_height = window->height * window->scale
       }
     }
   };
@@ -712,6 +715,9 @@ static void create_window(struct imv_window *window, int width, int height,
   window->egl_window = wl_egl_window_create(window->wl_surface, width, height);
   window->egl_surface = eglCreateWindowSurface(window->egl_display, config, window->egl_window, NULL);
   eglMakeCurrent(window->egl_display, window->egl_surface, window->egl_surface, window->egl_context);
+
+  window->width = width;
+  window->height = height;
 
   wl_surface_commit(window->wl_surface);
   wl_display_roundtrip(window->wl_display);
