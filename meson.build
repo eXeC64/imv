@@ -155,11 +155,13 @@ foreach ws : ['wayland', 'x11']
   endif
 endforeach
 
-install_data(
-  files('files/imv-folder'),
-  install_dir: get_option('bindir'),
-  install_mode: 'rwxr-xr-x',
-)
+if get_option('contrib-commands')
+  install_data(
+    files('contrib/imv-folder'),
+    install_dir: get_option('bindir'),
+    install_mode: 'rwxr-xr-x',
+  )
+endif
 
 if not target_single_ws
   install_data(
@@ -169,7 +171,15 @@ if not target_single_ws
   )
 endif
 
-foreach desktop: ['imv', 'imv-folder']
+desktop_list = [
+  'imv',
+]
+if get_option('contrib-commands')
+  desktop_list += [
+    'imv-folder',
+  ]
+endif
+foreach desktop: desktop_list
   install_data(
     files('files/@0@.desktop'.format(desktop)),
     install_dir: '@0@/applications'.format(get_option('datadir')),
@@ -202,12 +212,18 @@ endif
 prog_a2x = find_program('a2x', required: get_option('man'))
 
 if prog_a2x.found()
-  foreach man : [
+  man_list = [
     [1, 'imv'],
-    [1, 'imv-folder'],
     [1, 'imv-msg'],
     [5, 'imv'],
   ]
+  if get_option('contrib-commands')
+    man_list += [
+      [1, 'imv-folder'],
+    ]
+  endif
+
+  foreach man : man_list
     _section = man[0]
     _topic = man[1]
     custom_target(
