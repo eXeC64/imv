@@ -13,6 +13,12 @@ option('test',
   description : 'enable tests'
 )
 
+option('contrib-commands',
+  type: 'boolean',
+  value: true,
+  description: 'Install extra commands available in `contrib/`'
+)
+
 option('man',
   type : 'feature',
   description : 'enable man pages'
