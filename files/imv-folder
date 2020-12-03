@@ -1,0 +1,3 @@
+#!/bin/sh
+image="$1"
+exec imv "$(dirname "$image")" -n "$image"
