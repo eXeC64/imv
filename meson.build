@@ -149,6 +149,12 @@ foreach ws : ['wayland', 'x11']
   endif
 endforeach
 
+install_data(
+  files('files/imv-folder'),
+  install_dir: get_option('bindir'),
+  install_mode: 'rwxr-xr-x',
+)
+
 if not target_single_ws
   install_data(
     files('files/imv'),
@@ -157,11 +163,13 @@ if not target_single_ws
   )
 endif
 
-install_data(
-  files('files/imv.desktop'),
-  install_dir: '@0@/applications'.format(get_option('datadir')),
-  install_mode: 'rw-r--r--',
-)
+foreach desktop: ['imv', 'imv-folder']
+  install_data(
+    files('files/@0@.desktop'.format(desktop)),
+    install_dir: '@0@/applications'.format(get_option('datadir')),
+    install_mode: 'rw-r--r--',
+  )
+endforeach
 
 install_data(
   files('files/imv_config'),
@@ -190,6 +198,7 @@ prog_a2x = find_program('a2x', required: get_option('man'))
 if prog_a2x.found()
   foreach man : [
     [1, 'imv'],
+    [1, 'imv-folder'],
     [1, 'imv-msg'],
     [5, 'imv'],
   ]

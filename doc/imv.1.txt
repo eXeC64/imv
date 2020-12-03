@@ -327,4 +327,4 @@ Full source code and other information can be found at
 See Also
 --------
 
-**imv**(5) **imv-msg**(1)
+**imv**(5) **imv-msg**(1) **imv-folder**(1)
