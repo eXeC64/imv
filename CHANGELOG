@@ -1,6 +1,19 @@
 imv Changelog
 =============
 
+v4.2.0 - 2020-12-17
+
+* Switched to meson build system
+* Added HEIF backend
+* Added rotate and flip commands
+* Added colour support for overlay
+* Added some missing command/config documentation
+* Read directories in alphabetical order
+* Fixed several memory leaks
+* Improved compatibility with non glibc systems
+* Fixed several window management bugs for Wayland
+* Fixed bug when selecting first/last image
+
 v4.1.0 - 2019-12-21
 
 * Added libsngif backend

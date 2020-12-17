@@ -1,7 +1,7 @@
 project(
   'imv',
   ['c'],
-  version: '4.1.0',
+  version: '4.2.0',
   license: 'MIT',
   meson_version: '>= 0.47',
   default_options: ['buildtype=debugoptimized', 'c_std=c99'],
