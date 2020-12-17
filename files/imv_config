@@ -21,7 +21,7 @@ y = exec echo working!
 <bracketleft> = prev
 <Right> = next
 <bracketright> = next
-gg = goto 0
+gg = goto 1
 <Shift+G> = goto -1
 
 # Panning

@@ -134,7 +134,7 @@ or a modifier is used it must be wrapped in '<' and '>', for example:
 '<Ctrl+q>'.
 
 Multiple keys in succession can be specified by listing them in order:
-'gg = goto 0' will bind two presses of the 'g' key to jump to the first
+'gg = goto 1' will bind two presses of the 'g' key to jump to the first
 image, and '<Ctrl+a>p = exec echo hi' will bind the key sequence of 'Ctrl+a'
 followed by 'p' to executing the shell command 'echo hi'.
 
