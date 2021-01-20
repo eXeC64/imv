@@ -255,15 +255,21 @@ void imv_navigator_remove_all(struct imv_navigator *nav)
 
 ssize_t imv_navigator_find_path(struct imv_navigator *nav, const char *path)
 {
-  /* first try to match the exact path */
-  for (size_t i = 0; i < nav->paths->len; ++i) {
-    struct nav_item *item = nav->paths->items[i];
-    if (!strcmp(item->path, path)) {
-      return (ssize_t)i;
+  char *real_path = realpath(path, NULL);
+  if (real_path) {
+    /* first try to match the exact path if path can be resolved */
+    for (size_t i = 0; i < nav->paths->len; ++i) {
+      struct nav_item *item = nav->paths->items[i];
+      if (!strcmp(item->path, real_path)) {
+        free(real_path);
+        return (ssize_t)i;
+      }
     }
+
+    free(real_path);
   }
 
-  /* no exact matches, try the final portion of the path */
+  /* no exact matches or path cannot be resolved, try the final portion of the path */
   for (size_t i = 0; i < nav->paths->len; ++i) {
     struct nav_item *item = nav->paths->items[i];
     char *last_sep = strrchr(item->path, '/');
