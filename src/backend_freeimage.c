@@ -7,6 +7,7 @@
 
 #include <FreeImage.h>
 #include <stdlib.h>
+#include <string.h>
 
 struct private {
   char *path;
