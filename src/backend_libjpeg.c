@@ -33,10 +33,7 @@ static void free_private(void *raw_private)
   if (private->fd >= 0) {
     munmap(private->data, private->len);
     close(private->fd);
-  } else {
-    free(private->data);
   }
-  private->data = NULL;
 
   free(private);
 }
