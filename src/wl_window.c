@@ -197,6 +197,8 @@ static void keyboard_key(void *data, struct wl_keyboard *keyboard,
 
   push_keypress(window, key);
 
+  wl_display_roundtrip(window->wl_display);
+
   if (imv_keyboard_should_key_repeat(window->keyboard, key)) {
     /* Kick off the key-repeat timer for the current key */
     window->repeat_scancode = key;
