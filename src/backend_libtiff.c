@@ -130,6 +130,7 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
 
 static enum backend_result open_memory(void *data, size_t len, struct imv_source **src)
 {
+  TIFFSetErrorHandler(NULL);
   struct private *private = malloc(sizeof *private);
   private->data = data;
   private->len = len;
