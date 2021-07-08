@@ -110,6 +110,8 @@ static enum backend_result open_path(const char *path, struct imv_source **src)
 {
   struct private private;
 
+  TIFFSetErrorHandler(NULL);
+
   private.tiff = TIFFOpen(path, "r");
   if (!private.tiff) {
     /* Header is read, so no BAD_PATH check here */
