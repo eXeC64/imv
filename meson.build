@@ -21,6 +21,7 @@ add_project_arguments('-D_XOPEN_SOURCE=700', language: 'c')
 
 cc = meson.get_compiler('c')
 dep_null = dependency('', required: false)
+m_dep = cc.find_library('m', required : false)
 
 _windows = get_option('windows')
 if _windows == 'wayland'
@@ -50,6 +51,7 @@ deps_for_imv = [
   dependency('xkbcommon'),
   dependency('icu-io'),
   dependency('inih', fallback : ['inih', 'inih_dep']),
+  m_dep,
 ]
 
 files_common = files(
