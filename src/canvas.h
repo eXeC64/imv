@@ -33,8 +33,10 @@ void imv_canvas_fill_rectangle(struct imv_canvas *canvas, int x, int y, int widt
 /* Fill the whole canvas with the current color */
 void imv_canvas_fill(struct imv_canvas *canvas);
 
-/* Fill the whole canvas with a chequerboard pattern */
-void imv_canvas_fill_checkers(struct imv_canvas *canvas, int size);
+/* Blit the given image area with a chequerboard pattern to the current OpenGL framebuffer */
+void imv_canvas_fill_checkers(struct imv_canvas *canvas, struct imv_image *image,
+                              int x, int y, double scale,
+                              double rotation, bool mirrored);
 
 /* Select the font to draw text with */
 void imv_canvas_font(struct imv_canvas *canvas, const char *name, int size);
