@@ -939,6 +939,7 @@ int imv_run(struct imv *imv)
 
   if (imv->starting_path) {
     if (imv->paths_from_stdin) {
+      int max_tries = 1000;
       bool is_number = true;
       for(int i=0; i<strlen(imv->starting_path); ++i) {
         if (!isdigit(imv->starting_path[i])) {
@@ -952,6 +953,9 @@ int imv_run(struct imv *imv)
       }
       bool cont = true;
       while (cont) {
+        if (max_tries <= 0) {
+          cont = false;
+        }
         imv_window_pump_events(imv->window, event_handler, imv);
         if (index == -1) {
           ssize_t img_index = imv_navigator_find_path(imv->navigator, imv->starting_path);
@@ -965,6 +969,7 @@ int imv_run(struct imv *imv)
             cont = false;
           }
         }
+        max_tries -= 1;
       }
     } else {
       ssize_t index = imv_navigator_find_path(imv->navigator, imv->starting_path);
