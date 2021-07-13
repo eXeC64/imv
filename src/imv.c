@@ -938,22 +938,51 @@ int imv_run(struct imv *imv)
   }
 
   if (imv->starting_path) {
-    ssize_t index = imv_navigator_find_path(imv->navigator, imv->starting_path);
-    if (index == -1) {
-      index = (int) strtol(imv->starting_path, NULL, 10);
-      index -= 1; /* input is 1-indexed, internally we're 0 indexed */
-      if (errno == EINVAL) {
-        index = -1;
+    if (imv->paths_from_stdin) {
+      bool is_number = true;
+      for(int i=0; i<strlen(imv->starting_path); ++i) {
+        if (!isdigit(imv->starting_path[i])) {
+          is_number = false;
+          break;
+        }
+      }
+      ssize_t index = -1;
+      if (is_number) {
+        index = strtol(imv->starting_path, NULL, 10);
+      }
+      bool cont = true;
+      while (cont) {
+        imv_window_pump_events(imv->window, event_handler, imv);
+        if (index == -1) {
+          ssize_t img_index = imv_navigator_find_path(imv->navigator, imv->starting_path);
+          if(img_index != -1) {
+            imv_navigator_select_abs(imv->navigator, img_index);
+            cont = false;
+          }
+        } else {
+          if(imv_navigator_length(imv->navigator) >= index) {
+            imv_navigator_select_abs(imv->navigator, index);
+            cont = false;
+          }
+        }
+      }
+    } else {
+      ssize_t index = imv_navigator_find_path(imv->navigator, imv->starting_path);
+      if (index == -1) {
+        index = (int) strtol(imv->starting_path, NULL, 10);
+        index -= 1; /* input is 1-indexed, internally we're 0 indexed */
+        if (errno == EINVAL) {
+          index = -1;
+        }
+      }
+
+      if (index >= 0) {
+        imv_navigator_select_abs(imv->navigator, index);
+      } else {
+        imv_log(IMV_ERROR, "Invalid starting image: %s\n", imv->starting_path);
       }
     }
-
-    if (index >= 0) {
-      imv_navigator_select_abs(imv->navigator, index);
-    } else {
-      imv_log(IMV_ERROR, "Invalid starting image: %s\n", imv->starting_path);
-    }
   }
-
   /* Push any startup commands into the event queue */
   for (size_t i = 0; i < imv->startup_commands->len; ++i) {
     command_callback(imv->startup_commands->items[i], imv);
