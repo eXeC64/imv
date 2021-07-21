@@ -25,6 +25,8 @@ struct imv_window {
   GLXContext x_glc;
   Atom       x_state;
   Atom       x_fullscreen;
+  Atom       wm_delete_window;
+  Atom       wm_protocols;
   int width;
   int height;
   struct {
@@ -107,7 +109,7 @@ struct imv_window *imv_window_create(int w, int h, const char *title)
   assert(window->x_display);
   Window root = DefaultRootWindow(window->x_display);
   assert(root);
-  
+
   GLint att[] = {
     GLX_RGBA,
     GLX_DEPTH_SIZE,
@@ -140,6 +142,9 @@ struct imv_window *imv_window_create(int w, int h, const char *title)
   };
   XSetClassHint(window->x_display, window->x_window, &hint);
   XMapWindow(window->x_display, window->x_window);
+  window->wm_protocols = XInternAtom(window->x_display, "WM_PROTOCOLS", false);
+  window->wm_delete_window = XInternAtom(window->x_display, "WM_DELETE_WINDOW", false);
+  XSetWMProtocols(window->x_display, window->x_window, &window->wm_delete_window, 1);
   XStoreName(window->x_display, window->x_window, title);
 
   window->x_glc = glXCreateContext(window->x_display, vi, NULL, GL_TRUE);
@@ -412,6 +417,13 @@ void imv_window_pump_events(struct imv_window *window, imv_event_handler handler
       };
       if (handler) {
         handler(data, &e);
+      }
+    } else if (xev.type == ClientMessage) {
+      if (xev.xclient.message_type = window->wm_protocols && xev.xclient.data.l[0] == window->wm_delete_window) {
+        struct imv_event e = {
+          .type = IMV_EVENT_CLOSE
+        };
+        imv_window_push_event(window, &e);
       }
     }
   }
