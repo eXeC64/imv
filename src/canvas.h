@@ -19,7 +19,7 @@ struct imv_canvas *imv_canvas_create(int width, int height);
 void imv_canvas_free(struct imv_canvas *canvas);
 
 /* Set the buffer size of the canvas */
-void imv_canvas_resize(struct imv_canvas *canvas, int width, int height);
+void imv_canvas_resize(struct imv_canvas *canvas, int width, int height, double scale);
 
 /* Blank the canvas to be empty and transparent */
 void imv_canvas_clear(struct imv_canvas *canvas);

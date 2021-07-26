@@ -558,7 +558,8 @@ static void update_scale(struct imv_window *window)
           .width = window->width,
           .height = window->height,
           .buffer_width = buffer_width,
-          .buffer_height = buffer_height
+          .buffer_height = buffer_height,
+          .scale = window->scale,
         }
       }
     };
@@ -639,6 +640,7 @@ static void toplevel_configure(void *data, struct xdg_toplevel *toplevel,
         .height = window->height,
         .buffer_width = buffer_width,
         .buffer_height = buffer_height,
+        .scale = window->scale,
       }
     }
   };

@@ -346,7 +346,8 @@ void imv_window_pump_events(struct imv_window *window, imv_event_handler handler
             .width = wa.width,
             .height = wa.height,
             .buffer_width = wa.width,
-            .buffer_height = wa.height
+            .buffer_height = wa.height,
+            .scale = 1,
           }
         }
       };
