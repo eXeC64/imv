@@ -447,8 +447,9 @@ static void event_handler(void *data, const struct imv_event *e)
         const int wh = e->data.resize.height;
         const int bw = e->data.resize.buffer_width;
         const int bh = e->data.resize.buffer_height;
+        const double scale = e->data.resize.scale;
         imv_viewport_update(imv->view, ww, wh, bw, bh, imv->current_image, imv->scaling_mode);
-        imv_canvas_resize(imv->canvas, bw, bh);
+        imv_canvas_resize(imv->canvas, bw, bh, scale);
         break;
       }
     case IMV_EVENT_KEYBOARD:

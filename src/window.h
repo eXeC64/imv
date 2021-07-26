@@ -24,6 +24,7 @@ struct imv_event {
       int height;
       int buffer_width;
       int buffer_height;
+      double scale;
     } resize;
     struct {
       int scancode;
