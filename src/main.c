@@ -18,6 +18,10 @@ int main(int argc, char **argv)
     return 1;
   }
 
+#ifdef IMV_BACKEND_FREEIMAGE
+  imv_install_backend(imv, &imv_backend_freeimage);
+#endif
+
 #ifdef IMV_BACKEND_LIBTIFF
   imv_install_backend(imv, &imv_backend_libtiff);
 #endif
@@ -36,10 +40,6 @@ int main(int argc, char **argv)
 
 #ifdef IMV_BACKEND_LIBNSGIF
   imv_install_backend(imv, &imv_backend_libnsgif);
-#endif
-
-#ifdef IMV_BACKEND_FREEIMAGE
-  imv_install_backend(imv, &imv_backend_freeimage);
 #endif
 
 #ifdef IMV_BACKEND_LIBHEIF
