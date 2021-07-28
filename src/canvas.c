@@ -127,7 +127,7 @@ void imv_canvas_font(struct imv_canvas *canvas, const char *name, int size)
 {
   pango_font_description_set_family(canvas->font, name);
   pango_font_description_set_weight(canvas->font, PANGO_WEIGHT_NORMAL);
-  pango_font_description_set_absolute_size(canvas->font, size * PANGO_SCALE);
+  pango_font_description_set_size(canvas->font, size * PANGO_SCALE);
 }
 
 int imv_canvas_printf(struct imv_canvas *canvas, int x, int y, const char *fmt, ...)
