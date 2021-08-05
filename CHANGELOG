@@ -1,6 +1,23 @@
 imv Changelog
 =============
 
+v4.3.0 - 2021-08-05
+
+* Give freeimage backend preceedence over libjpeg
+* Fix lack of X11 window deletion event handling
+* Scale fonts correctly for high-DPI wayland
+* Suppress annoying TIFF error messages
+* Fix missing -lm dependency for imv-msg
+* Fix image skipping when reading slow filesystems
+* Add a contrib directory
+* Add contrib/imv-folder
+* Fix zoom speed dependence on buffer/image width
+* Improve stat error handling when loading directories
+* Fix double-free when backend libjpeg is used
+* Fix -n option not working for symbolic links
+* List image/heif as a supported mime type
+* Fix flickering bug in high-DPI wayland
+
 v4.2.0 - 2020-12-17
 
 * Switched to meson build system
