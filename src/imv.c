@@ -1979,6 +1979,7 @@ static size_t generate_env_text(struct imv *imv, char *buf, size_t buf_len, cons
 
   size_t len = 0;
   wordexp_t word;
+  setenv("IFS", "", 1);
   if (wordexp(format, &word, 0) == 0) {
     for (size_t i = 0; i < word.we_wordc; ++i) {
       len += snprintf(buf + len, buf_len - len, "%s ", word.we_wordv[i]);
@@ -1987,6 +1988,7 @@ static size_t generate_env_text(struct imv *imv, char *buf, size_t buf_len, cons
   } else {
     len += snprintf(buf, buf_len, "error expanding text");
   }
+  unsetenv("IFS");
 
   return len;
 }
