@@ -5,7 +5,7 @@
 
 #include <GL/gl.h>
 #include <assert.h>
-#include <cairo/cairo.h>
+#include <cairo.h>
 #include <pango/pangocairo.h>
 #include <stdarg.h>
 #include <stdbool.h>
