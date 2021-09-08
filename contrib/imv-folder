@@ -1,10 +1,2 @@
-#!/bin/bash
-image="$1"
-declare -a ARGS order
-readarray -t -d '' order < <(printf '%s\0' "$(dirname "$image")"/* | sort -z --sort=version)
-for a in "${order[@]}"; do
-	if [ -f "$a" ]; then
-		ARGS+=("$a")
-	fi
-done
-exec imv "${ARGS[@]}" -n "$image"
+#!/bin/sh
+exec imv -n "$1" "$(dirname "$1")"
