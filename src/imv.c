@@ -1309,27 +1309,35 @@ static void render_window(struct imv *imv)
 
   /* if the overlay needs to be drawn, draw that too */
   if (imv->overlay.enabled) {
-    const int height = imv->overlay.font.size * 1.2;
-    imv_canvas_color(imv->canvas,
-        imv->overlay.background_color.r / 255.f,
-        imv->overlay.background_color.g / 255.f,
-        imv->overlay.background_color.b / 255.f,
-        imv->overlay.background_alpha / 255.f);
-    int y = 0 ;
+    char overlay_text[1024];
+    generate_env_text(imv, overlay_text, sizeof overlay_text, imv->overlay.text);
+    PangoLayout *layout = imv_canvas_make_layout(imv->canvas, overlay_text);
+
+    int width, height;
+    pango_layout_get_pixel_size(layout, &width, &height);
+
+    int y = 0;
     const int bottom_offset = 5;
     if (imv->overlay.position_at_bottom)
     {
       y = wh - height - bottom_offset;
     }
-    imv_canvas_fill_rectangle(imv->canvas, 0, y, ww, height + bottom_offset);
+
+    imv_canvas_color(imv->canvas,
+        imv->overlay.background_color.r / 255.f,
+        imv->overlay.background_color.g / 255.f,
+        imv->overlay.background_color.b / 255.f,
+        imv->overlay.background_alpha / 255.f);
+    imv_canvas_fill_rectangle(imv->canvas, 0, y, width, height + bottom_offset);
+
     imv_canvas_color(imv->canvas,
         imv->overlay.text_color.r / 255.f,
         imv->overlay.text_color.g / 255.f,
         imv->overlay.text_color.b / 255.f,
         imv->overlay.text_alpha / 255.f);
-    char overlay_text[1024];
-    generate_env_text(imv, overlay_text, sizeof overlay_text, imv->overlay.text);
-    imv_canvas_printf(imv->canvas, 0, y, "%s", overlay_text);
+    imv_canvas_show_layout(imv->canvas, 0, y, layout);
+
+    g_object_unref(layout);
   }
 
   /* draw command entry bar if needed */
