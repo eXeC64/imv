@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#include <pango/pangocairo.h>
+
 struct imv_canvas;
 struct imv_image;
 
@@ -40,6 +42,15 @@ void imv_canvas_fill_checkers(struct imv_canvas *canvas, struct imv_image *image
 
 /* Select the font to draw text with */
 void imv_canvas_font(struct imv_canvas *canvas, const char *name, int size);
+
+/* Prepare layout containing the given string, ready for rendering on the given
+ * canvas. The caller is responsible for releasing it with a call to
+ * g_object_unref */
+PangoLayout *imv_canvas_make_layout(struct imv_canvas *canvas, const char *str);
+
+/* Shows layout with at the specified coordinates */
+void imv_canvas_show_layout(struct imv_canvas *canvas, int x, int y,
+                            PangoLayout *layout);
 
 /* Draw some text on the canvas, returns the width used in pixels */
 int imv_canvas_printf(struct imv_canvas *canvas, int x, int y, const char *fmt, ...);

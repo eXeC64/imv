@@ -180,6 +180,22 @@ void imv_canvas_font(struct imv_canvas *canvas, const char *name, int size)
   pango_font_description_set_size(canvas->font, size * PANGO_SCALE);
 }
 
+PangoLayout *imv_canvas_make_layout(struct imv_canvas *canvas, const char *line)
+{
+  PangoLayout *layout = pango_cairo_create_layout(canvas->cairo);
+  pango_layout_set_font_description(layout, canvas->font);
+  pango_layout_set_text(layout, line, -1);
+
+  return layout;
+}
+
+void imv_canvas_show_layout(struct imv_canvas *canvas, int x, int y,
+                            PangoLayout *layout)
+{
+  cairo_move_to(canvas->cairo, x, y);
+  pango_cairo_show_layout(canvas->cairo, layout);
+}
+
 int imv_canvas_printf(struct imv_canvas *canvas, int x, int y, const char *fmt, ...)
 {
   char line[1024];
@@ -187,12 +203,9 @@ int imv_canvas_printf(struct imv_canvas *canvas, int x, int y, const char *fmt, 
   va_start(args, fmt);
   vsnprintf(line, sizeof line, fmt, args);
 
-  PangoLayout *layout = pango_cairo_create_layout(canvas->cairo);
-  pango_layout_set_font_description(layout, canvas->font);
-  pango_layout_set_text(layout, line, -1);
+  PangoLayout *layout = imv_canvas_make_layout(canvas, line);
 
-  cairo_move_to(canvas->cairo, x, y);
-  pango_cairo_show_layout(canvas->cairo, layout);
+  imv_canvas_show_layout(canvas, x, y, layout);
 
   PangoRectangle extents;
   pango_layout_get_pixel_extents(layout, NULL, &extents);
