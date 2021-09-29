@@ -159,7 +159,7 @@ endforeach
 
 if get_option('contrib-commands')
   install_data(
-    files('contrib/imv-folder'),
+    files('contrib/imv-dir'),
     install_dir: get_option('bindir'),
     install_mode: 'rwxr-xr-x',
   )
@@ -178,7 +178,7 @@ desktop_list = [
 ]
 if get_option('contrib-commands')
   desktop_list += [
-    'imv-folder',
+    'imv-dir',
   ]
 endif
 foreach desktop: desktop_list
@@ -221,7 +221,7 @@ if prog_a2x.found()
   ]
   if get_option('contrib-commands')
     man_list += [
-      [1, 'imv-folder'],
+      [1, 'imv-dir'],
     ]
   endif
 

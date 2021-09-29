@@ -8,18 +8,18 @@ imv (1)
 
 Name
 ----
-imv-folder - Open 'imv' for all images in a folder
+imv-dir - Open 'imv' for all images in a directory
 
 Description
 -----------
 
-'imv-folder' is a wrapper for 'imv' that auto-selects the folder where the image is located, so that the *next* and *previous* commands function in the same way as other image viewers.
+'imv-dir' is a wrapper for 'imv' that auto-selects the directory where the image is located, so that the *next* and *previous* commands function in the same way as other image viewers.
 
 Note that this wrapper supports only a single image. For opening multiple images, use plain `imv`.
 
 Synopsis
 --------
-'imv-folder' path
+'imv-dir' path
 
 Authors
 -------
