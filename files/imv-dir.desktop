@@ -1,10 +1,10 @@
 [Desktop Entry]
-Name=imv-folder
+Name=imv-dir
 Name[en_US]=imv
 GenericName=Image viewer
 GenericName[en_US]=Image viewer
-Comment=Fast freeimage-based Image Viewer | Open all images on a folder
-Exec=imv-folder %f
+Comment=Fast freeimage-based Image Viewer | Open all images in a directory
+Exec=imv-dir %f
 NoDisplay=true
 Terminal=false
 Type=Application
