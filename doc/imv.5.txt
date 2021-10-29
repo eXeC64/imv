@@ -56,9 +56,10 @@ The *[options]* section accepts the following settings:
 	Use the specified font in the overlay. Defaults to 'Monospace:24'.
 
 *overlay_text* = <text>::
-	Use the given text as the overlay's text. The provided text is shell
-	expanded, so the output of commands can be used: '$(ls)' as can environment
-	variables, including the ones accessible to imv's 'exec' command.
+	Use the given text as the overlay's text. The provided text is shell expanded,
+	so the output of commands can be used (for example, '$(ls)'). Environment
+	variables can also be used, including the ones accessible to imv's 'exec'
+	command.
 
 *overlay_text_color* = <hex-code>::
 	Set the color for the text in the overlay. Is a 6-digit hexadecimal color
