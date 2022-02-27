@@ -215,6 +215,7 @@ static void command_set_scaling_mode(struct list *args, const char *argstr, void
 static void command_set_upscaling_method(struct list *args, const char *argstr, void *data);
 static void command_set_slideshow_duration(struct list *args, const char *argstr, void *data);
 static void command_set_background(struct list *args, const char *argstr, void *data);
+static void command_set_option(struct list *args, const char *argstr, void *data);
 static void command_bind(struct list *args, const char *argstr, void *data);
 
 static bool setup_window(struct imv *imv);
@@ -326,6 +327,7 @@ static bool add_bind(struct imv *imv, const char *keys, const char *commands)
       break;
     }
     commands = next_command;
+
   }
 
   list_deep_free(list);
@@ -564,6 +566,7 @@ struct imv *imv_create(void)
 
   imv_command_register(imv->commands, "quit", &command_quit);
   imv_command_register(imv->commands, "pan", &command_pan);
+  imv_command_register(imv->commands, "set", &command_set_option);
   imv_command_register(imv->commands, "next", &command_next);
   imv_command_register(imv->commands, "prev", &command_prev);
   imv_command_register(imv->commands, "goto", &command_goto);
@@ -1641,6 +1644,18 @@ static void command_pan(struct list *args, const char *argstr, void *data)
   long int y = strtol(args->items[2], NULL, 10);
 
   imv_viewport_move(imv->view, x, y, imv->current_image);
+}
+
+static void command_set_option(struct list *args, const char *argstr, void *data)
+{
+  (void)argstr;
+  struct imv *imv = data;
+  if (args->len != 3 ) {
+    imv_log(IMV_ERROR, "set command needs 2 arguments");
+  }
+
+  handle_ini_value(imv, "options", args->items[1], args->items[2]);
+  imv->need_redraw = true;
 }
 
 static void command_next(struct list *args, const char *argstr, void *data)
